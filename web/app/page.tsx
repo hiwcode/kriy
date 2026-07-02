@@ -1,0 +1,977 @@
+"use client";
+
+import * as React from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/components/auth/auth-provider";
+import { useBackendReady } from "@/components/backend-health-provider";
+import { siteConfig } from "@/config/site";
+import { ThemeToggle } from "@/components/theme-toggle";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import { Playground } from "@/components/landing/playground";
+import { FeatureShowcase } from "@/components/landing/feature-showcase";
+import {
+  ArrowRight,
+  BookOpen,
+  Bot,
+  BrainCircuit,
+  FolderKanban,
+  Github,
+  MemoryStick,
+  MessageSquare,
+  Puzzle,
+  Star,
+  LayoutDashboard,
+  FileText,
+  Activity,
+  Zap,
+  DollarSign,
+  Wand2,
+  Ban,
+  Eye,
+  Check,
+  Code2,
+  Workflow,
+  Bell,
+} from "lucide-react";
+
+/* ------------------------------------------------------------------ */
+/*  Static data                                                        */
+/* ------------------------------------------------------------------ */
+
+const FEATURES = [
+  {
+    icon: FolderKanban,
+    title: "Workspaces",
+    description:
+      "Personal and team workspaces with role-based access control, email invites, and atomic resource transfer.",
+  },
+  {
+    icon: Bot,
+    title: "Agent Builder",
+    description:
+      "Create local Gemini agents or connect external A2A endpoints. Configure prompts, models, and tools.",
+  },
+  {
+    icon: BrainCircuit,
+    title: "Orchestrator",
+    description:
+      "Visual flow editor for designing multi-agent workflows. Drag, connect, and coordinate sub-agents.",
+  },
+  {
+    icon: Puzzle,
+    title: "Tool Integrations",
+    description:
+      "Connect MCP servers and PostgreSQL databases as agent tools. Test connections before deploying.",
+  },
+  {
+    icon: MemoryStick,
+    title: "Memory System",
+    description:
+      "Persistent session history and automatic facts extraction. Agents remember context across conversations.",
+  },
+  {
+    icon: MessageSquare,
+    title: "Streaming Chat",
+    description:
+      "Real-time SSE streaming with multi-session management. Conversations persist and resume seamlessly.",
+  },
+  {
+    icon: Workflow,
+    title: "Event Workflows",
+    description:
+      "Connect your app: emit an event and the right agent handles it automatically — a priority queue with retries, no glue code.",
+  },
+  {
+    icon: Bell,
+    title: "Notifications",
+    description:
+      "Real-time in-app notifications over WebSocket. Agents and workflows ping you the moment something needs attention.",
+  },
+];
+
+const STEPS = [
+  {
+    number: "01",
+    title: "Sign in",
+    description:
+      "Authenticate with Google. Your personal workspace is created instantly, complete with a demo agent.",
+  },
+  {
+    number: "02",
+    title: "Build your agent",
+    description:
+      "Pick a model, write a system prompt, attach MCP or database tools, and save. That's it.",
+  },
+  {
+    number: "03",
+    title: "Chat and orchestrate",
+    description:
+      "Stream conversations in real-time, design multi-agent workflows, and invite your team to collaborate.",
+  },
+];
+
+/* ------------------------------------------------------------------ */
+/*  Helpers                                                            */
+/* ------------------------------------------------------------------ */
+
+function scrollTo(id: string) {
+  document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
+}
+
+/* ------------------------------------------------------------------ */
+/*  Hero Visual — static product mockup                                */
+/* ------------------------------------------------------------------ */
+
+type HeroNavItem = { label: string; icon: React.ComponentType<{ className?: string }>; active?: boolean };
+const HERO_NAV_GROUPS: { name: string; items: HeroNavItem[] }[] = [
+  { name: "main", items: [{ label: "Dashboard", icon: LayoutDashboard, active: true }] },
+  {
+    name: "Agents",
+    items: [
+      { label: "Agents", icon: Bot },
+      { label: "Orchestrator", icon: BrainCircuit },
+    ],
+  },
+  {
+    name: "Tools & Prompts",
+    items: [
+      { label: "Prompt Library", icon: FileText },
+      { label: "MCP Connections", icon: Puzzle },
+    ],
+  },
+  {
+    name: "Observability",
+    items: [{ label: "Traces", icon: Activity }],
+  },
+];
+
+const HERO_STATS = [
+  { label: "Active agents", value: "12", icon: Bot },
+  { label: "Tokens used", value: "84.2k", icon: Zap },
+  { label: "Prompts", value: "36", icon: FileText },
+  { label: "Spent", value: "$4.21", icon: DollarSign },
+] as const;
+
+const HERO_AGENTS = [
+  { name: "Research Agent", meta: "gemini-2.5-flash", on: true },
+  { name: "Writer Agent", meta: "gemini-2.5-pro", on: true },
+  { name: "Review Agent", meta: "external A2A", on: false },
+] as const;
+
+function HeroVisual() {
+  return (
+    <div className="relative mx-auto mt-16 max-w-5xl md:mt-20">
+      {/* soft brand glow behind the frame */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -inset-x-8 -top-8 bottom-0 -z-10 rounded-[2rem] opacity-70 blur-2xl"
+        style={{
+          background:
+            "radial-gradient(60% 60% at 50% 0%, color-mix(in oklch, var(--primary) 16%, transparent), transparent 70%)",
+        }}
+      />
+      <div
+        className="overflow-hidden rounded-xl border border-border bg-card shadow-2xl shadow-primary/[0.07]"
+        style={{
+          maskImage: "linear-gradient(to bottom, black 68%, transparent 99%)",
+          WebkitMaskImage: "linear-gradient(to bottom, black 68%, transparent 99%)",
+        }}
+      >
+        {/* Title bar */}
+        <div className="flex items-center gap-2 border-b border-border/60 bg-muted/30 px-4 py-2.5">
+          <div className="flex items-center gap-1.5">
+            <div className="size-2.5 rounded-full bg-foreground/[0.12]" />
+            <div className="size-2.5 rounded-full bg-foreground/[0.08]" />
+            <div className="size-2.5 rounded-full bg-foreground/[0.08]" />
+          </div>
+          <div className="ml-4 flex-1 rounded-md bg-background/60 px-3 py-1 text-center">
+            <span className="text-[10px] font-medium text-muted-foreground/50">
+              atelier.app / dashboard
+            </span>
+          </div>
+        </div>
+
+        {/* App body */}
+        <div className="flex h-[320px] text-left sm:h-[440px]">
+          {/* Sidebar — mirrors the real AppSidebar */}
+          <aside className="hidden w-52 shrink-0 flex-col border-r border-sidebar-border/60 bg-sidebar p-3 sm:flex">
+            {/* Brand */}
+            <div className="mb-4 flex items-center gap-3 px-1.5 py-1">
+              <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary shadow-sm shadow-primary/25">
+                <Bot className="size-[18px] text-primary-foreground" />
+              </div>
+              <div className="flex min-w-0 flex-col">
+                <span className="truncate text-[15px] font-semibold leading-tight tracking-tight text-sidebar-foreground">
+                  Atelier
+                </span>
+                <span className="truncate text-[9px] font-medium uppercase tracking-[0.18em] text-sidebar-foreground/45">
+                  AI Workspace
+                </span>
+              </div>
+            </div>
+
+            {/* Nav groups */}
+            <div className="flex flex-1 flex-col gap-2 overflow-hidden">
+              {HERO_NAV_GROUPS.map((group) => (
+                <div key={group.name} className="flex flex-col gap-0.5">
+                  {group.name !== "main" && (
+                    <span className="px-2 pb-0.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-sidebar-foreground/40">
+                      {group.name}
+                    </span>
+                  )}
+                  {group.items.map((item) => (
+                    <div
+                      key={item.label}
+                      className={cn(
+                        "relative flex h-8 items-center gap-2.5 rounded-lg px-2.5 text-xs font-medium",
+                        item.active
+                          ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                          : "text-sidebar-foreground/70"
+                      )}
+                    >
+                      <span
+                        className={cn(
+                          "absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-primary",
+                          item.active ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      <item.icon
+                        className={cn(
+                          "size-3.5 shrink-0",
+                          item.active ? "text-primary" : "text-sidebar-foreground/55"
+                        )}
+                      />
+                      {item.label}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+
+            {/* Footer */}
+            <div className="mt-2 flex items-center gap-2 px-2 py-1.5 text-[9px] font-medium text-sidebar-foreground/40">
+              <span className="size-1.5 shrink-0 rounded-full bg-success" />
+              All systems operational
+            </div>
+          </aside>
+
+          {/* Main */}
+          <div className="flex min-w-0 flex-1 flex-col gap-4 overflow-hidden p-4 sm:p-5">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold tracking-tight">Dashboard</p>
+                <p className="text-[10px] text-muted-foreground">Welcome back, Alex</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="hidden h-6 w-24 items-center rounded-md border border-border/60 px-2 text-[9px] text-muted-foreground/50 sm:flex">
+                  Search…
+                </div>
+                <div className="size-7 rounded-full bg-gradient-to-br from-primary to-fuchsia-500" />
+              </div>
+            </div>
+
+            {/* Stat cards */}
+            <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+              {HERO_STATS.map((s) => (
+                <div key={s.label} className="rounded-lg border border-border/60 bg-background/60 p-2.5">
+                  <div className="mb-1.5 flex size-6 items-center justify-center rounded-md bg-primary/10 text-primary">
+                    <s.icon className="size-3.5" />
+                  </div>
+                  <p className="text-sm font-semibold tracking-tight">{s.value}</p>
+                  <p className="truncate text-[9px] text-muted-foreground">{s.label}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Chart + agents */}
+            <div className="grid min-h-0 flex-1 grid-cols-1 gap-2.5 lg:grid-cols-3">
+              {/* Chart */}
+              <div className="flex flex-col rounded-lg border border-border/60 bg-background/60 p-3 lg:col-span-2">
+                <div className="mb-1 flex items-center justify-between">
+                  <p className="text-[11px] font-medium">Token usage</p>
+                  <span className="text-[9px] text-muted-foreground">last 7 days</span>
+                </div>
+                <div className="relative min-h-0 flex-1">
+                  <svg viewBox="0 0 320 120" preserveAspectRatio="none" className="size-full">
+                    <defs>
+                      <linearGradient id="heroArea" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="var(--primary)" stopOpacity="0.35" />
+                        <stop offset="100%" stopColor="var(--primary)" stopOpacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <path
+                      d="M0,95 C30,80 55,86 85,62 C115,40 135,52 165,42 C195,32 215,40 245,24 C275,12 295,18 320,8 L320,120 L0,120 Z"
+                      fill="url(#heroArea)"
+                    />
+                    <path
+                      d="M0,95 C30,80 55,86 85,62 C115,40 135,52 165,42 C195,32 215,40 245,24 C275,12 295,18 320,8"
+                      fill="none"
+                      stroke="var(--primary)"
+                      strokeWidth="2"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                  </svg>
+                </div>
+              </div>
+
+              {/* Agents list */}
+              <div className="hidden flex-col rounded-lg border border-border/60 bg-background/60 p-3 lg:flex">
+                <p className="mb-2 text-[11px] font-medium">Agents</p>
+                <div className="flex flex-col gap-2">
+                  {HERO_AGENTS.map((a) => (
+                    <div key={a.name} className="flex items-center gap-2">
+                      <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                        <Bot className="size-3" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[10px] font-medium">{a.name}</p>
+                        <p className="truncate text-[9px] text-muted-foreground">{a.meta}</p>
+                      </div>
+                      <span
+                        className="size-1.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: a.on ? "var(--primary)" : "oklch(0.7 0 0 / 0.3)" }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Agentify-legacy section                                            */
+/* ------------------------------------------------------------------ */
+
+const AGENTIFY_CAPS = [
+  { icon: Eye, title: "Observe", desc: "Shadow-mode first — the agent logs what it would do, changing nothing." },
+  { icon: Wand2, title: "Modify", desc: "Rewrite payloads in-flight — mask PII, enrich, or clamp to policy." },
+  { icon: Ban, title: "Deny", desc: "Block risky actions before they ever hit your API or database." },
+];
+
+const AGENTIFY_CODE: Record<"python" | "node", string> = {
+  python: `from atelier_agentic import AtelierClient
+
+atelier = AtelierClient(agent_id=12, mode="enforce")
+
+# put an agent in the path of any action
+order = atelier.guard(
+    "db.update", order,
+    mutable_fields=["discount"],   # agent may only touch these
+)
+db.update(order)`,
+  node: `import { AtelierClient } from "@atelier/agentic";
+
+const atelier = new AtelierClient({ agentId: 12, mode: "enforce" });
+
+// put an agent in the path of any action
+const order = await atelier.guard("db.update", order, {
+  mutableFields: ["discount"],   // agent may only touch these
+});
+await db.orders.update(order);`,
+};
+
+function AgentifySection() {
+  const [lang, setLang] = React.useState<"python" | "node">("python");
+
+  return (
+    <section className="scroll-mt-20 py-24 md:py-32">
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="mx-auto max-w-2xl text-center">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+            Legacy → Agentic
+          </p>
+          <h2 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
+            Agentify your existing codebase
+          </h2>
+          <p className="mt-4 text-muted-foreground">
+            Drop the SDK into your Python or Node app and put an agent in the decision
+            path of any API call, DB write, or function — one call site at a time.
+          </p>
+        </div>
+
+        <div className="mt-14 grid items-center gap-10 lg:grid-cols-2">
+          {/* Left — capabilities */}
+          <div>
+            <div className="space-y-4">
+              {AGENTIFY_CAPS.map((cap) => {
+                const Icon = cap.icon;
+                return (
+                  <div key={cap.title} className="flex gap-4">
+                    <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-inset ring-primary/10">
+                      <Icon className="size-5" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold tracking-tight">{cap.title}</h3>
+                      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{cap.desc}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Roll-out modes */}
+            <div className="mt-8 flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium text-muted-foreground">Roll out safely:</span>
+              {["observe", "suggest", "enforce"].map((m, i) => (
+                <span key={m} className="inline-flex items-center gap-1.5">
+                  {i > 0 && <ArrowRight className="size-3 text-muted-foreground/50" />}
+                  <span className="rounded-full border border-primary/20 bg-primary/5 px-2.5 py-0.5 text-xs font-medium text-primary">
+                    {m}
+                  </span>
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Right — code card */}
+          <div className="overflow-hidden rounded-2xl border border-border bg-zinc-950 shadow-xl shadow-primary/[0.06]">
+            {/* tabs */}
+            <div className="flex items-center gap-1 border-b border-white/10 px-3 py-2">
+              <div className="mr-2 flex items-center gap-1.5">
+                <span className="size-2.5 rounded-full bg-white/15" />
+                <span className="size-2.5 rounded-full bg-white/10" />
+                <span className="size-2.5 rounded-full bg-white/10" />
+              </div>
+              {(["python", "node"] as const).map((l) => (
+                <button
+                  key={l}
+                  onClick={() => setLang(l)}
+                  className={
+                    "rounded-md px-2.5 py-1 text-xs font-medium transition-colors " +
+                    (lang === l ? "bg-white/10 text-white" : "text-zinc-400 hover:text-zinc-200")
+                  }
+                >
+                  {l === "python" ? "Python" : "Node"}
+                </button>
+              ))}
+            </div>
+            <pre className="overflow-x-auto p-5 font-mono text-[13px] leading-relaxed text-zinc-100">
+              {AGENTIFY_CODE[lang]}
+            </pre>
+            {/* faux verdict */}
+            <div className="flex items-center gap-2 border-t border-white/10 px-5 py-3 text-xs">
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 font-medium text-emerald-400">
+                <Check className="size-3" /> modify
+              </span>
+              <span className="font-mono text-zinc-400">discount: 80 → 50</span>
+              <span className="ml-auto text-zinc-500">clamped to policy · logged to traces</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Page                                                               */
+/* ------------------------------------------------------------------ */
+
+export default function LandingPage() {
+  const router = useRouter();
+  const auth = useAuth();
+  const backendReady = useBackendReady();
+  // Sign-in needs the backend — only offer it when the backend is reachable.
+  const showSignIn = backendReady === true;
+
+  React.useEffect(() => {
+    if (auth?.isSignedIn) {
+      router.replace("/dashboard");
+    }
+  }, [auth?.isSignedIn, router]);
+
+  if (auth?.isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex items-center gap-3">
+          <div className="size-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (auth?.isSignedIn) return null;
+
+  const Logo = siteConfig.logo;
+
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      {/* -- Navbar ------------------------------------------------- */}
+      <nav className="fixed inset-x-0 top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
+          {/* Left: logo + links */}
+          <div className="flex items-center gap-8">
+            <Link href="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
+              <div className="flex size-8 items-center justify-center rounded-lg bg-primary">
+                <Logo className="size-4 text-primary-foreground" />
+              </div>
+              <span className="text-lg font-semibold tracking-tight">
+                {siteConfig.name}
+              </span>
+            </Link>
+
+            <div className="hidden items-center gap-1 md:flex">
+              <button
+                onClick={() => scrollTo("features")}
+                className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                Features
+              </button>
+              <button
+                onClick={() => scrollTo("playground")}
+                className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                Playground
+              </button>
+              <button
+                onClick={() => scrollTo("how-it-works")}
+                className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                How it works
+              </button>
+              <Link
+                href="/sdk"
+                className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                SDK
+              </Link>
+              <Link
+                href="/docs"
+                className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                Docs
+              </Link>
+            </div>
+          </div>
+
+          {/* Right: actions */}
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Button variant="ghost" size="icon" asChild className="hidden sm:inline-flex">
+              <a href={siteConfig.github} target="_blank" rel="noopener noreferrer" aria-label="GitHub">
+                <Github className="size-4" />
+              </a>
+            </Button>
+            {showSignIn && <div className="hidden sm:block">{auth?.signInButton}</div>}
+          </div>
+        </div>
+      </nav>
+
+      {/* -- Hero --------------------------------------------------- */}
+      <section className="relative overflow-hidden pt-16">
+        {/* Dot-grid background */}
+        <div
+          className="pointer-events-none absolute inset-0 opacity-100 dark:opacity-100"
+          style={{
+            backgroundImage:
+              "radial-gradient(circle, oklch(0.5 0 0 / 0.07) 1px, transparent 1px)",
+            backgroundSize: "32px 32px",
+          }}
+        />
+        {/* Brand glow */}
+        <div
+          className="pointer-events-none absolute left-1/2 top-[-8%] h-[620px] w-[900px] -translate-x-1/2 rounded-full opacity-70 blur-3xl"
+          style={{
+            background:
+              "radial-gradient(ellipse at center, color-mix(in oklch, var(--primary) 20%, transparent) 0%, transparent 70%)",
+          }}
+        />
+        <div
+          className="pointer-events-none absolute right-[8%] top-[20%] hidden size-72 rounded-full opacity-50 blur-3xl lg:block"
+          style={{
+            background:
+              "radial-gradient(circle, color-mix(in oklch, oklch(0.7 0.2 320) 16%, transparent) 0%, transparent 70%)",
+          }}
+        />
+
+        <div className="relative mx-auto max-w-6xl px-6 pb-20 pt-36 md:pt-48">
+          <div className="mx-auto max-w-3xl text-center">
+            {/* Badge */}
+            <div className="mb-8 inline-flex items-center gap-2.5 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-xs font-medium text-foreground/70 shadow-sm">
+              <span className="relative flex size-2">
+                <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary/40" />
+                <span className="relative inline-flex size-2 rounded-full bg-primary" />
+              </span>
+              Open source · Bring AI agents to your stack
+            </div>
+
+            {/* Headline */}
+            <h1 className="text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl">
+              Add{" "}
+              <span className="relative inline-block">
+                <span className="relative z-10 text-gradient-brand">AI workflows</span>
+                <span className="absolute bottom-1 left-0 right-0 z-0 h-3 rounded-sm bg-gradient-to-r from-primary/20 to-fuchsia-500/20 sm:bottom-1.5 sm:h-4" />
+              </span>{" "}
+              to your app
+              <br className="hidden sm:block" />
+              <span className="text-muted-foreground"> &mdash; without a rewrite</span>
+            </h1>
+
+            {/* Subtitle */}
+            <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
+              Drop an agent into the path of any API call, DB write, or event &mdash; to
+              guard, automate, and extend the systems you already run. Or build new
+              agents and orchestrate them. One open-source platform, both directions.
+            </p>
+
+            {/* CTAs */}
+            <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+              {showSignIn ? (
+                auth?.signInButton ?? (
+                  <p className="text-sm text-muted-foreground">
+                    Google sign-in is not configured.
+                  </p>
+                )
+              ) : backendReady === false ? (
+                <p className="text-sm text-red-400">
+                  Sign-in is temporarily unavailable
+                </p>
+              ) : null}
+              <Button variant="outline" size="lg" asChild>
+                <Link href="/docs">
+                  <BookOpen className="size-4" />
+                  Documentation
+                </Link>
+              </Button>
+            </div>
+
+            {/* Trust row */}
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs font-medium text-muted-foreground">
+              {["Open source · MIT", "Self-hostable", "No credit card"].map((item) => (
+                <span key={item} className="inline-flex items-center gap-1.5">
+                  <span className="size-1.5 rounded-full bg-primary/70" />
+                  {item}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Animated hero visual */}
+          <HeroVisual />
+        </div>
+
+        {/* Section divider */}
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+        </div>
+      </section>
+
+      {/* -- Features ----------------------------------------------- */}
+      <section id="features" className="scroll-mt-20 py-24 md:py-32 ">
+        <div className="mx-auto max-w-6xl px-6">
+          {/* Section header */}
+          <div className="mx-auto max-w-2xl text-center">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+              Features
+            </p>
+            <h2 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
+              Everything you need to build with AI agents
+            </h2>
+            <p className="mt-4 text-muted-foreground">
+              From agent creation to multi-agent orchestration, Atelier provides the complete toolkit.
+            </p>
+          </div>
+
+          {/* Grid */}
+          <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {FEATURES.map((feature) => {
+              const Icon = feature.icon;
+              return (
+                <div
+                  key={feature.title}
+                  className="group relative overflow-hidden rounded-2xl border border-border bg-card p-6 transition-all duration-300 hover:-translate-y-1 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/[0.06]"
+                >
+                  {/* Corner glow on hover */}
+                  <div
+                    aria-hidden
+                    className="pointer-events-none absolute -right-12 -top-12 size-32 rounded-full bg-primary/10 opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-100"
+                  />
+                  {/* Top hairline on hover */}
+                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
+                  <div className="relative">
+                    <div className="mb-4 flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-inset ring-primary/10 transition-all duration-300 group-hover:bg-primary group-hover:text-primary-foreground group-hover:shadow-md group-hover:shadow-primary/25">
+                      <Icon className="size-5" />
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <h3 className="font-semibold tracking-tight">{feature.title}</h3>
+                      <ArrowRight className="size-4 -translate-x-1 text-primary opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100" />
+                    </div>
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                      {feature.description}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* Divider */}
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+      </div>
+
+      {/* -- A closer look (feature mockups) ------------------------ */}
+      <FeatureShowcase />
+
+      {/* Divider */}
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+      </div>
+
+      {/* -- Two ways to use it ------------------------------------- */}
+      <section className="scroll-mt-20 py-24 md:py-32">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="mx-auto max-w-2xl text-center">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+              Two ways to use it
+            </p>
+            <h2 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
+              Build agents. Embed agents.
+            </h2>
+            <p className="mt-4 text-muted-foreground">
+              Atelier works in both directions — give an agent the tools to do work, or drop an
+              agent into code you already have. Same platform, opposite control flow.
+            </p>
+          </div>
+
+          <div className="mt-14 grid gap-5 lg:grid-cols-2">
+            {/* Build */}
+            <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="flex size-11 items-center justify-center rounded-xl bg-muted text-foreground">
+                  <BrainCircuit className="size-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold tracking-tight">Build agents</h3>
+                  <p className="text-sm text-muted-foreground">The agent does the work.</p>
+                </div>
+              </div>
+              <div className="mt-4 inline-flex items-center gap-1.5 rounded-full border bg-muted/40 px-2.5 py-1 font-mono text-xs text-muted-foreground">
+                agent <ArrowRight className="size-3" /> your systems
+              </div>
+              <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+                It reasons, then reaches out — calling tools, running skills, and coordinating
+                sub-agents, on demand or on a schedule.
+              </p>
+              <ul className="mt-5 grid grid-cols-2 gap-2 text-sm">
+                {["MCP tools", "Skills", "Orchestration", "Schedules"].map((f) => (
+                  <li key={f} className="flex items-center gap-2 text-foreground/80">
+                    <Check className="size-4 shrink-0 text-primary" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {/* Embed */}
+            <div className="relative overflow-hidden rounded-2xl border border-primary/30 bg-card p-6 shadow-sm">
+              <span className="absolute right-4 top-4 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
+                The wedge
+              </span>
+              <div className="flex items-center gap-3">
+                <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <Code2 className="size-5" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold tracking-tight">Embed agents</h3>
+                  <p className="text-sm text-muted-foreground">An agent rides along in your code.</p>
+                </div>
+              </div>
+              <div className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 font-mono text-xs text-primary">
+                your code <ArrowRight className="size-3" /> agent
+              </div>
+              <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+                Keep your codebase as-is. The agent sits in the path of calls you already make — to
+                observe, modify, or deny them before they happen.
+              </p>
+              <ul className="mt-5 grid grid-cols-2 gap-2 text-sm">
+                {["Python & Node SDK", "API · DB · fn intercept", "Policies & guardrails", "Shadow → enforce"].map((f) => (
+                  <li key={f} className="flex items-center gap-2 text-foreground/80">
+                    <Check className="size-4 shrink-0 text-primary" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-5 flex flex-wrap gap-2">
+                <Button size="sm" asChild>
+                  <Link href="/sdk">
+                    Explore the SDK
+                    <ArrowRight className="size-4" />
+                  </Link>
+                </Button>
+                <Button size="sm" variant="outline" onClick={() => scrollTo("playground")}>
+                  Try the playground
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Divider */}
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+      </div>
+
+      {/* -- Agentify your codebase --------------------------------- */}
+      <AgentifySection />
+
+      {/* Divider */}
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+      </div>
+
+      {/* -- Interactive playground --------------------------------- */}
+      <Playground />
+
+      {/* Divider */}
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+      </div>
+
+      {/* -- How it works ------------------------------------------- */}
+      <section id="how-it-works" className="scroll-mt-20 py-24 md:py-32">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="mx-auto max-w-2xl text-center">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+              How it works
+            </p>
+            <h2 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
+              Up and running in minutes
+            </h2>
+          </div>
+
+          <div className="relative mt-20 grid gap-12 md:grid-cols-3 md:gap-8">
+            {/* Connecting line (desktop) */}
+            <div className="pointer-events-none absolute left-[16.67%] right-[16.67%] top-8 hidden h-px -translate-y-1/2 bg-gradient-to-r from-transparent via-border to-transparent md:block" />
+
+            {STEPS.map((step, i) => (
+              <div key={step.number} className="relative text-center">
+                {/* Number circle */}
+                <div className="relative z-10 mx-auto mb-6 flex size-16 items-center justify-center rounded-2xl border-2 border-primary/30 bg-card font-mono text-lg font-bold text-primary shadow-sm transition-all duration-300 hover:scale-105 hover:border-primary/50">
+                  {step.number}
+                </div>
+                <h3 className="text-lg font-semibold tracking-tight">
+                  {step.title}
+                </h3>
+                <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-muted-foreground">
+                  {step.description}
+                </p>
+                {/* Arrow (mobile) */}
+                {i < STEPS.length - 1 && (
+                  <div className="mt-8 flex justify-center text-border md:hidden">
+                    <ArrowRight className="size-5 rotate-90" />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Divider */}
+      <div className="mx-auto max-w-6xl px-6">
+        <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+      </div>
+
+      {/* -- Final CTA ---------------------------------------------- */}
+      <section className="py-24 md:py-32">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="relative overflow-hidden rounded-3xl  bg-gradient-to-br from-primary/10 via-card to-fuchsia-500/5 px-8 py-16 text-center md:px-16 md:py-20">
+            {/* Glow */}
+            <div
+              className="pointer-events-none absolute -top-24 left-1/2 h-72 w-[640px] -translate-x-1/2 rounded-full opacity-70 blur-3xl"
+              style={{
+                background:
+                  "radial-gradient(ellipse, color-mix(in oklch, var(--primary) 25%, transparent) 0%, transparent 70%)",
+              }}
+            />
+            {/* Dot pattern */}
+            <div
+              className="pointer-events-none absolute inset-0 opacity-60"
+              style={{
+                backgroundImage:
+                  "radial-gradient(circle, oklch(0.5 0 0 / 0.04) 1px, transparent 1px)",
+                backgroundSize: "24px 24px",
+              }}
+            />
+
+            <div className="relative">
+              <div className="mx-auto mb-6 flex size-14 items-center justify-center rounded-2xl bg-primary shadow-lg shadow-primary/30">
+                <Logo className="size-7 text-primary-foreground" />
+              </div>
+              <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+                Start building with AI agents today
+              </h2>
+              <p className="mx-auto mt-4 max-w-md text-muted-foreground">
+                Free, open source and self-hostable. Sign in with Google and your
+                workspace is ready in seconds.
+              </p>
+              <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+                {showSignIn && auth?.signInButton}
+                <Button variant="outline" size="lg" asChild>
+                  <a
+                    href={siteConfig.github}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Star className="size-4" />
+                    Star on GitHub
+                  </a>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* -- Footer ------------------------------------------------- */}
+      <footer className="border-t border-border">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 py-8 sm:flex-row">
+          <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
+            <div className="flex size-6 items-center justify-center rounded-md bg-primary">
+              <Logo className="size-3 text-primary-foreground" />
+            </div>
+            <span className="font-medium text-foreground">{siteConfig.name}</span>
+            <span className="text-border">/</span>
+            <span>MIT License</span>
+          </div>
+          <div className="flex items-center gap-6 text-sm">
+            <Link
+              href="/sdk"
+              className="text-muted-foreground transition-colors hover:text-foreground"
+            >
+              SDK
+            </Link>
+            <Link
+              href="/docs"
+              className="text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Docs
+            </Link>
+            <a
+              href={siteConfig.github}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-muted-foreground transition-colors hover:text-foreground"
+            >
+              GitHub
+            </a>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}

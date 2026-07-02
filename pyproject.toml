@@ -1,0 +1,22 @@
+[project]
+name = "ms"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+dependencies = [
+    "asyncpg>=0.31.0",
+    "cryptography>=44.0.0",
+    "fastapi>=0.128.3",
+    "fastmcp>=2.14.5",
+    "google-adk[a2a]>=1.27.0",
+    "tiktoken>=0.12.0",
+    "pyjwt>=2.0.0",
+    "uvicorn>=0.40.0",
+    "opik>=1.0.0",
+    "croniter>=6.0.0",
+]
+
+# examples/ are standalone uv projects (each has its own pyproject + .venv),
+# intentionally NOT workspace members so they stay self-contained.

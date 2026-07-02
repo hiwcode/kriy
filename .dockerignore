@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Frontend / SDK (not part of the backend image)
+web/
+sdk/
+examples/
+docs/
+
+# Local / VCS
+.git/
+.gitignore
+.env
+*.md
