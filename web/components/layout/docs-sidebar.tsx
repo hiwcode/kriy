@@ -35,6 +35,8 @@ import {
   Code2,
 } from "lucide-react";
 
+import Logo from "@/components/logo";
+
 type DocItem = { slug: string; name: string; href: string; icon: React.ComponentType<{ className?: string }> };
 type DocSection = { label: string; items: DocItem[] };
 
@@ -88,7 +90,6 @@ export function DocsSidebar() {
   const pathname = usePathname();
   const slug = pathname?.replace("/docs", "").replace(/^\//, "") ?? "";
   const isCollapsed = state === "collapsed";
-  const Logo = siteConfig.logo;
 
   return (
     <Sidebar collapsible="icon" className="border-r-0">
@@ -98,7 +99,7 @@ export function DocsSidebar() {
           className="flex items-center gap-3 transition-opacity hover:opacity-80"
         >
           <div className="flex items-center justify-center">
-            <Logo size={24} />
+            <Logo width={28} height={28} />
           </div>
           <div
             className={cn(

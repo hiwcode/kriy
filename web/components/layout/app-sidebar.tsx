@@ -19,12 +19,12 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { Badge } from "../ui/badge";
+import Logo from "@/components/logo";
 
 export function AppSidebar() {
   const { state } = useSidebar();
   const pathname = usePathname();
   const isCollapsed = state === "collapsed";
-  const Logo = siteConfig.logo;
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border/60 bg-sidebar">
@@ -39,7 +39,7 @@ export function AppSidebar() {
         >
           {/* Logo mark */}
           {!isCollapsed && <div className="relative flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary shadow-sm shadow-primary/25">
-            <Logo className="size-[18px] text-primary-foreground" />
+            <Logo width={28} height={28} />
             <span className="absolute -inset-px rounded-xl ring-1 ring-inset ring-white/10" />
           </div>}
 

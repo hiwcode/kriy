@@ -164,7 +164,7 @@ const uninstall = installFetch(atelier, { methods: ["POST", "PUT"] });`}</Code>
                 <Link href="/#playground">Try the playground</Link>
               </Button>
               <Button variant="outline" asChild>
-                <a href={siteConfig.github} target="_blank" rel="noopener noreferrer">
+                <a href={siteConfig.sdk_github} target="_blank" rel="noopener noreferrer">
                   <Github className="size-4" />
                   Read the source
                 </a>

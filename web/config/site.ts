@@ -44,7 +44,8 @@ export const siteConfig = {
   description: "AI Workspace",
   version: "0.1.0",
   logo: Ghost,
-  github: "https://github.com/hiwcode/Atelier-AI-Workspace",
+  github: "https://github.com/hiwcode/atelier",
+  sdk_github: "https://github.com/hiwcode/atelier-sdk",
 };
 
 // Navigation configuration

@@ -34,8 +34,11 @@ import {
   Code2,
   Workflow,
   Bell,
+  Heart,
+  Mail,
 } from "lucide-react";
 
+import Logo from "@/components/logo";
 /* ------------------------------------------------------------------ */
 /*  Static data                                                        */
 /* ------------------------------------------------------------------ */
@@ -501,7 +504,6 @@ export default function LandingPage() {
 
   if (auth?.isSignedIn) return null;
 
-  const Logo = siteConfig.logo;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -512,7 +514,7 @@ export default function LandingPage() {
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
               <div className="flex size-8 items-center justify-center rounded-lg bg-primary">
-                <Logo className="size-4 text-primary-foreground" />
+                <Logo width={24} height={24} />
               </div>
               <span className="text-lg font-semibold tracking-tight">
                 {siteConfig.name}
@@ -646,7 +648,7 @@ export default function LandingPage() {
 
             {/* Trust row */}
             <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs font-medium text-muted-foreground">
-              {["Open source · MIT", "Self-hostable", "No credit card"].map((item) => (
+              {["Source-available · FSL", "Self-hostable", "No credit card"].map((item) => (
                 <span key={item} className="inline-flex items-center gap-1.5">
                   <span className="size-1.5 rounded-full bg-primary/70" />
                   {item}
@@ -909,8 +911,8 @@ export default function LandingPage() {
             />
 
             <div className="relative">
-              <div className="mx-auto mb-6 flex size-14 items-center justify-center rounded-2xl bg-primary shadow-lg shadow-primary/30">
-                <Logo className="size-7 text-primary-foreground" />
+              <div className="mx-auto mb-6 flex size-14 items-center justify-center rounded-2xl bg-primary shadow-lg shadow-primary/30 overflow-clip">
+                <Logo width={48} height={48} />
               </div>
               <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
                 Start building with AI agents today
@@ -937,18 +939,54 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* -- Support & contact -------------------------------------- */}
+      <section id="support" className="scroll-mt-20 border-t border-border py-24 md:py-32">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="mx-auto max-w-2xl text-center">
+            <div className="mx-auto mb-6 flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-inset ring-primary/10">
+              <Heart className="size-6" />
+            </div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+              Support
+            </p>
+            <h2 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
+              Support the project
+            </h2>
+            <p className="mt-4 text-muted-foreground">
+              Atelier is free and source-available, built and maintained in the open.
+              If it helps you, consider supporting it — donations, feature sponsorships,
+              and commercial-licensing enquiries are all welcome.
+            </p>
+            <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+              <Button size="lg" asChild>
+                <a href="mailto:contract@gethowitworks.com?subject=Atelier%20%E2%80%94%20Support%20%2F%20Donate">
+                  <Heart className="size-4" />
+                  Donate / Get in touch
+                </a>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* -- Footer ------------------------------------------------- */}
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 py-8 sm:flex-row">
           <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
             <div className="flex size-6 items-center justify-center rounded-md bg-primary">
-              <Logo className="size-3 text-primary-foreground" />
+              <Logo width={24} height={24} />
             </div>
             <span className="font-medium text-foreground">{siteConfig.name}</span>
             <span className="text-border">/</span>
-            <span>MIT License</span>
+            <span>FSL-1.1-MIT</span>
           </div>
           <div className="flex items-center gap-6 text-sm">
+            <a
+              href="mailto:contract@gethowitworks.com"
+              className="text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Contact
+            </a>
             <Link
               href="/sdk"
               className="text-muted-foreground transition-colors hover:text-foreground"
