@@ -4,7 +4,10 @@
   "private": true,
   "license": "SEE LICENSE IN LICENSE.md",
   "scripts": {
+    "copy-docs": "node scripts/copy-docs.mjs",
+    "predev": "node scripts/copy-docs.mjs",
     "dev": "next dev --turbopack --port 3004",
+    "prebuild": "node scripts/copy-docs.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"

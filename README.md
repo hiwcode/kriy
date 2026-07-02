@@ -5,11 +5,7 @@
 
 > **Atelier** is a full-stack AI agent orchestration platform for building, configuring, and managing AI agents with streaming chat, tool integrations, persistent memory, and collaborative workspaces.
 
-**📖 [Read the Docs →](docs/README.md)** — setup, usage, and everything else lives here.
-
-[Click to Watch demo](web/public/demo.MOV)
-Orchestrator
-Agent Configurations
+**📖 [Read the Docs →](https://ai.gethowitworks.com/docs)** — setup, usage, and everything else lives here.
 
 ---
 
@@ -19,7 +15,7 @@ An **AI Workspace** for creating and managing AI agents across multiple LLM prov
 
 **Highlights:** multi-LLM support · team workspaces with RBAC · agent + skill builder · streaming chat · visual multi-agent orchestrator · MCP / database / file / Claude Code tools · cron scheduling · session & facts memory · Slack integration · Opik observability.
 
-Full architecture, tech stack, feature reference, and project layout are in the **[docs](docs/README.md)**.
+Full architecture, tech stack, feature reference, and project layout are in the **[docs](https://ai.gethowitworks.com/docs)**.
 
 ---
 

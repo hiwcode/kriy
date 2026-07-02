@@ -43,7 +43,7 @@ export default function DocsPage() {
   React.useEffect(() => {
     setLoading(true);
     setError(null);
-    fetch(`/api/docs/${mdPath}`)
+    fetch(`/docs-md/${mdPath}`)
       .then((res) => {
         if (!res.ok) throw new Error("Document not found");
         return res.text();

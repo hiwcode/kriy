@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+# generated docs (copied from ../docs at build time)
+/public/docs-md/
+
 # production
 /build
 
