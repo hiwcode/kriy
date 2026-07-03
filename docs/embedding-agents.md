@@ -91,6 +91,72 @@ const uninstall = installFetch(atelier, { methods: ["POST", "PUT"] });  // patch
 
 ---
 
+## The rest of the SDK
+
+`guard()` is the common case, but the SDK exposes the full decision surface.
+
+### `decide` — get the verdict without applying it
+
+Inspect what the agent would do (decision, reason, confidence, whether it changed the payload) and decide for yourself.
+
+```python
+v = atelier.decide("http.post", body, schema=ORDER_SCHEMA)
+print(v.decision, v.reason, v.confidence, v.changed)
+```
+
+```ts
+const v = await atelier.decide("http.post", body, { schema: ORDER_SCHEMA });
+console.log(v.decision, v.reason, v.confidence, v.changed);
+```
+
+### `wrap` / `@intercept` — guard a function
+
+Wrap a function so its payload argument is guarded before it runs.
+
+```python
+@atelier.intercept("fn.charge", mutable_fields=["amount"])
+def charge(payload):
+    return gateway.charge(payload)
+```
+
+```ts
+import { wrap } from "@atelier/agentic";
+
+const charge = wrap(atelier, "fn.charge", (p) => gateway.charge(p), {
+  mutableFields: ["amount"],
+});
+await charge({ card, amount: 100 });
+```
+
+### `emit` — fire-and-forget an event
+
+Where `guard`/`decide` sit *in the path* of one action, `emit` reports that **something happened** and lets Atelier run whatever server-side **workflows** match it (each picks its own agent). No `agent_id` needed. See [Event Workflows](using-event-workflows.md) for the full flow.
+
+```python
+atelier = AtelierClient(api_key="ate-...")          # no agent_id required for emit
+atelier.emit("todo.completed", {"todos": todos})
+# -> {"event": "todo.completed", "matched": 2, "run_ids": [...]}
+```
+
+```ts
+const atelier = new AtelierClient({ apiKey: "ate-..." });
+await atelier.emit("todo.completed", { todos });
+```
+
+### `trigger` — run a full agent turn
+
+Fire an event at **this client's agent** and let it react through its own tools (a full agent turn). Returns the agent's text response.
+
+```python
+summary = atelier.trigger("todo.completed", context={"todos": todos})
+```
+
+```ts
+const summary = await atelier.trigger("todo.completed", { context: { todos } });
+```
+
+---
+
 ## The verdict contract
 
 Every decision point hits one endpoint:

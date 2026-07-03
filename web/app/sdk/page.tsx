@@ -151,6 +151,57 @@ install_requests(atelier, methods=["POST", "PUT"])  # JSON bodies now guarded`}<
 const uninstall = installFetch(atelier, { methods: ["POST", "PUT"] });`}</Code>
           </Section>
 
+          <Section eyebrow="Full surface" title="Beyond guard">
+            <p className="text-muted-foreground">
+              <code className="rounded bg-muted px-1 text-sm">guard()</code> is the common case, but the SDK
+              exposes the whole decision surface.
+            </p>
+
+            <p className="mb-1.5 text-sm font-medium">
+              <code className="font-mono">decide</code> — get the verdict without applying it
+            </p>
+            <Code>{`# Python
+v = atelier.decide("http.post", body, schema=ORDER_SCHEMA)
+print(v.decision, v.reason, v.confidence, v.changed)`}</Code>
+            <Code>{`// Node
+const v = await atelier.decide("http.post", body, { schema: ORDER_SCHEMA });
+console.log(v.decision, v.reason, v.confidence, v.changed);`}</Code>
+
+            <p className="mb-1.5 mt-4 text-sm font-medium">
+              <code className="font-mono">wrap</code> / <code className="font-mono">@intercept</code> — guard a function
+            </p>
+            <Code>{`# Python
+@atelier.intercept("fn.charge", mutable_fields=["amount"])
+def charge(payload):
+    return gateway.charge(payload)`}</Code>
+            <Code>{`// Node
+const charge = wrap(atelier, "fn.charge", (p) => gateway.charge(p), {
+  mutableFields: ["amount"],
+});`}</Code>
+
+            <p className="mb-1.5 mt-4 text-sm font-medium">
+              <code className="font-mono">emit</code> — fire-and-forget an event
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Report that something happened and let server-side{" "}
+              <Link href="/docs/using-event-workflows" className="underline underline-offset-2">workflows</Link>{" "}
+              react (each picks its own agent). No <code className="font-mono">agent_id</code> needed.
+            </p>
+            <Code>{`# Python
+atelier = AtelierClient(api_key="ate-...")   # no agent_id for emit
+atelier.emit("todo.completed", {"todos": todos})`}</Code>
+            <Code>{`// Node
+await atelier.emit("todo.completed", { todos });`}</Code>
+
+            <p className="mb-1.5 mt-4 text-sm font-medium">
+              <code className="font-mono">trigger</code> — run a full agent turn
+            </p>
+            <Code>{`# Python
+summary = atelier.trigger("todo.completed", context={"todos": todos})`}</Code>
+            <Code>{`// Node
+const summary = await atelier.trigger("todo.completed", { context: { todos } });`}</Code>
+          </Section>
+
           <Section eyebrow="Policies" title="Bound what the agent may do">
             <p className="text-muted-foreground">
               Per-call-site detail lives in code (the <code className="rounded bg-muted px-1 text-sm">action</code>,{" "}
