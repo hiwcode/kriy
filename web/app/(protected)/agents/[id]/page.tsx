@@ -265,6 +265,7 @@ function ConfigurationContent({
   >({});
   const [a2aNewUrl, setA2aNewUrl] = React.useState("");
   const [a2aNewName, setA2aNewName] = React.useState("");
+  const [a2aNewHeaders, setA2aNewHeaders] = React.useState("");
 
   const toolsArray = Array.isArray(formState.tools) ? formState.tools : [];
 
@@ -712,21 +713,43 @@ function ConfigurationContent({
                         onClick={() => {
                           const url = a2aNewUrl.trim();
                           if (!url) return;
+                          let headers: Record<string, string> | undefined;
+                          const raw = a2aNewHeaders.trim();
+                          if (raw) {
+                            try {
+                              const parsed = JSON.parse(raw);
+                              if (parsed && typeof parsed === "object") {
+                                headers = Object.fromEntries(
+                                  Object.entries(parsed).map(([k, v]) => [k, String(v)])
+                                );
+                              }
+                            } catch {
+                              toast.error("Auth headers must be valid JSON, e.g. {\"Authorization\":\"Bearer …\"}");
+                              return;
+                            }
+                          }
                           setFormState((prev) => ({
                             ...prev,
                             a2a_connections: [
                               ...prev.a2a_connections,
-                              { url, name: a2aNewName.trim() || "external_agent" },
+                              { url, name: a2aNewName.trim() || "external_agent", headers },
                             ],
                           }));
                           setA2aNewUrl("");
                           setA2aNewName("");
+                          setA2aNewHeaders("");
                         }}
                       >
                         <Plus className="size-4 mr-1" />
                         Add
                       </Button>
                     </div>
+                    <Input
+                      placeholder='Optional auth headers as JSON, e.g. {"Authorization":"Bearer …"}'
+                      value={a2aNewHeaders}
+                      onChange={(e) => setA2aNewHeaders(e.target.value)}
+                      className="font-mono text-xs"
+                    />
                     {formState.a2a_connections.length > 0 && (
                       <ul className="space-y-2 rounded-lg border border-border bg-muted/20 p-2">
                         {formState.a2a_connections.map((c, i) => (
@@ -994,6 +1017,8 @@ function ConfigurationContent({
 interface A2aConnection {
   url: string;
   name: string;
+  /** Optional auth headers sent when calling this external agent (stored encrypted). */
+  headers?: Record<string, string>;
 }
 
 type AgentType = "local" | "a2a";
@@ -2222,10 +2247,14 @@ export default function AgentDetailPage() {
           const a2aRaw = extra.a2a_connections;
           const a2a_connections: A2aConnection[] = Array.isArray(a2aRaw)
             ? a2aRaw
-                .filter((c): c is { url?: string; name?: string } => c != null && typeof c === "object")
+                .filter((c): c is { url?: string; name?: string; headers?: unknown } => c != null && typeof c === "object")
                 .map((c) => ({
                   url: String(c.url ?? "").trim(),
                   name: String(c.name ?? "external_agent").trim() || "external_agent",
+                  headers:
+                    c.headers && typeof c.headers === "object" && !("__enc__" in (c.headers as object))
+                      ? (c.headers as Record<string, string>)
+                      : undefined,
                 }))
                 .filter((c) => c.url)
             : [];
@@ -2312,7 +2341,11 @@ export default function AgentDetailPage() {
         ...baseExtra,
         a2a_connections: formState.a2a_connections
           .filter((c) => c.url.trim())
-          .map((c) => ({ url: c.url.trim(), name: c.name || "external_agent" })),
+          .map((c) => ({
+            url: c.url.trim(),
+            name: c.name || "external_agent",
+            ...(c.headers && Object.keys(c.headers).length ? { headers: c.headers } : {}),
+          })),
       };
       if (formState.agent_type === "a2a") {
         extraFields.type = "a2a";

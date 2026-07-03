@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.responses import JSONResponse
 
 from app.api.router import router as api_router
 from app.core.config import settings
@@ -19,6 +20,21 @@ if settings.GOOGLE_API_KEY:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # Verify secrets encryption is correctly configured before anything reads or
+    # writes encrypted data. A missing/invalid ENCRYPTION_KEY otherwise fails
+    # silently at runtime, so surface it loudly at startup.
+    try:
+        from app.core.encryption import verify_encryption_key
+
+        verify_encryption_key()
+        logger.info("ENCRYPTION_KEY verified — secrets encryption is active")
+    except Exception:
+        logger.critical(
+            "ENCRYPTION_KEY is missing or invalid — secret storage will fail. "
+            "Generate one: python -c \"from cryptography.fernet import Fernet; "
+            "print(Fernet.generate_key().decode())\" and set ENCRYPTION_KEY.",
+        )
+
     await init_db(app)
 
     # Mount A2A endpoints for every agent in the database
@@ -74,6 +90,37 @@ app.add_middleware(
     allow_headers=["*"],
 )
 app.include_router(api_router)
+
+
+@app.middleware("http")
+async def a2a_auth_middleware(request, call_next):
+    """Gate the A2A-hosted agent endpoints (/a2a/{id}/) with an API key.
+
+    Invoking an agent over A2A requires a valid per-user API key (``X-API-Key``),
+    matching the rest of the API. Discovery stays open: the agent card at
+    ``/.well-known/agent.json`` and CORS preflight (OPTIONS) are allowed through
+    so clients can still discover capabilities.
+    """
+    path = request.url.path
+    if (
+        path.startswith("/a2a/")
+        and request.method != "OPTIONS"
+        and "/.well-known/" not in path
+    ):
+        api_key = request.headers.get("X-API-Key") or request.headers.get("x-api-key")
+        pool = getattr(request.app.state, "db_pool", None)
+        user_id = None
+        if pool is not None and api_key:
+            from app.repositories import user_api_key_repo
+
+            user_id = await user_api_key_repo.get_user_by_key(pool, api_key)
+        if user_id is None:
+            return JSONResponse(
+                {"detail": "A2A access requires a valid API key (X-API-Key)."},
+                status_code=401,
+            )
+    return await call_next(request)
+
 
 @app.get("/")
 async def health():

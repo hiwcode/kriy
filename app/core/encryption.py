@@ -62,6 +62,21 @@ def decrypt(ciphertext: str) -> str:
         return ciphertext
 
 
+def verify_encryption_key() -> None:
+    """Fail fast if ENCRYPTION_KEY is missing or invalid.
+
+    Runs a round-trip self-test (encrypt → decrypt a sentinel). Because `decrypt`
+    otherwise swallows failures (to tolerate legacy plaintext), a misconfigured
+    key would silently corrupt how secrets round-trip — this surfaces it at boot.
+    Raises EncryptionError on any problem.
+    """
+    sentinel = "atelier-encryption-self-test"
+    f = _get_fernet()  # raises EncryptionError if key missing/invalid
+    token = f.encrypt(sentinel.encode("utf-8"))
+    if f.decrypt(token).decode("utf-8") != sentinel:
+        raise EncryptionError("ENCRYPTION_KEY self-test failed (round-trip mismatch).")
+
+
 def encrypt_or_none(value: str | None) -> str | None:
     """Encrypt if value is not None."""
     return encrypt(value) if value else value

@@ -35,7 +35,10 @@ import {
   Workflow,
   Bell,
   Heart,
-  Mail,
+  ShieldCheck,
+  Lock,
+  KeyRound,
+  Server,
 } from "lucide-react";
 
 import Logo from "@/components/logo";
@@ -112,6 +115,33 @@ const STEPS = [
     title: "Chat and orchestrate",
     description:
       "Stream conversations in real-time, design multi-agent workflows, and invite your team to collaborate.",
+  },
+];
+
+const SECURITY = [
+  {
+    icon: Lock,
+    title: "Secrets encrypted at rest",
+    description:
+      "API keys, provider tokens, MCP credentials, and email passwords are encrypted with AES (Fernet) before they ever touch the database.",
+  },
+  {
+    icon: KeyRound,
+    title: "Keys & tokens hashed",
+    description:
+      "Your API keys, login sessions, and invite links are stored only as one-way hashes — never in plaintext.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Scoped, authenticated access",
+    description:
+      "Workspace role-based access control, per-user API keys, and API-key-gated agent endpoints keep access locked down.",
+  },
+  {
+    icon: Server,
+    title: "Self-hostable — your data stays yours",
+    description:
+      "Run Atelier on your own infrastructure with your own keys. Nothing leaves your servers unless you send it.",
   },
 ];
 
@@ -887,6 +917,49 @@ export default function LandingPage() {
       <div className="mx-auto max-w-6xl px-6">
         <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
       </div>
+
+      {/* -- Security / Trust --------------------------------------- */}
+      <section id="security" className="scroll-mt-20 border-t border-border py-24 md:py-32">
+        <div className="mx-auto max-w-6xl px-6">
+          <div className="mx-auto max-w-2xl text-center">
+            <div className="mx-auto mb-6 flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-inset ring-primary/10">
+              <ShieldCheck className="size-6" />
+            </div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+              Security
+            </p>
+            <h2 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
+              Your keys and data stay protected
+            </h2>
+            <p className="mt-4 text-muted-foreground">
+              Atelier is built to hold sensitive credentials safely — encrypted at rest,
+              hashed where it counts, and scoped to you.
+            </p>
+          </div>
+
+          <div className="mt-14 grid gap-5 sm:grid-cols-2">
+            {SECURITY.map((item) => {
+              const Icon = item.icon;
+              return (
+                <div
+                  key={item.title}
+                  className="flex gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm"
+                >
+                  <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-inset ring-primary/10">
+                    <Icon className="size-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold tracking-tight">{item.title}</h3>
+                    <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                      {item.description}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
 
       {/* -- Final CTA ---------------------------------------------- */}
       <section className="py-24 md:py-32">

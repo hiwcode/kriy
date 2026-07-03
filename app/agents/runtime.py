@@ -534,9 +534,19 @@ async def build_agent_from_config(
                     name = conn.get("name") or "external_agent"
                     if url and isinstance(url, str) and url.strip():
                         try:
+                            conn_headers = conn.get("headers") or {}
+                            if not isinstance(conn_headers, dict):
+                                conn_headers = {}
+                            kwargs: dict[str, Any] = {}
+                            if conn_headers:
+                                kwargs["httpx_client"] = httpx.AsyncClient(
+                                    timeout=httpx.Timeout(timeout=60),
+                                    headers={str(k): str(v) for k, v in conn_headers.items()},
+                                )
                             remote = RemoteA2aAgent(
                                 name=str(name).strip(),
                                 agent_card=_agent_card_url(url),
+                                **kwargs,
                             )
                             tools = list(tools) + [AgentTool(agent=remote)]
                             logger.info("Added A2A tool: %s at %s", name, url)

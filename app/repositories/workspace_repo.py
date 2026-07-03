@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 from datetime import datetime
@@ -10,6 +11,15 @@ import asyncpg
 from app.core.tokens import count_tokens
 
 logger = logging.getLogger(__name__)
+
+
+def _hash_invite_token(token: str) -> str:
+    """Hash an invite token for storage/lookup (same scheme as user API keys).
+
+    The raw token is only ever shown once, at creation; the DB stores just this
+    hash, so a database leak can't be used to accept invites.
+    """
+    return hashlib.sha256(token.encode()).hexdigest()
 
 
 async def get_workspace(pool: asyncpg.Pool, workspace_id: int) -> dict[str, Any] | None:
@@ -278,13 +288,13 @@ async def create_invite(
         """
         INSERT INTO workspace_invites (workspace_id, email, role, invited_by, token, expires_at)
         VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING id, workspace_id, email, role, invited_by, token, expires_at, status, created_at
+        RETURNING id, workspace_id, email, role, invited_by, expires_at, status, created_at
         """,
         workspace_id,
         email.lower().strip(),
         role,
         invited_by,
-        token,
+        _hash_invite_token(token),
         expires_at,
     )
     return dict(row) if row else {}
@@ -298,7 +308,7 @@ async def get_invite_by_token(pool: asyncpg.Pool, token: str) -> dict[str, Any] 
         JOIN workspaces w ON w.id = i.workspace_id
         WHERE i.token = $1 AND i.status = 'pending' AND i.expires_at > NOW()
         """,
-        token,
+        _hash_invite_token(token),
     )
     return dict(row) if row else None
 

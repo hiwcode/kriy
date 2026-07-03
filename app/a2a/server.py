@@ -134,9 +134,12 @@ async def mount_all_a2a(app: Any, pool: asyncpg.Pool) -> int:
         "FROM agents ORDER BY id"
     )
 
+    from app.repositories.agent_repo import hydrate_extra_fields
+
     count = 0
     for row in rows:
         agent_config = dict(row)
+        agent_config["extra_fields"] = hydrate_extra_fields(agent_config.get("extra_fields"))
         agent_id = agent_config["id"]
         mount_path = f"/a2a/{agent_id}/"
 

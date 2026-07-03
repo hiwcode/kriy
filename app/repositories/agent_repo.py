@@ -3,10 +3,87 @@ from __future__ import annotations
 from typing import Any
 
 import json
+import logging
 
 import asyncpg
 
+from app.core.encryption import decrypt, encrypt
 from app.db.filters import build_order_by, build_where
+
+logger = logging.getLogger(__name__)
+
+# A2A external-agent auth headers can carry bearer tokens / API keys, so their
+# values are encrypted at rest inside the extra_fields JSONB.
+_A2A_HEADERS_KEY = "a2a_headers"
+_ENC_MARKER = "__enc__"
+
+
+def _enc_headers(headers: Any) -> Any:
+    """Encrypt a headers dict into a {__enc__: <cipher>} envelope (idempotent)."""
+    if isinstance(headers, dict) and headers and _ENC_MARKER not in headers:
+        return {_ENC_MARKER: encrypt(json.dumps(headers))}
+    return headers
+
+
+def _dec_headers(headers: Any) -> Any:
+    """Reverse of {@link _enc_headers}. Leaves plaintext/undecryptable values as-is."""
+    if isinstance(headers, dict) and _ENC_MARKER in headers:
+        try:
+            decrypted = json.loads(decrypt(headers[_ENC_MARKER]))
+            if isinstance(decrypted, dict):
+                return decrypted
+        except Exception:  # noqa: BLE001 — leave as-is if it can't be decrypted
+            logger.warning("Failed to decrypt A2A headers; leaving encrypted")
+    return headers
+
+
+def _map_connection_headers(extra: dict[str, Any], fn) -> list[Any] | None:
+    """Apply `fn` to each a2a_connections[*].headers; return a new list or None."""
+    conns = extra.get("a2a_connections")
+    if not isinstance(conns, list):
+        return None
+    out = []
+    for c in conns:
+        if isinstance(c, dict) and "headers" in c:
+            out.append({**c, "headers": fn(c["headers"])})
+        else:
+            out.append(c)
+    return out
+
+
+def _encrypt_extra_fields(extra: dict[str, Any]) -> dict[str, Any]:
+    """Encrypt sensitive sub-fields (A2A auth headers) before storing extra_fields.
+
+    Covers both the standalone agent's `a2a_headers` and each external
+    connection's `a2a_connections[*].headers`.
+    """
+    result = dict(extra)
+    if _A2A_HEADERS_KEY in result:
+        result[_A2A_HEADERS_KEY] = _enc_headers(result[_A2A_HEADERS_KEY])
+    conns = _map_connection_headers(result, _enc_headers)
+    if conns is not None:
+        result["a2a_connections"] = conns
+    return result
+
+
+def _decrypt_extra_fields(extra: dict[str, Any]) -> dict[str, Any]:
+    """Reverse of {@link _encrypt_extra_fields} when reading extra_fields."""
+    result = dict(extra)
+    if _A2A_HEADERS_KEY in result:
+        result[_A2A_HEADERS_KEY] = _dec_headers(result[_A2A_HEADERS_KEY])
+    conns = _map_connection_headers(result, _dec_headers)
+    if conns is not None:
+        result["a2a_connections"] = conns
+    return result
+
+
+def hydrate_extra_fields(value: Any) -> dict[str, Any]:
+    """Normalize + decrypt extra_fields for readers — single source of truth.
+
+    Use this whenever an agent row is read outside `_row_to_dict` (e.g. raw SQL),
+    so encrypted sub-fields like A2A auth headers come back usable.
+    """
+    return _decrypt_extra_fields(_normalize_extra_fields(value))
 
 
 def _row_to_dict(row: asyncpg.Record | None) -> dict[str, Any] | None:
@@ -14,7 +91,7 @@ def _row_to_dict(row: asyncpg.Record | None) -> dict[str, Any] | None:
         return None
     d = dict(row)
     if "extra_fields" in d:
-        d["extra_fields"] = _normalize_extra_fields(d["extra_fields"])
+        d["extra_fields"] = hydrate_extra_fields(d["extra_fields"])
     return d
 
 
@@ -22,6 +99,11 @@ def _to_jsonb(value: Any) -> str | None:
     if value is None:
         return None
     return json.dumps(value)
+
+
+def _extra_fields_to_jsonb(value: Any) -> str | None:
+    """Normalize + encrypt sensitive sub-fields, then serialize for storage."""
+    return _to_jsonb(_encrypt_extra_fields(_normalize_extra_fields(value or {})))
 
 
 def _normalize_extra_fields(value: Any) -> dict[str, Any]:
@@ -117,7 +199,7 @@ async def create_agent(
         instruction,
         instruction_prompt_id,
         _to_jsonb(tools or []),
-        _to_jsonb(_normalize_extra_fields(extra_fields or {})),
+        _extra_fields_to_jsonb(extra_fields),
         is_orchestrator,
         sub_agent_ids or [],
         skill_ids or [],
@@ -255,7 +337,7 @@ async def update_agent(
         if field in payload:
             set_clauses.append(f"{field} = ${index}")
             if field == "extra_fields":
-                values.append(_to_jsonb(_normalize_extra_fields(payload[field])))
+                values.append(_extra_fields_to_jsonb(payload[field]))
             elif field == "tools":
                 values.append(_to_jsonb(payload[field]))
             elif field in ("sub_agent_ids", "skill_ids"):
