@@ -1072,6 +1072,18 @@ export default function LandingPage() {
             >
               Docs
             </Link>
+            <Link
+              href="/privacy"
+              className="text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Privacy
+            </Link>
+            <Link
+              href="/terms"
+              className="text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Terms
+            </Link>
             <a
               href={siteConfig.github}
               target="_blank"
