@@ -5,6 +5,7 @@ import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/components/auth/auth-provider";
 import { BackendHealthProvider } from "@/components/backend-health-provider";
 import { Toaster } from "@/components/ui/sonner";
+import { themeInitScript } from "@/config/theme";
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -27,6 +28,8 @@ export default function RootLayout({
       <body
         className={`${poppins.className} antialiased`}
       >
+        {/* Apply saved accent + contrast before paint (no theme flash on load). */}
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript() }} />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"

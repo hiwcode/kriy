@@ -50,7 +50,10 @@ import {
   AlertTriangle,
   type LucideIcon,
   SlackIcon,
+  Palette,
 } from "lucide-react";
+import { AccentPicker } from "@/components/accent-picker";
+import { ContrastToggle } from "@/components/contrast-toggle";
 
 const MODELS = [
   "gemini-2.5-flash",
@@ -372,6 +375,33 @@ export default function ConfigPage() {
               </div>
             </div>
           </div>
+
+          {/* Appearance */}
+          <section className="space-y-3">
+            <div className="px-1">
+              <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                Appearance
+              </h2>
+            </div>
+            <div className="rounded-2xl border bg-card p-4 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <Palette className="size-[18px]" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">Accent color</p>
+                  <p className="text-xs text-muted-foreground">
+                    Personalize the theme. Green is the default; pick any color and it
+                    applies everywhere instantly.
+                  </p>
+                </div>
+              </div>
+              <AccentPicker className="mt-4" />
+              <div className="mt-4 border-t pt-4">
+                <ContrastToggle />
+              </div>
+            </div>
+          </section>
 
           {/* AI & Models */}
           <section className="space-y-3">
