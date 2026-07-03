@@ -20,6 +20,8 @@ class UserConfigUpdate(BaseModel):
     slack_default_channel: str | None = None
     slack_default_agent_id: int | None = None
     slack_enabled: bool | None = None
+    gmail_address: str | None = None
+    gmail_app_password: str | None = None
 
 
 class UserConfigOut(BaseModel):
@@ -40,5 +42,7 @@ class UserConfigOut(BaseModel):
     slack_default_channel: str | None
     slack_default_agent_id: int | None
     slack_enabled: bool | None
+    gmail_address: str | None
+    gmail_app_password: str | None
     created_at: str
     updated_at: str

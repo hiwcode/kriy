@@ -51,6 +51,7 @@ import {
   type LucideIcon,
   SlackIcon,
   Palette,
+  Mail,
 } from "lucide-react";
 import { AccentPicker } from "@/components/accent-picker";
 import { ContrastToggle } from "@/components/contrast-toggle";
@@ -224,7 +225,7 @@ export default function ConfigPage() {
   const [error, setError] = React.useState<string | null>(null);
 
   // which dialog is open
-  const [openDialog, setOpenDialog] = React.useState<null | "providers" | "apikey" | "opik" | "slack">(null);
+  const [openDialog, setOpenDialog] = React.useState<null | "providers" | "apikey" | "opik" | "slack" | "gmail">(null);
 
   // API key flow
   const [newApiKey, setNewApiKey] = React.useState<string | null>(null);
@@ -272,6 +273,8 @@ export default function ConfigPage() {
           slack_default_channel: config.slack_default_channel ?? null,
           slack_default_agent_id: config.slack_default_agent_id ?? null,
           slack_enabled: config.slack_enabled ?? false,
+          gmail_address: config.gmail_address ?? null,
+          gmail_app_password: config.gmail_app_password ?? null,
         };
         const updated = await updateUserConfig({ ...base, ...patch });
         setConfig(updated);
@@ -471,6 +474,20 @@ export default function ConfigPage() {
               }
               onClick={() => setOpenDialog("slack")}
             />
+
+            <SettingRow
+              icon={Mail}
+              title="Email (Gmail)"
+              description="Let agents send email from your Gmail via the send_email tool"
+              status={
+                <StatusBadge
+                  active={!!config?.gmail_address && !!config?.gmail_app_password}
+                  activeLabel="Connected"
+                  inactiveLabel="Not configured"
+                />
+              }
+              onClick={() => setOpenDialog("gmail")}
+            />
           </section>
         </div>
 
@@ -496,6 +513,13 @@ export default function ConfigPage() {
               onOpenChange={(o) => setOpenDialog(o ? "slack" : null)}
               config={config}
               agents={agents}
+              saving={saving}
+              onSave={saveConfig}
+            />
+            <GmailDialog
+              open={openDialog === "gmail"}
+              onOpenChange={(o) => setOpenDialog(o ? "gmail" : null)}
+              config={config}
               saving={saving}
               onSave={saveConfig}
             />
@@ -609,6 +633,96 @@ function ProvidersDialog({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+        </div>
+
+        <DialogFooter showCloseButton>
+          <Button onClick={submit} disabled={saving}>
+            {saving ? <RefreshCw className="size-4 animate-spin" /> : <Save className="size-4" />}
+            {saving ? "Saving…" : "Save changes"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Dialog: Email (Gmail)                                              */
+/* ------------------------------------------------------------------ */
+
+function GmailDialog({
+  open,
+  onOpenChange,
+  config,
+  saving,
+  onSave,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  config: UserConfig;
+  saving: boolean;
+  onSave: (patch: ConfigPayload) => Promise<boolean>;
+}) {
+  const [address, setAddress] = React.useState("");
+  const [appPassword, setAppPassword] = React.useState("");
+
+  React.useEffect(() => {
+    if (open) {
+      setAddress(config.gmail_address ?? "");
+      setAppPassword(config.gmail_app_password ?? "");
+    }
+  }, [open, config]);
+
+  const submit = async () => {
+    const ok = await onSave({
+      gmail_address: address.trim() || null,
+      gmail_app_password: appPassword.trim() || null,
+    });
+    if (ok) onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Mail className="size-5 text-primary" />
+            Email (Gmail)
+          </DialogTitle>
+          <DialogDescription>
+            Connect Gmail so agents can send email with the <code>send_email</code> tool.
+            Uses an App Password over SMTP — stored encrypted at rest.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-1">
+          <div className="space-y-2">
+            <Label htmlFor="gmail-address">Gmail address</Label>
+            <Input
+              id="gmail-address"
+              type="email"
+              value={address}
+              onChange={(e) => setAddress(e.target.value)}
+              placeholder="you@gmail.com"
+              autoComplete="off"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="gmail-app-password">App Password</Label>
+            <SecretInput
+              id="gmail-app-password"
+              value={appPassword}
+              onChange={setAppPassword}
+              placeholder="16-character app password"
+            />
+            <p className="text-xs text-muted-foreground">
+              Requires 2-Step Verification. Create one at{" "}
+              <FieldLink href="https://myaccount.google.com/apppasswords">
+                Google App Passwords
+              </FieldLink>
+              {" "}— this is not your account password.
+            </p>
           </div>
         </div>
 

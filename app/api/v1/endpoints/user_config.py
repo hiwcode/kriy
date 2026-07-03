@@ -50,6 +50,8 @@ async def get_config(
             "slack_default_channel": None,
             "slack_default_agent_id": None,
             "slack_enabled": False,
+            "gmail_address": None,
+            "gmail_app_password": None,
         }
     return {
         "success": True,
@@ -94,6 +96,8 @@ async def update_config(
         "slack_default_channel",
         "slack_default_agent_id",
         "slack_enabled",
+        "gmail_address",
+        "gmail_app_password",
     ):
         if field in payload:
             kwargs[field] = payload[field]

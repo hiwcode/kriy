@@ -12,6 +12,7 @@ _COLUMNS = (
     "user_id, google_api_key, openai_api_key, anthropic_api_key, default_model, "
     "opik_api_key, opik_workspace, opik_project_name, opik_url_override, opik_enabled, "
     "slack_bot_token, slack_signing_secret, slack_app_token, slack_bot_user_id, slack_default_channel, slack_default_agent_id, slack_enabled, "
+    "gmail_address, gmail_app_password, "
     "created_at, updated_at"
 )
 
@@ -25,6 +26,7 @@ def _decrypt_row(row: dict[str, Any]) -> dict[str, Any]:
     result["slack_bot_token"] = decrypt_or_none(result.get("slack_bot_token"))
     result["slack_signing_secret"] = decrypt_or_none(result.get("slack_signing_secret"))
     result["slack_app_token"] = decrypt_or_none(result.get("slack_app_token"))
+    result["gmail_app_password"] = decrypt_or_none(result.get("gmail_app_password"))
     return result
 
 
@@ -60,6 +62,8 @@ async def upsert_config(
     slack_default_channel: Any = _UNCHANGED,
     slack_default_agent_id: Any = _UNCHANGED,
     slack_enabled: Any = _UNCHANGED,
+    gmail_address: Any = _UNCHANGED,
+    gmail_app_password: Any = _UNCHANGED,
 ) -> dict[str, Any]:
     """Upsert config. Omit kwargs for fields to leave unchanged."""
     existing = await get_config(pool, user_id)
@@ -80,6 +84,8 @@ async def upsert_config(
         s_default_channel = slack_default_channel if slack_default_channel is not _UNCHANGED else existing.get("slack_default_channel")
         s_default_agent_id = slack_default_agent_id if slack_default_agent_id is not _UNCHANGED else existing.get("slack_default_agent_id")
         s_enabled = slack_enabled if slack_enabled is not _UNCHANGED else existing.get("slack_enabled")
+        g_addr = gmail_address if gmail_address is not _UNCHANGED else existing.get("gmail_address")
+        g_pass = gmail_app_password if gmail_app_password is not _UNCHANGED else existing.get("gmail_app_password")
     else:
         gkey = google_api_key if google_api_key is not _UNCHANGED else None
         oai_key = openai_api_key if openai_api_key is not _UNCHANGED else None
@@ -97,12 +103,15 @@ async def upsert_config(
         s_default_channel = slack_default_channel if slack_default_channel is not _UNCHANGED else None
         s_default_agent_id = slack_default_agent_id if slack_default_agent_id is not _UNCHANGED else None
         s_enabled = slack_enabled if slack_enabled is not _UNCHANGED else False
+        g_addr = gmail_address if gmail_address is not _UNCHANGED else None
+        g_pass = gmail_app_password if gmail_app_password is not _UNCHANGED else None
 
     query = f"""
     INSERT INTO user_config (user_id, google_api_key, openai_api_key, anthropic_api_key, default_model,
         opik_api_key, opik_workspace, opik_project_name, opik_url_override, opik_enabled,
-        slack_bot_token, slack_signing_secret, slack_app_token, slack_bot_user_id, slack_default_channel, slack_default_agent_id, slack_enabled)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+        slack_bot_token, slack_signing_secret, slack_app_token, slack_bot_user_id, slack_default_channel, slack_default_agent_id, slack_enabled,
+        gmail_address, gmail_app_password)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
     ON CONFLICT (user_id) DO UPDATE SET
         google_api_key = EXCLUDED.google_api_key,
         openai_api_key = EXCLUDED.openai_api_key,
@@ -120,6 +129,8 @@ async def upsert_config(
         slack_default_channel = EXCLUDED.slack_default_channel,
         slack_default_agent_id = EXCLUDED.slack_default_agent_id,
         slack_enabled = EXCLUDED.slack_enabled,
+        gmail_address = EXCLUDED.gmail_address,
+        gmail_app_password = EXCLUDED.gmail_app_password,
         updated_at = NOW()
     RETURNING {_COLUMNS};
     """
@@ -130,6 +141,7 @@ async def upsert_config(
     encrypted_slack_bot_token = encrypt_or_none(s_bot_token)
     encrypted_slack_signing_secret = encrypt_or_none(s_signing_secret)
     encrypted_slack_app_token = encrypt_or_none(s_app_token)
+    encrypted_gmail_app_password = encrypt_or_none(g_pass)
     row = await pool.fetchrow(
         query,
         user_id,
@@ -149,6 +161,8 @@ async def upsert_config(
         s_default_channel or None,
         s_default_agent_id,
         bool(s_enabled),
+        g_addr or None,
+        encrypted_gmail_app_password,
     )
     if not row:
         return {}

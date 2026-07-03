@@ -19,6 +19,8 @@ export interface UserConfig {
   slack_default_channel: string | null;
   slack_default_agent_id: number | null;
   slack_enabled: boolean | null;
+  gmail_address: string | null;
+  gmail_app_password: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -40,6 +42,8 @@ export interface UserConfigUpdate {
   slack_default_channel?: string | null;
   slack_default_agent_id?: number | null;
   slack_enabled?: boolean | null;
+  gmail_address?: string | null;
+  gmail_app_password?: string | null;
 }
 
 export interface ApiKeyInfo {
