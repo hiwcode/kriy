@@ -430,7 +430,7 @@ function AgentifySection() {
           </p>
         </div>
 
-        <div className="mt-14 grid items-center gap-10 lg:grid-cols-2">
+        <div className="mt-14 grid grid-cols-1 items-center gap-10 lg:grid-cols-2">
           {/* Left — capabilities */}
           <div>
             <div className="space-y-4">
@@ -464,8 +464,8 @@ function AgentifySection() {
             </div>
           </div>
 
-          {/* Right — code card */}
-          <div className="overflow-hidden rounded-2xl border border-border bg-zinc-950 shadow-xl shadow-primary/[0.06]">
+          {/* Right — code card. min-w-0 so the <pre> scrolls instead of blowing out the page width on mobile. */}
+          <div className="min-w-0 overflow-hidden rounded-2xl border border-border bg-zinc-950 shadow-xl shadow-primary/[0.06]">
             {/* tabs */}
             <div className="flex items-center gap-1 border-b border-white/10 px-3 py-2">
               <div className="mr-2 flex items-center gap-1.5">
@@ -489,13 +489,13 @@ function AgentifySection() {
             <pre className="overflow-x-auto p-5 font-mono text-[13px] leading-relaxed text-zinc-100">
               {AGENTIFY_CODE[lang]}
             </pre>
-            {/* faux verdict */}
-            <div className="flex items-center gap-2 border-t border-white/10 px-5 py-3 text-xs">
+            {/* faux verdict — wraps on small screens instead of overflowing */}
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 border-t border-white/10 px-5 py-3 text-xs">
               <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 font-medium text-emerald-400">
                 <Check className="size-3" /> modify
               </span>
               <span className="font-mono text-zinc-400">discount: 80 → 50</span>
-              <span className="ml-auto text-zinc-500">clamped to policy · logged to traces</span>
+              <span className="text-zinc-500 sm:ml-auto">clamped to policy · logged to traces</span>
             </div>
           </div>
         </div>
@@ -665,7 +665,7 @@ export default function LandingPage() {
                 )
               ) : backendReady === false ? (
                 <p className="text-sm text-red-400">
-                  Sign-in is temporarily unavailable
+                  Sign-in is temporarily unavailable <br/>(Please try again in a few minutes.)
                 </p>
               ) : null}
               <Button variant="outline" size="lg" asChild>
@@ -714,7 +714,7 @@ export default function LandingPage() {
           </div>
 
           {/* Grid */}
-          <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mt-14 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map((feature) => {
               const Icon = feature.icon;
               return (
@@ -778,7 +778,7 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="mt-14 grid gap-5 lg:grid-cols-2">
+          <div className="mt-14 grid grid-cols-1 gap-5 lg:grid-cols-2">
             {/* Build */}
             <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
               <div className="flex items-center gap-3">
@@ -937,7 +937,7 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="mt-14 grid gap-5 sm:grid-cols-2">
+          <div className="mt-14 grid grid-cols-1 gap-5 sm:grid-cols-2">
             {SECURITY.map((item) => {
               const Icon = item.icon;
               return (
@@ -1053,7 +1053,7 @@ export default function LandingPage() {
             <span className="text-border">/</span>
             <span>FSL-1.1-MIT</span>
           </div>
-          <div className="flex items-center gap-6 text-sm">
+          <div className="flex items-center gap-6 text-sm flex-col md:flex-row">
             <a
               href="mailto:contract@gethowitworks.com"
               className="text-muted-foreground transition-colors hover:text-foreground"

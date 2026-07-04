@@ -348,7 +348,7 @@ export function FeatureShowcase() {
             return (
               <div
                 key={row.title}
-                className="grid items-center gap-10 lg:grid-cols-2 lg:gap-14"
+                className="grid grid-cols-1 items-center gap-10 lg:grid-cols-2 lg:gap-14"
               >
                 {/* Copy */}
                 <div className={cn(flip && "lg:order-2")}>
@@ -374,7 +374,7 @@ export function FeatureShowcase() {
                 </div>
 
                 {/* Mockup */}
-                <div className={cn(flip && "lg:order-1")}>{row.mock}</div>
+                <div className={cn("min-w-0", flip && "lg:order-1")}>{row.mock}</div>
               </div>
             );
           })}
