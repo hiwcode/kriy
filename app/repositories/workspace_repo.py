@@ -348,6 +348,55 @@ async def accept_invite(pool: asyncpg.Pool, token: str, user_id: int) -> dict[st
     return await get_workspace(pool, invite["workspace_id"])
 
 
+async def list_invites_for_email(pool: asyncpg.Pool, email: str) -> list[dict[str, Any]]:
+    """Pending, unexpired invitations addressed to this email (newest first)."""
+    rows = await pool.fetch(
+        """
+        SELECT i.id, i.workspace_id, i.email, i.role, i.invited_by, i.expires_at,
+               i.status, i.created_at, w.name AS workspace_name
+        FROM workspace_invites i
+        JOIN workspaces w ON w.id = i.workspace_id
+        WHERE lower(i.email) = lower($1)
+          AND i.status = 'pending' AND i.expires_at > NOW()
+        ORDER BY i.created_at DESC
+        """,
+        email,
+    )
+    return [dict(r) for r in rows]
+
+
+async def get_invite(pool: asyncpg.Pool, invite_id: int) -> dict[str, Any] | None:
+    row = await pool.fetchrow(
+        "SELECT id, workspace_id, email, role, invited_by, expires_at, status, created_at "
+        "FROM workspace_invites WHERE id = $1",
+        invite_id,
+    )
+    return dict(row) if row else None
+
+
+async def accept_invite_by_id(
+    pool: asyncpg.Pool, invite_id: int, user_id: int
+) -> dict[str, Any] | None:
+    """Accept a pending invite the caller owns (email checked by the endpoint)."""
+    invite = await get_invite(pool, invite_id)
+    if not invite or invite["status"] != "pending":
+        return None
+    await add_member(pool, invite["workspace_id"], user_id, invite["role"])
+    await pool.execute(
+        "UPDATE workspace_invites SET status = 'accepted' WHERE id = $1",
+        invite_id,
+    )
+    return await get_workspace(pool, invite["workspace_id"])
+
+
+async def decline_invite(pool: asyncpg.Pool, invite_id: int) -> bool:
+    r = await pool.execute(
+        "UPDATE workspace_invites SET status = 'declined' WHERE id = $1 AND status = 'pending'",
+        invite_id,
+    )
+    return r.split()[-1] != "0"
+
+
 async def update_workspace(
     pool: asyncpg.Pool,
     workspace_id: int,

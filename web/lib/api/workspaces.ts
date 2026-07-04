@@ -126,6 +126,44 @@ export async function acceptInvite(token: string): Promise<Workspace> {
   }
 }
 
+/** A pending invitation addressed to the current user (across any workspace). */
+export interface MyInvitation {
+  id: number;
+  workspace_id: number;
+  workspace_name: string | null;
+  role: string;
+  expires_at: string;
+}
+
+export async function listMyInvitations(): Promise<MyInvitation[]> {
+  const res = await apiFetch<MyInvitation[]>("/api/v1/workspaces/invitations/mine");
+  return res.data ?? [];
+}
+
+export async function acceptInvitation(inviteId: number): Promise<Workspace> {
+  try {
+    const res = await apiFetch<Workspace>(
+      `/api/v1/workspaces/invitations/${inviteId}/accept`,
+      { method: "POST" }
+    );
+    toast.success("Invitation accepted");
+    return res.data!;
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : "Failed to accept invitation");
+    throw error;
+  }
+}
+
+export async function declineInvitation(inviteId: number): Promise<void> {
+  try {
+    await apiFetch(`/api/v1/workspaces/invitations/${inviteId}/decline`, { method: "POST" });
+    toast.success("Invitation declined");
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : "Failed to decline invitation");
+    throw error;
+  }
+}
+
 export async function removeMember(workspaceId: number, userId: number): Promise<void> {
   try {
     await apiFetch(`/api/v1/workspaces/${workspaceId}/members/${userId}`, {

@@ -122,9 +122,7 @@ function evaluateCondition(
     case undefined:
       return true;
     case "no-ai-provider":
-      return !status.hasAnyProvider;
-    case "google-provider-set":
-      return status.hasGoogle;
+      return !status.hasGoogle;
     default:
       return false;
   }

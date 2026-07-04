@@ -278,6 +278,27 @@ async def create_invite(
         pool, workspace_id, data.email, data.role, auth.user_id, token, expires_at
     )
     invite_url = f"/invite/{token}"
+
+    # Notify the invitee in-app. Their user row exists (created above) whether or
+    # not they've signed up yet, so the notification waits in their inbox until
+    # they first sign in.
+    try:
+        from app.services import notification_service
+
+        source_ws = await workspace_repo.get_workspace(pool, workspace_id)
+        ws_name = source_ws["name"] if source_ws else "a workspace"
+        await notification_service.notify(
+            pool,
+            user_id=user["id"],
+            title="Workspace invitation",
+            body=f"You've been invited to join {ws_name} as {data.role}.",
+            level="info",
+            source="workspace",
+            link="/workspace/settings",
+        )
+    except Exception:  # noqa: BLE001 — notification is best-effort
+        pass
+
     return {
         "success": True,
         "message": "Invite created",
@@ -346,6 +367,93 @@ async def get_invite_info(
         },
         "pagination": None,
     }
+
+
+def _serialize_invitation(i: dict) -> dict:
+    return {
+        "id": i["id"],
+        "workspace_id": i["workspace_id"],
+        "workspace_name": i.get("workspace_name"),
+        "role": i["role"],
+        "expires_at": i["expires_at"].isoformat() if hasattr(i["expires_at"], "isoformat") else str(i["expires_at"]),
+    }
+
+
+@router.get("/invitations/mine", response_model=ApiResponse)
+async def my_invitations(
+    pool: asyncpg.Pool = Depends(get_db),
+    auth: AuthContext = Depends(require_google_auth),
+) -> dict:
+    """Pending workspace invitations addressed to the current user's email."""
+    me = await user_repo.get_user(pool, auth.user_id)
+    email = me.get("email") if me else None
+    invites = await workspace_repo.list_invites_for_email(pool, email) if email else []
+    return {
+        "success": True,
+        "message": "Invitations",
+        "data": [_serialize_invitation(i) for i in invites],
+        "pagination": None,
+    }
+
+
+async def _require_own_invite(pool, invite_id: int, user_id: int) -> dict:
+    """Load an invite and ensure it's addressed to this user's email."""
+    invite = await workspace_repo.get_invite(pool, invite_id)
+    if not invite:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Invitation not found")
+    me = await user_repo.get_user(pool, user_id)
+    if not me or (me.get("email") or "").lower() != (invite["email"] or "").lower():
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This invitation isn't yours")
+    return invite
+
+
+@router.post("/invitations/{invite_id}/accept", response_model=ApiResponse)
+async def accept_invitation(
+    invite_id: int,
+    pool: asyncpg.Pool = Depends(get_db),
+    auth: AuthContext = Depends(require_google_auth),
+) -> dict:
+    """Accept an invitation addressed to you (from the in-app invitations list)."""
+    invite = await _require_own_invite(pool, invite_id, auth.user_id)
+    ws = await workspace_repo.accept_invite_by_id(pool, invite_id, auth.user_id)
+    if not ws:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invitation is no longer valid")
+
+    # Let the person who sent the invite know it was accepted.
+    try:
+        from app.services import notification_service
+
+        who = (invite.get("email") or "Someone")
+        await notification_service.notify(
+            pool,
+            user_id=invite["invited_by"],
+            title="Invitation accepted",
+            body=f"{who} joined {ws['name']}.",
+            level="success",
+            source="workspace",
+            link="/workspace/settings",
+        )
+    except Exception:  # noqa: BLE001 — notification is best-effort
+        pass
+
+    return {
+        "success": True,
+        "message": "Invitation accepted",
+        "data": _serialize_workspace(ws),
+        "pagination": None,
+    }
+
+
+@router.post("/invitations/{invite_id}/decline", response_model=ApiResponse)
+async def decline_invitation(
+    invite_id: int,
+    pool: asyncpg.Pool = Depends(get_db),
+    auth: AuthContext = Depends(require_google_auth),
+) -> dict:
+    """Decline an invitation addressed to you."""
+    await _require_own_invite(pool, invite_id, auth.user_id)
+    await workspace_repo.decline_invite(pool, invite_id)
+    return {"success": True, "message": "Invitation declined", "data": None, "pagination": None}
 
 
 @router.post("/transfer", response_model=ApiResponse)

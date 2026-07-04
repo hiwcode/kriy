@@ -56,18 +56,7 @@ export const BANNERS: BannerDef[] = [
       "We suggest Google Gemini — it has a free tier, so you can try Atelier without a credit card.",
     link: { label: "Add provider", href: "/config" },
     condition: "no-ai-provider",
-    dismissible: true,
-    priority: 10,
-  },
-  {
-    id: "google-free-tier-notice",
-    type: "warning",
-    title: "You're on the Google Gemini free tier",
-    description:
-      "The free tier is capped (~20 requests/day), so agent runs may occasionally fail with a quota error. Add a paid key or another provider for reliable runs.",
-    link: { label: "Manage providers", href: "/config" },
-    condition: "google-provider-set",
-    dismissible: true,
-    priority: 5,
-  },
+    dismissible: false,
+    priority: 0,
+  }
 ];

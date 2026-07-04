@@ -32,8 +32,12 @@ import {
   removeMember,
   updateMemberRole,
   createWorkspace,
+  listMyInvitations,
+  acceptInvitation,
+  declineInvitation,
   type WorkspaceMember,
   type WorkspaceInvite,
+  type MyInvitation,
 } from "@/lib/api/workspaces";
 import {
   Users,
@@ -132,6 +136,7 @@ export default function WorkspaceSettingsPage() {
   const workspace = useWorkspace();
   const [members, setMembers] = React.useState<WorkspaceMember[]>([]);
   const [invites, setInvites] = React.useState<WorkspaceInvite[]>([]);
+  const [invitations, setInvitations] = React.useState<MyInvitation[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
@@ -161,9 +166,41 @@ export default function WorkspaceSettingsPage() {
     }
   }, [activeWs?.id]);
 
+  const loadInvitations = React.useCallback(async () => {
+    try {
+      setInvitations(await listMyInvitations());
+    } catch {
+      setInvitations([]);
+    }
+  }, []);
+
   React.useEffect(() => {
     loadData();
   }, [loadData]);
+
+  React.useEffect(() => {
+    loadInvitations();
+  }, [loadInvitations]);
+
+  const handleAcceptInvitation = async (inviteId: number) => {
+    try {
+      const ws = await acceptInvitation(inviteId);
+      await workspace?.refreshWorkspaces();
+      workspace?.setActiveWorkspace(ws); // jump into the workspace you just joined
+      await loadInvitations();
+    } catch {
+      /* toast handled in api */
+    }
+  };
+
+  const handleDeclineInvitation = async (inviteId: number) => {
+    try {
+      await declineInvitation(inviteId);
+      await loadInvitations();
+    } catch {
+      /* toast handled in api */
+    }
+  };
 
   const handleRemoveMember = async (userId: number) => {
     if (!activeWs) return;
@@ -221,6 +258,40 @@ export default function WorkspaceSettingsPage() {
               <AlertTriangle className="size-4 shrink-0" />
               {error}
             </div>
+          )}
+
+          {/* Your invitations (pending, addressed to you) */}
+          {invitations.length > 0 && (
+            <section className="space-y-3">
+              <SectionHeader title="Your invitations" />
+              <div className="divide-y rounded-xl border bg-card">
+                {invitations.map((inv) => (
+                  <div key={inv.id} className="flex items-center gap-3 p-4">
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                      <Users className="size-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium">
+                        {inv.workspace_name ?? "A workspace"}
+                      </p>
+                      <p className="truncate text-xs text-muted-foreground">
+                        Invited as {inv.role}
+                      </p>
+                    </div>
+                    <Button size="sm" onClick={() => handleAcceptInvitation(inv.id)}>
+                      Accept
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleDeclineInvitation(inv.id)}
+                    >
+                      Decline
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </section>
           )}
 
           {/* Workspace banner */}
