@@ -81,7 +81,7 @@ async def lifespan(app: FastAPI):
     await close_db(app)
 
 
-app = FastAPI(title="Atelier API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="Atelier API", version="0.1.0", lifespan=lifespan, docs_url=None, redoc_url=None)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
