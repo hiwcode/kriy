@@ -14,6 +14,7 @@ import asyncio
 import json
 import logging
 import smtplib
+import socket
 from email.message import EmailMessage
 
 import asyncpg
@@ -24,8 +25,7 @@ from app.repositories import user_config_repo
 logger = logging.getLogger(__name__)
 
 _GMAIL_SMTP_HOST = "smtp.gmail.com"
-_GMAIL_SMTP_SSL_PORT = 465
-_GMAIL_SMTP_STARTTLS_PORT = 587
+_GMAIL_SMTP_PORT = 587
 
 
 def _send_via_gmail(
@@ -39,12 +39,8 @@ def _send_via_gmail(
 ) -> None:
     """Blocking SMTP send (run in a thread). Raises on failure.
 
-    `body` is the plain-text part (always set, used as the fallback). If
-    `html_body` is given, an HTML alternative is attached so clients that render
-    HTML show the rich version.
-
-    Tries SSL on port 465 first, falls back to STARTTLS on port 587 if
-    the network blocks 465 (common on hosted platforms like Render).
+    Uses port 587 + STARTTLS (matching nodemailer's default config).
+    Forces IPv4 to avoid ENETUNREACH on hosts without IPv6 (e.g. Render).
     """
     msg = EmailMessage()
     msg["From"] = sender
@@ -54,16 +50,17 @@ def _send_via_gmail(
     if html_body:
         msg.add_alternative(html_body, subtype="html")
 
-    try:
-        with smtplib.SMTP_SSL(_GMAIL_SMTP_HOST, _GMAIL_SMTP_SSL_PORT, timeout=30) as smtp:
-            smtp.login(sender, app_password)
-            smtp.send_message(msg)
-    except OSError:
-        # Port 465 blocked — try 587 with STARTTLS.
-        with smtplib.SMTP(_GMAIL_SMTP_HOST, _GMAIL_SMTP_STARTTLS_PORT, timeout=30) as smtp:
-            smtp.starttls()
-            smtp.login(sender, app_password)
-            smtp.send_message(msg)
+    # Resolve to IPv4 explicitly to avoid IPv6 ENETUNREACH on cloud hosts.
+    ipv4_addr = socket.getaddrinfo(
+        _GMAIL_SMTP_HOST, _GMAIL_SMTP_PORT, socket.AF_INET
+    )[0][4][0]
+
+    with smtplib.SMTP(ipv4_addr, _GMAIL_SMTP_PORT, timeout=30) as smtp:
+        smtp.ehlo()
+        smtp.starttls()
+        smtp.ehlo()
+        smtp.login(sender, app_password)
+        smtp.send_message(msg)
 
 
 def make_email_tools(pool: asyncpg.Pool, user_id: int | None) -> list[FunctionTool]:
