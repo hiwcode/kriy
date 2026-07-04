@@ -15,6 +15,7 @@ from app.schemas.workspace import (
     WorkspaceUpdate,
     WorkspaceInviteCreate,
     WorkspaceInviteAccept,
+    WorkspaceMemberRoleUpdate,
     WorkspaceTransferRequest,
 )
 
@@ -32,6 +33,8 @@ def _serialize_workspace(ws: dict) -> dict:
         "slug": ws["slug"],
         "is_personal": ws["is_personal"],
         "created_by": ws.get("created_by"),
+        # The caller's role in this workspace (owner | admin | member), when known.
+        "role": ws.get("member_role") or ws.get("role"),
         "created_at": ws["created_at"].isoformat() if hasattr(ws["created_at"], "isoformat") else str(ws["created_at"]),
         "updated_at": ws["updated_at"].isoformat() if hasattr(ws["updated_at"], "isoformat") else str(ws["updated_at"]),
     }
@@ -85,10 +88,11 @@ async def get_current(
     ws = await get_current_workspace(pool, auth, x_workspace_id)
     if not ws:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+    role = await workspace_repo.get_member_role(pool, ws["id"], auth.user_id)
     return {
         "success": True,
         "message": "Current workspace",
-        "data": _serialize_workspace(ws),
+        "data": _serialize_workspace({**ws, "member_role": role}),
         "pagination": None,
     }
 
@@ -112,7 +116,7 @@ async def create_workspace(
     return {
         "success": True,
         "message": "Workspace created",
-        "data": _serialize_workspace(ws),
+        "data": _serialize_workspace({**ws, "member_role": "owner"}),
         "pagination": None,
     }
 
@@ -222,6 +226,37 @@ async def remove_member(
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to remove members")
     await workspace_repo.remove_member(pool, workspace_id, user_id)
     return {"success": True, "message": "Member removed", "data": None, "pagination": None}
+
+
+@router.patch("/{workspace_id}/members/{user_id}/role", response_model=ApiResponse)
+async def change_member_role(
+    workspace_id: int,
+    user_id: int,
+    data: WorkspaceMemberRoleUpdate,
+    pool: asyncpg.Pool = Depends(get_db),
+    auth: AuthContext = Depends(require_google_auth),
+) -> dict:
+    """Change a member's role. Owner only; can set 'admin' or 'member'."""
+    if await workspace_repo.get_member_role(pool, workspace_id, auth.user_id) != "owner":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the workspace owner can change roles",
+        )
+    target_role = await workspace_repo.get_member_role(pool, workspace_id, user_id)
+    if target_role is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Member not found")
+    if target_role == "owner":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot change the owner's role",
+        )
+    await workspace_repo.update_member_role(pool, workspace_id, user_id, data.role)
+    return {
+        "success": True,
+        "message": "Role updated",
+        "data": {"user_id": user_id, "role": data.role},
+        "pagination": None,
+    }
 
 
 @router.post("/{workspace_id}/invite", response_model=ApiResponse, status_code=status.HTTP_201_CREATED)
@@ -376,6 +411,9 @@ async def transfer_workspace_resources(
             "transferred_skills": counts["skills"],
             "transferred_mcp_connections": counts["mcp_connections"],
             "transferred_database_connections": counts["database_connections"],
+            "transferred_schedules": counts["schedules"],
+            "transferred_workflows": counts["workflows"],
+            "transferred_events": counts["events"],
             "transferred_sessions": counts["sessions"],
             "transferred_memories": counts["memories"],
             "total_transferred": total,

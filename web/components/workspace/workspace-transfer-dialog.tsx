@@ -41,6 +41,9 @@ const RESOURCE_TYPES = [
   { value: "skills", label: "Skills Only" },
   { value: "mcp_connections", label: "MCP Connections Only" },
   { value: "database_connections", label: "Database Connections Only" },
+  { value: "schedules", label: "Schedules Only" },
+  { value: "workflows", label: "Workflows Only" },
+  { value: "events", label: "Event Types Only" },
 ] as const;
 
 export function WorkspaceTransferDialog({
@@ -161,6 +164,15 @@ export function WorkspaceTransferDialog({
                     )}
                     {success.transferred_database_connections > 0 && (
                       <li>• {success.transferred_database_connections} database connection(s)</li>
+                    )}
+                    {(success.transferred_schedules ?? 0) > 0 && (
+                      <li>• {success.transferred_schedules} schedule(s)</li>
+                    )}
+                    {(success.transferred_workflows ?? 0) > 0 && (
+                      <li>• {success.transferred_workflows} workflow(s)</li>
+                    )}
+                    {(success.transferred_events ?? 0) > 0 && (
+                      <li>• {success.transferred_events} event type(s)</li>
                     )}
                     {success.transferred_sessions > 0 && (
                       <li>• {success.transferred_sessions} session(s)</li>

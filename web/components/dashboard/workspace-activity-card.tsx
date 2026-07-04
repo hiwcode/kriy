@@ -69,6 +69,7 @@ export function WorkspaceActivityCard({
   showViewAll = true,
   paginate = false,
   pageSize = 20,
+  devider=false,
 }: {
   limit?: number;
   showViewAll?: boolean;
@@ -76,6 +77,7 @@ export function WorkspaceActivityCard({
   paginate?: boolean;
   /** Rows per page when paginating. */
   pageSize?: number;
+  devider?: boolean;
 }) {
   const auth = useAuth();
   const perPage = paginate ? pageSize : limit;
@@ -138,11 +140,11 @@ export function WorkspaceActivityCard({
               <p className="text-sm text-muted-foreground">No activity yet.</p>
             </div>
           ) : (
-            items.map((item) => {
+            items.map((item, index) => {
               const style = ACTION_STYLE[item.action];
               const Icon = style?.icon ?? ActivityIcon;
               return (
-                <div key={item.id} className="flex items-start gap-3">
+                <div key={item.id} className={`flex items-start gap-3 ${devider && index!=items.length-1 && "border-b pb-4"}`}>
                   <div
                     className={cn(
                       "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full",

@@ -7,6 +7,8 @@ export interface Workspace {
   slug: string;
   is_personal: boolean;
   created_by: number | null;
+  /** The current user's role in this workspace: "owner" | "admin" | "member". */
+  role?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -136,10 +138,37 @@ export async function removeMember(workspaceId: number, userId: number): Promise
   }
 }
 
+/** Change a member's role. Owner only (enforced server-side). */
+export async function updateMemberRole(
+  workspaceId: number,
+  userId: number,
+  role: "admin" | "member"
+): Promise<void> {
+  try {
+    await apiFetch(`/api/v1/workspaces/${workspaceId}/members/${userId}/role`, {
+      method: "PATCH",
+      body: JSON.stringify({ role }),
+    });
+    toast.success("Role updated");
+  } catch (error) {
+    toast.error(error instanceof Error ? error.message : "Failed to update role");
+    throw error;
+  }
+}
+
 export interface WorkspaceTransferRequest {
   source_workspace_id: number;
   target_workspace_id: number;
-  resource_type: "agents" | "prompts" | "skills" | "mcp_connections" | "database_connections" | "all";
+  resource_type:
+    | "agents"
+    | "prompts"
+    | "skills"
+    | "mcp_connections"
+    | "database_connections"
+    | "schedules"
+    | "workflows"
+    | "events"
+    | "all";
   resource_ids?: number[];
 }
 
@@ -149,6 +178,9 @@ export interface WorkspaceTransferResponse {
   transferred_skills: number;
   transferred_mcp_connections: number;
   transferred_database_connections: number;
+  transferred_schedules?: number;
+  transferred_workflows?: number;
+  transferred_events?: number;
   transferred_sessions: number;
   transferred_memories: number;
   total_transferred: number;

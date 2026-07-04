@@ -9,7 +9,7 @@ export default function ActivityPage() {
     <AppLayout>
       <PageLayout title="Activity" subtitle="Recent changes across your workspace">
         <div className="mx-auto max-w-3xl">
-          <WorkspaceActivityCard paginate pageSize={20} showViewAll={false} />
+          <WorkspaceActivityCard paginate pageSize={20} showViewAll={false} devider={true}/>
         </div>
       </PageLayout>
     </AppLayout>

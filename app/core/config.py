@@ -15,6 +15,13 @@ class Settings(BaseSettings):
     APP_NAME: str = Field(default="Atelier", description="Application name")
     APP_VERSION: str = Field(default="0.1.0", description="Application version")
     DEBUG: bool = Field(default=False, description="Debug mode")
+    ENVIRONMENT: str = Field(
+        default="development",
+        description="Deployment environment: 'development' or 'production'. "
+        "Local-only tools (bash, file access, run_python, claude_code) are "
+        "disabled in production.",
+        env="ENVIRONMENT",
+    )
 
     # API
     API_KEYS: str = Field(default="", description="Comma-separated valid API keys", env="API_KEYS")
@@ -67,6 +74,15 @@ class Settings(BaseSettings):
     
     # Logging
     LOG_LEVEL: str = Field(default="INFO", description="Logging level")
+
+    @property
+    def is_production(self) -> bool:
+        return self.ENVIRONMENT.strip().lower() in ("production", "prod")
+
+    @property
+    def local_tools_enabled(self) -> bool:
+        """Local-only tools (shell, filesystem, code exec) are off in production."""
+        return not self.is_production
 
     class Config:
         env_file = ".env"

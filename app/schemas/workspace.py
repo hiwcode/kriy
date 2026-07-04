@@ -40,6 +40,10 @@ class WorkspaceInviteCreate(BaseModel):
     role: str = Field(default="member", pattern="^(admin|member)$")
 
 
+class WorkspaceMemberRoleUpdate(BaseModel):
+    role: str = Field(..., pattern="^(admin|member)$")
+
+
 class WorkspaceInviteOut(BaseModel):
     id: int
     workspace_id: int
@@ -58,7 +62,7 @@ class WorkspaceInviteAccept(BaseModel):
 class WorkspaceTransferRequest(BaseModel):
     source_workspace_id: int = Field(..., description="ID of the workspace to transfer from")
     target_workspace_id: int = Field(..., description="ID of the workspace to transfer to")
-    resource_type: str = Field(..., pattern="^(agents|prompts|skills|mcp_connections|database_connections|all)$")
+    resource_type: str = Field(..., pattern="^(agents|prompts|skills|mcp_connections|database_connections|schedules|workflows|events|all)$")
     resource_ids: list[int] | None = Field(None, description="Specific resource IDs to transfer. If None, all resources will be transferred")
 
 
@@ -68,4 +72,7 @@ class WorkspaceTransferResponse(BaseModel):
     transferred_skills: int = 0
     transferred_mcp_connections: int
     transferred_database_connections: int
+    transferred_schedules: int = 0
+    transferred_workflows: int = 0
+    transferred_events: int = 0
     total_transferred: int

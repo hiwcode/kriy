@@ -46,12 +46,13 @@ export function AppSidebar() {
           {/* Brand Name */}
           <div
             className={cn(
-              "flex min-w-0 flex-col transition-all duration-200",
+              "relative flex min-w-0 flex-col transition-all duration-200",
               isCollapsed && "w-0 overflow-hidden opacity-0"
             )}
           >
             <span className="truncate text-[15px] font-semibold leading-tight tracking-tight text-sidebar-foreground">
               {siteConfig.name}
+              <Badge variant={'outline'} className="absolute text-[8px] ml-1">Beta</Badge>
             </span>
             <span className="truncate text-[10px] font-medium uppercase tracking-[0.18em] text-sidebar-foreground/45">
               {siteConfig.description}

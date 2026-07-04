@@ -73,104 +73,6 @@ def get_current_date() -> str:
     return datetime.utcnow().strftime("%Y-%m-%d")
 
 
-def days_between(date1: str, date2: str) -> int:
-    """Calculate days between two dates (YYYY-MM-DD format)."""
-    try:
-        d1 = datetime.strptime(date1, "%Y-%m-%d")
-        d2 = datetime.strptime(date2, "%Y-%m-%d")
-        return abs((d2 - d1).days)
-    except ValueError:
-        return -1
-
-
-def add_days(date: str, days: int) -> str:
-    """Add days to a date (YYYY-MM-DD format)."""
-    try:
-        d = datetime.strptime(date, "%Y-%m-%d")
-        new_date = d + timedelta(days=days)
-        return new_date.strftime("%Y-%m-%d")
-    except ValueError:
-        return "Error: Invalid date format"
-
-
-def get_weekday(date: str) -> str:
-    """Get the weekday name for a date (YYYY-MM-DD format)."""
-    try:
-        d = datetime.strptime(date, "%Y-%m-%d")
-        return d.strftime("%A")
-    except ValueError:
-        return "Error: Invalid date format"
-
-
-def time_until(target_date: str) -> str:
-    """Calculate time remaining until a target date."""
-    try:
-        target = datetime.strptime(target_date, "%Y-%m-%d")
-        now = datetime.utcnow()
-        diff = target - now
-
-        if diff.days < 0:
-            return f"{abs(diff.days)} days ago"
-        elif diff.days == 0:
-            return "Today"
-        elif diff.days == 1:
-            return "Tomorrow"
-        else:
-            return f"{diff.days} days from now"
-    except ValueError:
-        return "Error: Invalid date format"
-
-
-# ============================================================
-# TEXT TOOLS
-# ============================================================
-
-
-def to_uppercase(text: str) -> str:
-    """Convert text to uppercase."""
-    return text.upper()
-
-
-def to_lowercase(text: str) -> str:
-    """Convert text to lowercase."""
-    return text.lower()
-
-
-def word_count(text: str) -> int:
-    """Count words in text."""
-    return len(text.split())
-
-
-def char_count(text: str) -> int:
-    """Count characters in text (excluding spaces)."""
-    return len(text.replace(" ", ""))
-
-
-def reverse_text(text: str) -> str:
-    """Reverse the text."""
-    return text[::-1]
-
-
-def title_case(text: str) -> str:
-    """Convert text to title case."""
-    return text.title()
-
-
-def replace_text(text: str, old: str, new: str) -> str:
-    """Replace occurrences of old with new in text."""
-    return text.replace(old, new)
-
-
-def extract_numbers(text: str) -> str:
-    """Extract all numbers from text."""
-    numbers = re.findall(r"-?\d+\.?\d*", text)
-    return ", ".join(numbers) if numbers else "No numbers found"
-
-
-# ============================================================
-# REGISTRY
-# ============================================================
-
 # ============================================================
 # SHELL / BASH TOOL
 # ============================================================
@@ -586,18 +488,6 @@ _BUILTIN_TOOLS: dict[str, FunctionTool] = {
     "percentage": FunctionTool(func=percentage),
     "get_current_time": FunctionTool(func=get_current_time),
     "get_current_date": FunctionTool(func=get_current_date),
-    "days_between": FunctionTool(func=days_between),
-    "add_days": FunctionTool(func=add_days),
-    "get_weekday": FunctionTool(func=get_weekday),
-    "time_until": FunctionTool(func=time_until),
-    "to_uppercase": FunctionTool(func=to_uppercase),
-    "to_lowercase": FunctionTool(func=to_lowercase),
-    "word_count": FunctionTool(func=word_count),
-    "char_count": FunctionTool(func=char_count),
-    "reverse_text": FunctionTool(func=reverse_text),
-    "title_case": FunctionTool(func=title_case),
-    "replace_text": FunctionTool(func=replace_text),
-    "extract_numbers": FunctionTool(func=extract_numbers),
     "bash": FunctionTool(func=run_bash),
     "run_python": FunctionTool(func=run_python),
     "read_file": FunctionTool(func=read_file),
@@ -608,12 +498,40 @@ _BUILTIN_TOOLS: dict[str, FunctionTool] = {
     "claude_code": FunctionTool(func=claude_code),
 }
 
+# Tools that touch the host machine (shell, filesystem, code execution). These
+# are only available outside production — see settings.local_tools_enabled.
+LOCAL_ONLY_TOOLS: frozenset[str] = frozenset(
+    {
+        "bash",
+        "run_python",
+        "read_file",
+        "write_file",
+        "edit_file",
+        "glob_files",
+        "grep_files",
+        "claude_code",
+    }
+)
+
+
+def _local_tools_enabled() -> bool:
+    from app.core.config import settings
+
+    return settings.local_tools_enabled
+
 
 def get_builtin_tool(name: str):
-    """Get a builtin tool by name."""
+    """Get a builtin tool by name (local-only tools are None in production)."""
+    if name in LOCAL_ONLY_TOOLS and not _local_tools_enabled():
+        return None
     return _BUILTIN_TOOLS.get(name)
 
 
 def get_all_builtin_tool_names() -> list[str]:
-    """Return list of all builtin tool names."""
-    return list(_BUILTIN_TOOLS.keys())
+    """Return builtin tool names, hiding local-only tools in production."""
+    allow_local = _local_tools_enabled()
+    return [
+        name
+        for name in _BUILTIN_TOOLS
+        if allow_local or name not in LOCAL_ONLY_TOOLS
+    ]

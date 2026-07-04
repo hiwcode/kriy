@@ -30,6 +30,7 @@ import {
   createWorkspaceInvite,
   listWorkspaceInvites,
   removeMember,
+  updateMemberRole,
   createWorkspace,
   type WorkspaceMember,
   type WorkspaceInvite,
@@ -142,17 +143,21 @@ export default function WorkspaceSettingsPage() {
   const loadData = React.useCallback(async () => {
     if (!activeWs) return;
     setLoading(true);
+    setError(null);
+    // Members: visible to any member of the workspace.
     try {
-      const [m, i] = await Promise.all([
-        listWorkspaceMembers(activeWs.id),
-        listWorkspaceInvites(activeWs.id),
-      ]);
-      setMembers(m);
-      setInvites(i);
+      setMembers(await listWorkspaceMembers(activeWs.id));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed to load");
+      setError(e instanceof Error ? e.message : "Failed to load members");
     } finally {
       setLoading(false);
+    }
+    // Invites: admin/owner-only. A 403 for regular members is expected — ignore
+    // it (and keep the list empty) rather than failing the whole page.
+    try {
+      setInvites(await listWorkspaceInvites(activeWs.id));
+    } catch {
+      setInvites([]);
     }
   }, [activeWs?.id]);
 
@@ -169,6 +174,16 @@ export default function WorkspaceSettingsPage() {
       await workspace?.refreshWorkspaces();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to remove");
+    }
+  };
+
+  const handleRoleChange = async (userId: number, newRole: "admin" | "member") => {
+    if (!activeWs) return;
+    try {
+      await updateMemberRole(activeWs.id, userId, newRole);
+      await loadData();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to update role");
     }
   };
 
@@ -190,7 +205,12 @@ export default function WorkspaceSettingsPage() {
     );
   }
 
-  const canManage = activeWs && !activeWs.is_personal;
+  // Only owners/admins of a shared workspace can manage members & invites.
+  const role = activeWs?.role?.toLowerCase();
+  const canManage =
+    !!activeWs && !activeWs.is_personal && (role === "owner" || role === "admin");
+  // Only the owner can change member roles.
+  const isOwner = !!activeWs && !activeWs.is_personal && role === "owner";
 
   return (
     <AppLayout>
@@ -273,7 +293,22 @@ export default function WorkspaceSettingsPage() {
                           <p className="truncate font-medium">{name}</p>
                           <p className="truncate text-xs text-muted-foreground">{m.email}</p>
                         </div>
-                        <RoleBadge role={m.role} />
+                        {isOwner && m.role.toLowerCase() !== "owner" ? (
+                          <Select
+                            value={m.role.toLowerCase()}
+                            onValueChange={(v) => handleRoleChange(m.user_id, v as "admin" | "member")}
+                          >
+                            <SelectTrigger size="sm" className="w-28">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="admin">Admin</SelectItem>
+                              <SelectItem value="member">Member</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <RoleBadge role={m.role} />
+                        )}
                         {canManage && m.role.toLowerCase() !== "owner" && (
                           <Button
                             variant="ghost"

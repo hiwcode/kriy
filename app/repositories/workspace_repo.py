@@ -219,6 +219,16 @@ async def user_can_manage_workspace(pool: asyncpg.Pool, workspace_id: int, user_
     return row is not None and row["role"] in ("owner", "admin")
 
 
+async def get_member_role(pool: asyncpg.Pool, workspace_id: int, user_id: int) -> str | None:
+    """Return the user's role in the workspace (owner | admin | member), or None."""
+    row = await pool.fetchrow(
+        "SELECT role FROM workspace_members WHERE workspace_id = $1 AND user_id = $2",
+        workspace_id,
+        user_id,
+    )
+    return row["role"] if row else None
+
+
 async def list_members(pool: asyncpg.Pool, workspace_id: int) -> list[dict[str, Any]]:
     rows = await pool.fetch(
         """
@@ -401,6 +411,9 @@ async def transfer_resources(
         "skills": 0,
         "mcp_connections": 0,
         "database_connections": 0,
+        "schedules": 0,
+        "workflows": 0,
+        "events": 0,
         "sessions": 0,
         "memories": 0,
     }
@@ -580,6 +593,51 @@ async def transfer_resources(
                         source_workspace_id,
                     )
                 counts["database_connections"] = int(result.split()[-1])
-    
+
+            # Transfer schedules
+            if resource_type in ("schedules", "all"):
+                if resource_ids:
+                    result = await conn.execute(
+                        "UPDATE schedules SET workspace_id = $1 "
+                        "WHERE workspace_id = $2 AND id = ANY($3::int[])",
+                        target_workspace_id, source_workspace_id, resource_ids,
+                    )
+                else:
+                    result = await conn.execute(
+                        "UPDATE schedules SET workspace_id = $1 WHERE workspace_id = $2",
+                        target_workspace_id, source_workspace_id,
+                    )
+                counts["schedules"] = int(result.split()[-1])
+
+            # Transfer workflows
+            if resource_type in ("workflows", "all"):
+                if resource_ids:
+                    result = await conn.execute(
+                        "UPDATE workflows SET workspace_id = $1 "
+                        "WHERE workspace_id = $2 AND id = ANY($3::int[])",
+                        target_workspace_id, source_workspace_id, resource_ids,
+                    )
+                else:
+                    result = await conn.execute(
+                        "UPDATE workflows SET workspace_id = $1 WHERE workspace_id = $2",
+                        target_workspace_id, source_workspace_id,
+                    )
+                counts["workflows"] = int(result.split()[-1])
+
+            # Transfer event types (the workspace's event registry)
+            if resource_type in ("events", "all"):
+                if resource_ids:
+                    result = await conn.execute(
+                        "UPDATE event_types SET workspace_id = $1 "
+                        "WHERE workspace_id = $2 AND id = ANY($3::int[])",
+                        target_workspace_id, source_workspace_id, resource_ids,
+                    )
+                else:
+                    result = await conn.execute(
+                        "UPDATE event_types SET workspace_id = $1 WHERE workspace_id = $2",
+                        target_workspace_id, source_workspace_id,
+                    )
+                counts["events"] = int(result.split()[-1])
+
     return counts
 
