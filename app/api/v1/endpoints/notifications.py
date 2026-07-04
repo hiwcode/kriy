@@ -152,26 +152,38 @@ async def mark_all_read(
 async def _resolve_ws_user(
     pool: asyncpg.Pool, token: str | None, api_key: str | None
 ) -> int | None:
-    """Resolve a user id from a WS query token (per-user API key or Google id token)."""
+    """Resolve a user id from a WS query token (per-user API key, backend JWT, or Google id token)."""
     if api_key:
         from app.repositories import user_api_key_repo
 
         uid = await user_api_key_repo.get_user_by_key(pool, api_key)
         if uid is not None:
             return uid
-    if token and settings.GOOGLE_CLIENT_ID:
-        try:
-            idinfo = id_token.verify_oauth2_token(
-                token, google_requests.Request(), settings.GOOGLE_CLIENT_ID
-            )
-            email = idinfo.get("email") or idinfo.get("sub")
-            if email:
-                from app.repositories import user_repo
+    if token:
+        # 1) Try our own backend-issued JWT access token first.
+        from app.core.auth_tokens import verify_access_token
 
-                user = await user_repo.get_or_create_user_by_email(pool, email)
-                return user["id"]
-        except Exception:  # noqa: BLE001 — invalid token
-            return None
+        claims = verify_access_token(token)
+        if claims and claims.get("sub"):
+            try:
+                return int(claims["sub"])
+            except (ValueError, TypeError):
+                pass
+
+        # 2) Fall back to Google OAuth ID token.
+        if settings.GOOGLE_CLIENT_ID:
+            try:
+                idinfo = id_token.verify_oauth2_token(
+                    token, google_requests.Request(), settings.GOOGLE_CLIENT_ID
+                )
+                email = idinfo.get("email") or idinfo.get("sub")
+                if email:
+                    from app.repositories import user_repo
+
+                    user = await user_repo.get_or_create_user_by_email(pool, email)
+                    return user["id"]
+            except Exception:  # noqa: BLE001 — invalid token
+                pass
     return None
 
 
