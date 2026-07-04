@@ -93,6 +93,21 @@ app.include_router(api_router)
 
 
 @app.middleware("http")
+async def audit_middleware(request, call_next):
+    """Record every mutating request (POST/PUT/PATCH/DELETE) to the audit log."""
+    response = await call_next(request)
+    from app.core.audit import AUDIT_METHODS
+
+    if request.method in AUDIT_METHODS:
+        pool = getattr(request.app.state, "db_pool", None)
+        if pool is not None:
+            from app.core.audit import log_request
+
+            await log_request(request, response.status_code, pool)
+    return response
+
+
+@app.middleware("http")
 async def a2a_auth_middleware(request, call_next):
     """Gate the A2A-hosted agent endpoints (/a2a/{id}/) with an API key.
 

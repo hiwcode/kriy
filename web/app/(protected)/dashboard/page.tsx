@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/card";
 import type { DashboardData } from "@/lib/api/dashboard";
 import { getDashboard } from "@/lib/api/dashboard";
+import { WorkspaceActivityCard } from "@/components/dashboard/workspace-activity-card";
 import { cn } from "@/lib/utils";
 import {
   ArrowRight,
@@ -291,36 +292,7 @@ export default function DashboardPage() {
               )}
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="flex items-center justify-between">
-              <div>
-                <CardTitle>Recent Activity</CardTitle>
-                <CardDescription>Latest actions in your workspace</CardDescription>
-              </div>
-              <Button variant="ghost" size="sm" asChild>
-                <Link href="/agents">View all<ArrowRight className="ml-1 size-4" /></Link>
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {data.recent_activity.length === 0 ? (
-                  <p className="text-sm text-muted-foreground py-4">No recent activity.</p>
-                ) : (
-                  data.recent_activity.map((activity) => (
-                    <Link key={activity.id} href={activity.url} className="flex items-start gap-3 rounded-lg p-2 -mx-2 transition-colors hover:bg-muted/50">
-                      <div className={cn("mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full", activity.type === "conversation" ? "bg-blue-500/10 text-blue-500" : activity.type === "prompt" ? "bg-purple-500/10 text-purple-500" : "bg-orange-500/10 text-orange-500")}>
-                        {activity.type === "conversation" ? <MessageSquare className="size-4" /> : activity.type === "prompt" ? <FileText className="size-4" /> : <Database className="size-4" />}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium leading-none truncate">{activity.title}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{activity.agent !== "-" ? `${activity.agent} • ` : ""}{formatRelativeTime(activity.timestamp)}</p>
-                      </div>
-                    </Link>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          <WorkspaceActivityCard />
         </div>
 
         <Card>

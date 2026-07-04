@@ -8,11 +8,12 @@ signs in with Google once, exchanges the credential here, then uses our access J
 from __future__ import annotations
 
 import asyncpg
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token
 from pydantic import BaseModel, Field
 
+from app.core.audit import set_actor
 from app.core.auth_tokens import (
     create_access_token,
     hash_refresh,
@@ -56,6 +57,7 @@ def _verify_google(credential: str) -> dict:
 @router.post("/google")
 async def exchange_google(
     data: GoogleExchangeRequest,
+    request: Request,
     pool: asyncpg.Pool = Depends(get_db),
 ) -> dict:
     """Verify a Google credential, upsert the user, and issue a session."""
@@ -67,6 +69,7 @@ async def exchange_google(
     picture = idinfo.get("picture")
 
     user = await user_repo.get_or_create_user_by_email(pool, email, full_name=name)
+    set_actor(request, user_id=user["id"], email=email)
     access, expires_in = create_access_token(user["id"], email)
     raw_refresh, refresh_hash = new_refresh_token()
     await auth_session_repo.create_session(
@@ -84,6 +87,7 @@ async def exchange_google(
 @router.post("/refresh")
 async def refresh(
     data: RefreshRequest,
+    request: Request,
     pool: asyncpg.Pool = Depends(get_db),
 ) -> dict:
     """Exchange a valid refresh token for a fresh access token."""
@@ -95,6 +99,7 @@ async def refresh(
         )
     user = await user_repo.get_user(pool, session["user_id"])
     email = user.get("email") if user else None
+    set_actor(request, user_id=session["user_id"], email=email)
     access, expires_in = create_access_token(session["user_id"], email)
     await auth_session_repo.touch_session(pool, h)
     return {"access_token": access, "expires_in": expires_in}
@@ -103,8 +108,19 @@ async def refresh(
 @router.post("/logout")
 async def logout(
     data: LogoutRequest,
+    request: Request,
     pool: asyncpg.Pool = Depends(get_db),
 ) -> dict:
     """Revoke a refresh token."""
-    await auth_session_repo.revoke_session(pool, hash_refresh(data.refresh_token))
+    h = hash_refresh(data.refresh_token)
+    # Capture who is logging out (for the audit log) before the session is gone.
+    session = await auth_session_repo.get_valid_session(pool, h)
+    if session:
+        user = await user_repo.get_user(pool, session["user_id"])
+        set_actor(
+            request,
+            user_id=session["user_id"],
+            email=user.get("email") if user else None,
+        )
+    await auth_session_repo.revoke_session(pool, h)
     return {"success": True}
