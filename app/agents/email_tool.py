@@ -55,7 +55,7 @@ def _send_via_gmail(
         _GMAIL_SMTP_HOST, _GMAIL_SMTP_PORT, socket.AF_INET
     )[0][4][0]
 
-    with smtplib.SMTP(ipv4_addr, _GMAIL_SMTP_PORT, timeout=30) as smtp:
+    with smtplib.SMTP(ipv4_addr, _GMAIL_SMTP_PORT, timeout=120) as smtp:
         smtp.ehlo()
         smtp.starttls()
         smtp.ehlo()
