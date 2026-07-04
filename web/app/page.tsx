@@ -588,7 +588,7 @@ export default function LandingPage() {
           {/* Right: actions */}
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <Button variant="ghost" size="icon" asChild className="hidden sm:inline-flex">
+            <Button variant="ghost" size="icon" asChild>
               <a href={siteConfig.github} target="_blank" rel="noopener noreferrer" aria-label="GitHub">
                 <Github className="size-4" />
               </a>
