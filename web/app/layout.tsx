@@ -6,6 +6,7 @@ import { AuthProvider } from "@/components/auth/auth-provider";
 import { BackendHealthProvider } from "@/components/backend-health-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { themeInitScript } from "@/config/theme";
+import { GoogleAnalytics } from "@next/third-parties/google";
 
 const poppins = Poppins({
   subsets: ['latin'],
@@ -17,6 +18,8 @@ export const metadata: Metadata = {
   title: "Atelier",
   description: "Your AI Workspace",
 };
+
+const GA_ID = process.env.NEXT_PUBLIC_GA_ID;
 
 export default function RootLayout({
   children,
@@ -44,6 +47,7 @@ export default function RootLayout({
           <Toaster richColors position="top-right" />
         </ThemeProvider>
       </body>
+      {GA_ID && <GoogleAnalytics gaId={GA_ID} />}
     </html>
   );
 }

@@ -113,11 +113,16 @@ export default function PrivacyPage() {
         </p>
       </LegalSection>
 
-      <LegalSection title="Cookies & local storage">
+      <LegalSection title="Cookies & analytics">
         <p>
           We store a login session token and your preferences (such as theme and accent
-          color) in your browser. We don&apos;t use third-party advertising or tracking
-          cookies.
+          color) in your browser.
+        </p>
+        <p>
+          If analytics is enabled on this instance, we use <strong>Google Analytics</strong>{" "}
+          to understand how the app is used. It sets its own cookies and sends aggregated
+          usage data (like page views) to Google under their privacy policy. We don&apos;t
+          use advertising cookies, and we don&apos;t sell your data.
         </p>
       </LegalSection>
 
