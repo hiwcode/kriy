@@ -515,13 +515,23 @@ function WorkflowEditor({
             <Input value={draft.name} onChange={(e) => set({ name: e.target.value })} placeholder="Auto-reset todos" />
           </Field>
 
+          <div className="rounded-lg border border-blue-200 bg-blue-50/50 px-3 py-2.5 text-xs text-blue-700 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-300">
+            <p className="font-medium mb-1">Event type supports glob patterns:</p>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 font-mono">
+              <span>todo.completed</span><span className="text-blue-500">exact match</span>
+              <span>todo.*</span><span className="text-blue-500">all todo events</span>
+              <span>*.created</span><span className="text-blue-500">all created events</span>
+              <span>*</span><span className="text-blue-500">matches everything</span>
+            </div>
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Event type">
               <Input
                 list="wf-event-types"
                 value={draft.event_type}
                 onChange={(e) => set({ event_type: e.target.value })}
-                placeholder="todo.completed"
+                placeholder="todo.*"
                 className="font-mono"
               />
               <datalist id="wf-event-types">
