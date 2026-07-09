@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   Clock,
   Bot,
+  RefreshCcw,
 } from "lucide-react";
 
 import { AppLayout } from "@/components/layout/app-layout";
@@ -669,7 +670,7 @@ function RunsDrawer({
           </div>
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon-sm" onClick={refresh} title="Refresh">
-              <Loader2 className={cn("size-4", loading && "animate-spin")} />
+              <RefreshCcw className={cn("size-4", loading && "animate-spin")} />
             </Button>
             <Button variant="ghost" size="icon-sm" onClick={() => onOpenChange(false)} aria-label="Close">
               <X className="size-4" />
@@ -757,7 +758,7 @@ function QueueDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o: 
           </div>
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon-sm" onClick={refresh} title="Refresh">
-              <Loader2 className={cn("size-4", loading && "animate-spin")} />
+              <RefreshCcw className={cn("size-4", loading && "animate-spin")} />
             </Button>
             <Button variant="ghost" size="icon-sm" onClick={() => onOpenChange(false)} aria-label="Close">
               <X className="size-4" />

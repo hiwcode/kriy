@@ -114,11 +114,10 @@ export function AppNavbar({ className }: { className?: string }) {
 
       {/* Right Section */}
       <div className="flex items-center gap-3">
-        <NotificationBell />
         <Button
           variant="outline"
           size="sm"
-          className="hidden gap-2 sm:hidden"
+          className="hidden gap-2 md:flex"
           asChild
         >
           <a
@@ -134,7 +133,7 @@ export function AppNavbar({ className }: { className?: string }) {
         <Button
           variant="ghost"
           size="icon"
-          className="sm:hidden size-9 hidden"
+          className="md:hidden size-9"
           asChild
         >
           <a
@@ -145,6 +144,7 @@ export function AppNavbar({ className }: { className?: string }) {
             <Github className="size-4" />
           </a>
         </Button>
+        <NotificationBell />
         <ThemeToggle />
         {/* Auth: Sign in button or User dropdown */}
         {auth?.isLoading ? (
