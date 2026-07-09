@@ -44,7 +44,7 @@ function OrchestratorNode(props: NodeProps<AgentNode>) {
   return (
     <div
       className={cn(
-        "relative flex min-w-[190px] flex-col gap-2 rounded-2xl border border-white/10 bg-gradient-to-br from-primary to-fuchsia-600 px-4 py-3 text-primary-foreground shadow-lg shadow-primary/25 transition-all",
+        "relative flex min-w-[190px] flex-col gap-2 rounded-2xl border border-white/10 bg-primary px-4 py-3 text-primary-foreground shadow-lg shadow-primary/25 transition-all",
         selected
           ? "ring-2 ring-primary/40 ring-offset-2 ring-offset-background"
           : "hover:shadow-xl hover:shadow-primary/30"
