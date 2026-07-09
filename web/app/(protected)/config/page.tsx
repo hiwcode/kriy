@@ -52,6 +52,7 @@ import {
   SlackIcon,
   Palette,
   Mail,
+  Info
 } from "lucide-react";
 import { AccentPicker } from "@/components/accent-picker";
 import { ContrastToggle } from "@/components/contrast-toggle";
@@ -540,6 +541,16 @@ export default function ConfigPage() {
           onGenerate={handleGenerateApiKey}
           onRevoke={handleRevokeApiKey}
         />
+
+      <div className="mx-auto max-w-3xl mt-4">                                                                                                                  
+        <div className="flex items-start gap-3 rounded-xl border border-primary bg-primary/20 p-4 dark:border-primary dark:bg-primary/20">                      
+          <Info className="mt-0.5 size-4 shrink-0 text-blue-600 dark:text-blue-400" />                                                                          
+          <p className="text-sm text-blue-700 dark:text-blue-300">                                                                                            
+          This configuration is shared across all your workspaces. Changes here apply everywhere.                                                             
+          </p>                                                                                                                                                
+        </div>                                                                                                                                           
+      </div> 
+
       </PageLayout>
     </AppLayout>
   );

@@ -41,6 +41,8 @@ import {
 } from "@/components/ui/sheet";
 import { ResizableDrawer } from "@/components/ui/resizable-drawer";
 import { cn } from "@/lib/utils";
+import { loadProviderStatus } from "@/lib/config-check";
+
 
 // Pricing per 1M tokens (USD) - input / output
 const MODEL_PRICING: Record<string, { input: number; output: number }> = {
@@ -437,6 +439,11 @@ function AgentTracesContent({ agent }: { agent: AgentItem }) {
   const [total, setTotal] = React.useState(0);
   const [searchInput, setSearchInput] = React.useState("");
   const [search, setSearch] = React.useState("");
+  const [opikEnabled, setOpikEnabled] = React.useState<boolean | null>(null);
+
+  React.useEffect(() => {
+    loadProviderStatus().then((s) => setOpikEnabled(s.hasOpik));
+  }, []);
 
   const fetchTraces = React.useCallback(() => {
     setLoading(true);
@@ -473,7 +480,8 @@ function AgentTracesContent({ agent }: { agent: AgentItem }) {
 
   return (
     <div className="space-y-4">
-      {/* Opik deep tracing hint */}
+      {/* Opik deep tracing hint — hidden when Opik is already enabled */}
+      {opikEnabled === false && (
       <div className="flex items-start gap-3 rounded-xl border border-orange-300/40 bg-gradient-to-r from-orange-50 to-red-50 px-4 py-3 dark:border-orange-500/20 dark:from-orange-950/20 dark:to-red-950/20">
         <svg width="24" height="24" viewBox="40 40 230 230" fill="none" xmlns="http://www.w3.org/2000/svg" className="mt-0.5 shrink-0">
           <path fillRule="evenodd" clipRule="evenodd" d="M211.526 86.214C163.671 65.177 106.858 87.6512 84.9987 137.376C63.1395 187.101 84.9915 244.157 132.846 265.194C152.148 273.679 172.796 275.093 192.066 270.531C200.361 268.567 208.678 273.7 210.641 281.995C212.605 290.29 207.473 298.607 199.177 300.571C173.657 306.612 146.128 304.754 120.423 293.454C56.3654 265.294 28.2831 189.683 56.7387 124.953C85.1944 60.2225 159.892 29.7942 223.949 57.954C263.032 75.1349 288.768 110.083 296.374 149.317C297.997 157.686 292.528 165.785 284.159 167.408C275.791 169.03 267.691 163.561 266.069 155.192C260.271 125.29 240.78 99.074 211.526 86.214ZM263.453 256.783C266.44 269.313 258.703 281.891 246.173 284.878C233.643 287.864 221.064 280.128 218.078 267.598C215.091 255.068 222.828 242.489 235.358 239.503C247.888 236.516 260.467 244.253 263.453 256.783ZM282.895 238.991C299.635 235.001 309.971 218.196 305.981 201.457C301.991 184.717 285.186 174.381 268.447 178.371C251.707 182.361 241.371 199.165 245.361 215.905C249.351 232.645 266.156 242.981 282.895 238.991Z" fill="url(#opik_gradient)" />
@@ -505,6 +513,7 @@ function AgentTracesContent({ agent }: { agent: AgentItem }) {
           </p>
         </div>
       </div>
+      )}
 
       {/* Search */}
       <div className="relative">
