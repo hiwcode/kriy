@@ -128,6 +128,21 @@ function ActionRow({
   );
 }
 
+function CopyWorkspaceId({ workspace }: { workspace: object }) {
+  const [copied, setCopied] = React.useState(false);
+  const copy = () => {
+    navigator.clipboard.writeText(String(JSON.stringify(workspace)));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <Button variant="outline" size="sm" onClick={copy} className="">
+      {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+      {copied ? "Copied!" : `Copy`}
+    </Button>
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /*  Page                                                               */
 /* ------------------------------------------------------------------ */
@@ -310,6 +325,12 @@ export default function WorkspaceSettingsPage() {
                     ) : (
                       <Badge className="border-0 bg-primary/10 text-primary">Team</Badge>
                     )}
+                    <CopyWorkspaceId workspace={{
+                      id: activeWs.id,
+                      name: activeWs.name,
+                      slug: activeWs.slug,
+                      created_at: activeWs.created_at
+                    }} />
                   </div>
                   <p className="mt-0.5 text-sm text-muted-foreground">
                     {members.length} member{members.length === 1 ? "" : "s"}
