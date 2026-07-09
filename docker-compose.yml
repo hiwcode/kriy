@@ -2,15 +2,15 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: ai_workflow_playground
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-ai_workflow_playground}
     ports:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d ai_workflow_playground"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-ai_workflow_playground}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -20,13 +20,12 @@ services:
     env_file:
       - .env
     environment:
-      # Point the app at the compose "db" service instead of localhost.
-      # This overrides DATABASE_URL from .env.
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/ai_workflow_playground
+      # Override DATABASE_URL to point at the compose "db" service.
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-ai_workflow_playground}
       HOST: 0.0.0.0
-      PORT: 8000
+      PORT: "8000"
     ports:
-      - "8000:8000"
+      - "${PORT:-8000}:8000"
     depends_on:
       db:
         condition: service_healthy
