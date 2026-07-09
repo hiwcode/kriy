@@ -12,13 +12,13 @@ from google.adk.tools import FunctionTool
 logger = logging.getLogger(__name__)
 
 
-def make_schedule_tools(pool: asyncpg.Pool, workspace_id: int | None = None, created_by: int | None = None) -> list[FunctionTool]:
+def make_schedule_tools(pool: asyncpg.Pool, workspace_id: int | None = None, created_by: int | None = None, default_agent_id: int | None = None) -> list[FunctionTool]:
     """Create schedule tools with the database pool baked in."""
 
     async def create_schedule(
         name: str,
-        agent_id: int,
         message: str,
+        agent_id: int = 0,
         schedule_type: str = "one_time",
         cron_expression: str | None = None,
         run_at: str | None = None,
@@ -40,8 +40,8 @@ def make_schedule_tools(pool: asyncpg.Pool, workspace_id: int | None = None, cre
 
         Args:
             name: A descriptive name for this schedule
-            agent_id: The ID of the agent to run
             message: The message/prompt to send to the agent
+            agent_id: The ID of the agent to run. Defaults to the current agent (yourself) if omitted or 0.
             schedule_type: Either 'one_time' or 'recurring'
             cron_expression: Cron expression for recurring schedules (5-field format)
             run_at: ISO datetime string for one-time schedules (e.g. '2025-01-15T10:30:00Z')
@@ -50,6 +50,9 @@ def make_schedule_tools(pool: asyncpg.Pool, workspace_id: int | None = None, cre
         """
         from app.schemas.schedule import ScheduleCreate
         from app.services import schedule_service
+
+        if not agent_id and default_agent_id:
+            agent_id = default_agent_id
 
         parsed_run_at = None
         if run_at:

@@ -258,7 +258,7 @@ async def _build_tools(
         if tool_type == "builtin":
             name = item.get("name")
             if name == "schedule":
-                schedule_tools = make_schedule_tools(pool, workspace_id=workspace_id, created_by=created_by)
+                schedule_tools = make_schedule_tools(pool, workspace_id=workspace_id, created_by=created_by, default_agent_id=default_agent_id)
                 result.extend(schedule_tools)
                 logger.info("Schedule tools added (via builtin)")
             elif name == "workflow":
