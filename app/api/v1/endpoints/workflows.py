@@ -61,6 +61,8 @@ class WorkflowIn(BaseModel):
     instructions: str = ""
     enabled: bool = True
     priority: int = Field(0, description="Higher runs first when several match an event")
+    execution_mode: str = Field("serial", description="'serial' or 'parallel'")
+    max_concurrency: int = Field(3, ge=1, le=20, description="Max concurrent runs when parallel")
 
 
 class WorkflowOut(WorkflowIn):
@@ -261,6 +263,8 @@ async def create_workflow(
         instructions=data.instructions,
         enabled=data.enabled,
         priority=data.priority,
+        execution_mode=data.execution_mode,
+        max_concurrency=data.max_concurrency,
     )
     return {"success": True, "message": "Workflow created", "data": wf, "pagination": None}
 
@@ -284,6 +288,8 @@ async def update_workflow(
         instructions=data.instructions,
         enabled=data.enabled,
         priority=data.priority,
+        execution_mode=data.execution_mode,
+        max_concurrency=data.max_concurrency,
     )
     if not updated:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow not found")
@@ -300,6 +306,25 @@ async def delete_workflow(
     await _owned_workflow(workflow_id, pool, workspace)
     await workflow_repo.delete(pool, workflow_id)
     return {"success": True, "message": "Workflow deleted", "data": {"id": workflow_id}, "pagination": None}
+
+
+@router.get("/queue/all", response_model=ApiResponse)
+async def list_queue(
+    limit: int = Query(100, ge=1, le=500),
+    pool: asyncpg.Pool = Depends(get_db),
+    auth: AuthContext = Depends(require_google_auth),
+    workspace: dict | None = Depends(get_current_workspace),
+) -> dict:
+    """Global queue view: all recent runs across workflows in the workspace."""
+    ws_id = _ws_id(workspace)
+    runs = await workflow_repo.list_queue(pool, ws_id, limit=limit)
+    counts = await workflow_repo.count_queue(pool, ws_id)
+    return {
+        "success": True,
+        "message": "Queue fetched",
+        "data": {"runs": runs, "counts": counts},
+        "pagination": None,
+    }
 
 
 @router.get("/{workflow_id}/runs", response_model=ApiResponse)

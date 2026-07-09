@@ -44,6 +44,7 @@ import {
   updateWorkflow,
   deleteWorkflow,
   listWorkflowRuns,
+  listQueue,
   workflowChat,
   listEventTypes,
   upsertEventType,
@@ -51,6 +52,7 @@ import {
   type Workflow,
   type WorkflowRun,
   type EventType,
+  type QueueRun,
 } from "@/lib/api/workflows";
 import { listIntegrationAgents, type IntegrationAgent } from "@/lib/api/integration";
 
@@ -64,6 +66,8 @@ const emptyWorkflow = (): Workflow => ({
   instructions: "",
   enabled: true,
   priority: 0,
+  execution_mode: "serial",
+  max_concurrency: 3,
 });
 
 export default function WorkflowsPage() {
@@ -128,6 +132,8 @@ export default function WorkflowsPage() {
         instructions: w.instructions,
         enabled: w.enabled,
         priority: w.priority,
+        execution_mode: w.execution_mode,
+        max_concurrency: w.max_concurrency,
       };
       if (editing) await updateWorkflow(editing.id, input);
       else await createWorkflow(input);
@@ -163,11 +169,19 @@ export default function WorkflowsPage() {
     }
   };
 
-  const eventsButton = (
-    <Button variant="outline" size="sm" onClick={() => setEventsOpen(true)}>
-      <Webhook className="size-4" />
-      Events{eventTypes.length ? ` (${eventTypes.length})` : ""}
-    </Button>
+  const [queueOpen, setQueueOpen] = React.useState(false);
+
+  const headerButtons = (
+    <div className="flex gap-2">
+      <Button variant="outline" size="sm" onClick={() => setQueueOpen(true)}>
+        <Clock className="size-4" />
+        Queue
+      </Button>
+      <Button variant="outline" size="sm" onClick={() => setEventsOpen(true)}>
+        <Webhook className="size-4" />
+        Events{eventTypes.length ? ` (${eventTypes.length})` : ""}
+      </Button>
+    </div>
   );
 
   // One tab per agent (like Traces); each shows that agent's workflows.
@@ -176,7 +190,7 @@ export default function WorkflowsPage() {
     tabName: "Event Workflows",
     description:
       "Connect an external app to your agents: when your app emits an event (e.g. “todo.completed”), the matching agent runs automatically to handle it. Pick an agent below to see its triggers; manage the events your apps send from the Events button.",
-    headerActions: eventsButton,
+    headerActions: headerButtons,
     items: agents.map((a) => ({
       id: a.id,
       name: a.label || a.name,
@@ -262,6 +276,8 @@ export default function WorkflowsPage() {
 
       <RunsDrawer workflow={runsFor} onOpenChange={(o) => !o && setRunsFor(null)} />
 
+      <QueueDrawer open={queueOpen} onOpenChange={setQueueOpen} />
+
       <EventsDrawer
         open={eventsOpen}
         onOpenChange={setEventsOpen}
@@ -344,6 +360,9 @@ function WorkflowsList({
                 </Badge>
                 <Badge variant="secondary" className="gap-1 border-0 text-[10px]">
                   <ArrowUpDown className="size-3" /> p{w.priority}
+                </Badge>
+                <Badge variant={w.execution_mode === "parallel" ? "default" : "secondary"} className="border-0 text-[10px]">
+                  {w.execution_mode === "parallel" ? `parallel (${w.max_concurrency})` : "serial"}
                 </Badge>
               </div>
               {w.instructions && (
@@ -520,6 +539,31 @@ function WorkflowEditor({
             </Field>
           </div>
 
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Execution mode">
+              <Select value={draft.execution_mode} onValueChange={(v) => set({ execution_mode: v as "serial" | "parallel" })}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="serial">Serial (one at a time)</SelectItem>
+                  <SelectItem value="parallel">Parallel</SelectItem>
+                </SelectContent>
+              </Select>
+            </Field>
+            {draft.execution_mode === "parallel" && (
+              <Field label="Max concurrency">
+                <Input
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={draft.max_concurrency}
+                  onChange={(e) => set({ max_concurrency: Math.max(1, Math.min(20, Number(e.target.value) || 3)) })}
+                />
+              </Field>
+            )}
+          </div>
+
           <Field label="Agent">
             <Select value={draft.agent_id ? String(draft.agent_id) : ""} onValueChange={(v) => set({ agent_id: Number(v) })}>
               <SelectTrigger>
@@ -645,6 +689,125 @@ function RunsDrawer({
               </div>
               {r.response && <p className="mt-1.5 whitespace-pre-wrap text-foreground/90">{r.response}</p>}
               {r.error && <p className="mt-1.5 whitespace-pre-wrap text-destructive">{r.error}</p>}
+            </div>
+          ))}
+        </div>
+      </div>
+    </ResizableDrawer>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Queue drawer                                                       */
+/* ------------------------------------------------------------------ */
+
+const QUEUE_STATUS_ICONS: Record<string, React.ReactNode> = {
+  pending: <Clock className="size-3.5" />,
+  running: <Loader2 className="size-3.5 animate-spin" />,
+  done: <Check className="size-3.5" />,
+  error: <AlertTriangle className="size-3.5" />,
+};
+
+function QueueDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+  const [runs, setRuns] = React.useState<QueueRun[]>([]);
+  const [counts, setCounts] = React.useState<Record<string, number>>({});
+  const [loading, setLoading] = React.useState(false);
+  const [filter, setFilter] = React.useState<string>("all");
+
+  const refresh = React.useCallback(() => {
+    setLoading(true);
+    listQueue(200)
+      .then((d) => { setRuns(d.runs); setCounts(d.counts); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  React.useEffect(() => {
+    if (open) refresh();
+  }, [open, refresh]);
+
+  // Auto-refresh while open
+  React.useEffect(() => {
+    if (!open) return;
+    const interval = setInterval(refresh, 5000);
+    return () => clearInterval(interval);
+  }, [open, refresh]);
+
+  const filtered = filter === "all" ? runs : runs.filter((r) => r.status === filter);
+  const total = Object.values(counts).reduce((a, b) => a + b, 0);
+
+  return (
+    <ResizableDrawer open={open} onOpenChange={onOpenChange} defaultWidth={640}>
+      <SheetTitle className="sr-only">Run Queue</SheetTitle>
+      <div className="flex h-full flex-col">
+        <div className="flex items-center justify-between gap-2 border-b px-4 py-3">
+          <div className="flex items-center gap-2.5">
+            <span className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Clock className="size-[18px]" />
+            </span>
+            <div>
+              <p className="font-semibold">Run Queue</p>
+              <p className="text-xs text-muted-foreground">
+                {counts.pending || 0} pending · {counts.running || 0} running · {total} total
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon-sm" onClick={refresh} title="Refresh">
+              <Loader2 className={cn("size-4", loading && "animate-spin")} />
+            </Button>
+            <Button variant="ghost" size="icon-sm" onClick={() => onOpenChange(false)} aria-label="Close">
+              <X className="size-4" />
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex gap-1.5 border-b px-4 py-2">
+          {["all", "pending", "running", "done", "error"].map((s) => (
+            <button
+              key={s}
+              onClick={() => setFilter(s)}
+              className={cn(
+                "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+                filter === s ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:bg-muted/80"
+              )}
+            >
+              {s} {s !== "all" && counts[s] ? `(${counts[s]})` : ""}
+            </button>
+          ))}
+        </div>
+
+        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-4">
+          {!loading && filtered.length === 0 && (
+            <p className="py-10 text-center text-sm text-muted-foreground">
+              {filter === "all" ? "No runs yet. Emit an event to trigger a workflow." : `No ${filter} runs.`}
+            </p>
+          )}
+          {filtered.map((r) => (
+            <div key={r.id} className="rounded-lg border bg-card p-3 text-sm">
+              <div className="flex items-center gap-2">
+                <span className={cn("flex items-center gap-1 rounded-md px-2 py-0.5 text-xs font-medium", STATUS_STYLES[r.status] ?? "")}>
+                  {QUEUE_STATUS_ICONS[r.status]} {r.status}
+                </span>
+                <span className="text-xs text-muted-foreground">#{r.id}</span>
+                <span className="font-mono text-xs text-muted-foreground">{r.event_type}</span>
+                {r.attempts > 1 && (
+                  <span className="text-xs text-muted-foreground">· attempt {r.attempts}/{r.max_attempts}</span>
+                )}
+                <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
+                  <Clock className="size-3" />
+                  {r.created_at ? new Date(r.created_at).toLocaleString() : ""}
+                </span>
+              </div>
+              <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                <Badge variant="secondary" className="border-0 text-[10px]">{r.workflow_name}</Badge>
+                <Badge variant="secondary" className="border-0 text-[10px]">{r.execution_mode}</Badge>
+                <Badge variant="secondary" className="gap-1 border-0 text-[10px]">
+                  <ArrowUpDown className="size-2.5" /> p{r.priority}
+                </Badge>
+              </div>
+              {r.response && <p className="mt-1.5 line-clamp-3 whitespace-pre-wrap text-foreground/90">{r.response}</p>}
+              {r.error && <p className="mt-1.5 line-clamp-3 whitespace-pre-wrap text-destructive">{r.error}</p>}
             </div>
           ))}
         </div>

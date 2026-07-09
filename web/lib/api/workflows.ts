@@ -50,6 +50,8 @@ export interface Workflow {
   instructions: string;
   enabled: boolean;
   priority: number;
+  execution_mode: "serial" | "parallel";
+  max_concurrency: number;
 }
 
 export interface WorkflowInput {
@@ -59,6 +61,8 @@ export interface WorkflowInput {
   instructions: string;
   enabled: boolean;
   priority: number;
+  execution_mode: "serial" | "parallel";
+  max_concurrency: number;
 }
 
 export interface WorkflowRun {
@@ -172,6 +176,21 @@ export function deleteEventType(name: string): Promise<{ name: string }> {
   return unwrap<{ name: string }>(`/api/v1/event-types/${encodeURIComponent(name)}`, {
     method: "DELETE",
   });
+}
+
+export interface QueueRun extends WorkflowRun {
+  workflow_name: string;
+  execution_mode: "serial" | "parallel";
+  priority: number;
+}
+
+export interface QueueData {
+  runs: QueueRun[];
+  counts: Record<string, number>;
+}
+
+export function listQueue(limit = 100): Promise<QueueData> {
+  return unwrap<QueueData>(`/api/v1/workflows/queue/all?limit=${limit}`);
 }
 
 export function eventTypeSubscribers(name: string): Promise<Workflow[]> {
