@@ -630,50 +630,7 @@ function ToolCallDrawer({
               )}
             </div>
 
-            {result && (
-              <div
-                className={cn(
-                  "rounded-lg border p-4",
-                  result.isError
-                    ? "border-destructive/30 bg-destructive/10"
-                    : "border-success/30 bg-success/10"
-                )}
-              >
-                <div className="mb-2 flex items-center gap-1.5 text-sm font-medium">
-                  {result.isError ? (
-                    <>
-                      <AlertCircle className="size-4 text-destructive" />
-                      <span className="text-destructive">Error</span>
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="size-4 text-success" />
-                      <span className="text-success">Result</span>
-                    </>
-                  )}
-                </div>
-                {result.content?.length ? (
-                  <div className="space-y-2 text-sm">
-                    {result.content.map((block, i) => (
-                      <div key={i}>
-                        {block.text ? (
-                          <MdRenderer content={block.text} variant="docs" />
-                        ) : (
-                          <pre className="whitespace-pre-wrap break-words text-xs">
-                            {JSON.stringify(block, null, 2)}
-                          </pre>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-                {result.structuredContent && (
-                  <pre className="mt-2 max-h-48 overflow-auto rounded bg-muted/50 p-2 text-xs">
-                    {JSON.stringify(result.structuredContent, null, 2)}
-                  </pre>
-                )}
-              </div>
-            )}
+            {result && <ToolResult result={result} />}
           </div>
 
           {/* footer */}
@@ -697,5 +654,191 @@ function ToolCallDrawer({
           </div>
         </div>
     </ResizableDrawer>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Tool result display                                                */
+/* ------------------------------------------------------------------ */
+
+function tryParseJson(text: string): { parsed: unknown; isJson: boolean } {
+  try {
+    const parsed = JSON.parse(text);
+    return { parsed, isJson: true };
+  } catch {
+    return { parsed: null, isJson: false };
+  }
+}
+
+function ToolResult({
+  result,
+}: {
+  result: {
+    content: Array<{ type?: string; text?: string }>;
+    isError: boolean;
+    structuredContent?: Record<string, unknown>;
+  };
+}) {
+  const [viewMode, setViewMode] = React.useState<"formatted" | "raw">("formatted");
+
+  // Collect all text content
+  const allText = (result.content ?? []).map((b) => b.text ?? "").join("");
+  const { parsed, isJson } = tryParseJson(allText);
+
+  return (
+    <div
+      className={cn(
+        "rounded-xl border",
+        result.isError
+          ? "border-destructive/30 bg-destructive/5"
+          : "border-emerald-500/30 bg-emerald-500/5"
+      )}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-inherit px-4 py-2.5">
+        <div className="flex items-center gap-1.5 text-sm font-medium">
+          {result.isError ? (
+            <>
+              <AlertCircle className="size-4 text-destructive" />
+              <span className="text-destructive">Error</span>
+            </>
+          ) : (
+            <>
+              <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400" />
+              <span className="text-emerald-700 dark:text-emerald-400">Result</span>
+            </>
+          )}
+        </div>
+        {(isJson || result.structuredContent) && (
+          <div className="inline-flex rounded-lg border bg-muted/40 p-0.5 text-xs font-medium">
+            <button
+              type="button"
+              onClick={() => setViewMode("formatted")}
+              className={cn(
+                "rounded-md px-2.5 py-1 transition-colors",
+                viewMode === "formatted"
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Formatted
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode("raw")}
+              className={cn(
+                "rounded-md px-2.5 py-1 transition-colors",
+                viewMode === "raw"
+                  ? "bg-card text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Raw
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Body */}
+      <div className="max-h-[60vh] overflow-auto p-4">
+        {viewMode === "raw" ? (
+          <pre className="whitespace-pre-wrap break-all font-mono text-xs text-foreground/90">
+            {allText || JSON.stringify(result.structuredContent, null, 2) || "(empty)"}
+          </pre>
+        ) : isJson ? (
+          <JsonTree data={parsed} />
+        ) : result.structuredContent ? (
+          <JsonTree data={result.structuredContent} />
+        ) : result.content?.length ? (
+          <div className="space-y-2 text-sm">
+            {result.content.map((block, i) => (
+              <div key={i}>
+                {block.text ? (
+                  <MdRenderer content={block.text} variant="docs" />
+                ) : (
+                  <pre className="whitespace-pre-wrap break-all font-mono text-xs">
+                    {JSON.stringify(block, null, 2)}
+                  </pre>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">(empty response)</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  JSON tree viewer                                                   */
+/* ------------------------------------------------------------------ */
+
+function JsonTree({ data }: { data: unknown }) {
+  if (data === null || data === undefined) {
+    return <span className="font-mono text-xs text-muted-foreground">null</span>;
+  }
+
+  if (typeof data === "string") {
+    return (
+      <span className="whitespace-pre-wrap break-all font-mono text-xs text-emerald-700 dark:text-emerald-400">
+        &quot;{data}&quot;
+      </span>
+    );
+  }
+
+  if (typeof data === "number" || typeof data === "boolean") {
+    return (
+      <span className="font-mono text-xs text-blue-600 dark:text-blue-400">
+        {String(data)}
+      </span>
+    );
+  }
+
+  if (Array.isArray(data)) {
+    if (data.length === 0) {
+      return <span className="font-mono text-xs text-muted-foreground">[]</span>;
+    }
+    return (
+      <div className="space-y-1">
+        {data.map((item, i) => (
+          <div key={i} className="flex gap-2">
+            <span className="shrink-0 font-mono text-xs text-muted-foreground">{i}.</span>
+            <div className="min-w-0 flex-1">
+              <JsonTree data={item} />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  if (typeof data === "object") {
+    const entries = Object.entries(data as Record<string, unknown>);
+    if (entries.length === 0) {
+      return <span className="font-mono text-xs text-muted-foreground">{"{}"}</span>;
+    }
+    return (
+      <div className="space-y-1.5">
+        {entries.map(([key, val]) => {
+          const isSimple = val === null || typeof val !== "object";
+          return (
+            <div key={key} className={isSimple ? "flex items-baseline gap-2" : ""}>
+              <span className="shrink-0 font-mono text-xs font-medium text-foreground/80">
+                {key}:
+              </span>
+              <div className={cn("min-w-0", !isSimple && "ml-4 mt-0.5")}>
+                <JsonTree data={val} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  return (
+    <span className="font-mono text-xs text-muted-foreground">{String(data)}</span>
   );
 }
