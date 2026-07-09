@@ -126,7 +126,7 @@ export function AppNavbar({ className }: { className?: string }) {
             rel="noopener noreferrer"
           >
             <Github className="size-4" />
-            <Star className="size-3.5 fill-yellow-400 text-yellow-400" />
+            <Star className="size-3.5 fill-primary text-primary" />
             <span className="text-xs">Star</span>
           </a>
         </Button>
