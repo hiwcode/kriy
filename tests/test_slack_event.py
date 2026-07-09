@@ -7,7 +7,7 @@ import time
 import requests
 
 # Slack credentials (from your app)
-SIGNING_SECRET = "e6173ba3cfb69104d50252a358c96670"
+SIGNING_SECRET = ""
 BACKEND_URL = "http://localhost:8000"
 SLACK_ENDPOINT = f"{BACKEND_URL}/api/v1/slack/events"
 
@@ -27,17 +27,17 @@ def test_slack_event():
     # Slack event payload (simulating a message)
     event_payload = {
         "token": "token",
-        "team_id": "T1234567890",
-        "event_id": "Ev1234567890",
+        "team_id": "",
+        "event_id": "",
         "event": {
-            "type": "app_mention",
-            "channel": "C04DP6AEAEQ",
-            "user": "U1234567890",
-            "text": "<@U0AN77WNAV8> hey",
-            "ts": "1234567890.123456"
+            "type": "",
+            "channel": "",
+            "user": "",
+            "text": "",
+            "ts": ""
         },
-        "type": "event_callback",
-        "event_ts": "1234567890.123456"
+        "type": "",
+        "event_ts": ""
     }
     
     # Serialize payload
