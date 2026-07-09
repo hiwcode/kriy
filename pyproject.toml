@@ -16,6 +16,7 @@ dependencies = [
     "uvicorn>=0.40.0",
     "opik>=1.0.0",
     "croniter>=6.0.0",
+    "redis>=7.1.0",
 ]
 
 # examples/ are standalone uv projects (each has its own pyproject + .venv),

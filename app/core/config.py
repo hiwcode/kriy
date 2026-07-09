@@ -69,6 +69,9 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_TTL_MINUTES: int = Field(default=1440, description="Access token lifetime (minutes)")
     REFRESH_TOKEN_TTL_DAYS: int = Field(default=30, description="Refresh token lifetime (days)")
 
+    # Redis
+    REDIS_URL: str = Field(default="", description="Redis URL for caching", env="REDIS_URL")
+
     # CORS
     CORS_ORIGINS: list[str] = Field(default=["*"], description="Allowed CORS origins", env="CORS_ORIGINS")
     

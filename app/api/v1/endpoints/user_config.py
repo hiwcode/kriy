@@ -30,6 +30,12 @@ async def get_config(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Google sign-in required",
         )
+    from app.core import cache
+
+    cached = await cache.get(f"user_config:{auth.user_id}")
+    if cached is not None:
+        return {"success": True, "message": "Config fetched", "data": cached, "pagination": None}
+
     config = await user_config_repo.get_config(pool, auth.user_id)
     if not config:
         config = {
@@ -53,6 +59,7 @@ async def get_config(
             "gmail_address": None,
             "gmail_app_password": None,
         }
+    await cache.set(f"user_config:{auth.user_id}", config, ttl=600)
     return {
         "success": True,
         "message": "Config fetched",
@@ -102,6 +109,8 @@ async def update_config(
         if field in payload:
             kwargs[field] = payload[field]
     config = await user_config_repo.upsert_config(**kwargs)
+    from app.core import cache
+    await cache.delete(f"user_config:{auth.user_id}")
     return {
         "success": True,
         "message": "Config updated",

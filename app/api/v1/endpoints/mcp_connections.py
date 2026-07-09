@@ -31,6 +31,8 @@ async def create_mcp_connection(
     connection = await mcp_connection_service.create_mcp_connection(
         pool, data, created_by=auth.user_id, workspace_id=workspace_id
     )
+    from app.core import cache
+    await cache.delete_pattern(f"mcp:ws:{workspace_id}:*")
     return {
         "success": True,
         "message": "MCP connection created",
@@ -83,6 +85,16 @@ async def list_mcp_connections(
                 {"filter_field": field, "filter_op": op, "filter_value": value}
             )
     workspace_id = workspace["id"] if workspace else None
+
+    from app.core import cache
+
+    cache_key = None
+    if not search and not parsed_filters and not sort_field:
+        cache_key = f"mcp:ws:{workspace_id}:u:{auth.user_id}:{limit}:{offset}"
+        cached = await cache.get(cache_key)
+        if cached is not None:
+            return cached
+
     try:
         connections, total = await mcp_connection_service.list_mcp_connections(
             pool,
@@ -100,14 +112,16 @@ async def list_mcp_connections(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
         ) from exc
     page = (offset // limit) + 1 if limit else 1
-    return {
+    pagination = Pagination(limit=limit, offset=offset, total=total, page=page, page_size=limit)
+    result = {
         "success": True,
         "message": "MCP connections fetched",
         "data": connections,
-        "pagination": Pagination(
-            limit=limit, offset=offset, total=total, page=page, page_size=limit
-        ),
+        "pagination": pagination.model_dump(),
     }
+    if cache_key:
+        await cache.set(cache_key, result, ttl=300)
+    return result
 
 
 @router.get("/{connection_id}/tools", response_model=ApiResponse)
@@ -126,6 +140,14 @@ async def list_mcp_connection_tools(
             detail="MCP connection not found",
         )
     await require_resource_access(connection, pool, auth)
+
+    from app.core import cache
+
+    tools_cache_key = f"mcp_tools:{connection_id}"
+    cached = await cache.get(tools_cache_key)
+    if cached is not None:
+        return {"success": True, "message": "Tools fetched", "data": cached, "pagination": None}
+
     try:
         headers = connection.get("headers") or {}
         if not isinstance(headers, dict):
@@ -142,6 +164,7 @@ async def list_mcp_connection_tools(
             args=connection.get("args"),
             env=connection.get("env"),
         )
+        await cache.set(tools_cache_key, tools, ttl=600)
         return {
             "success": True,
             "message": "Tools fetched",
@@ -269,6 +292,10 @@ async def update_mcp_connection(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="MCP connection not found",
         )
+    from app.core import cache
+    ws_id = existing.get("workspace_id")
+    await cache.delete_pattern(f"mcp:ws:{ws_id}:*")
+    await cache.delete(f"mcp_tools:{connection_id}")
     return {
         "success": True,
         "message": "MCP connection updated",
@@ -302,6 +329,10 @@ async def delete_mcp_connection(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="MCP connection not found",
         )
+    from app.core import cache
+    ws_id = existing.get("workspace_id")
+    await cache.delete_pattern(f"mcp:ws:{ws_id}:*")
+    await cache.delete(f"mcp_tools:{connection_id}")
     return {
         "success": True,
         "message": "MCP connection deleted",

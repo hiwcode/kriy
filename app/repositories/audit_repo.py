@@ -90,28 +90,41 @@ _FEED_WHERE = """
 async def list_workspace_activity(
     pool: asyncpg.Pool, workspace_id: int, *, limit: int = 20, offset: int = 0
 ) -> list[dict[str, Any]]:
-    """Recent successful create/update/delete events in a workspace, newest first."""
+    """Recent successful create/update/delete events in a workspace, newest first.
+
+    Deduplicates consecutive identical actions on the same resource so that,
+    e.g., five back-to-back "create agent 'demo_assistant'" entries collapse
+    into one (keeping the most recent).
+    """
     rows = await pool.fetch(
         f"""
-        SELECT id, user_id, email, action, resource_type, resource_id, created_at
+        SELECT DISTINCT ON (user_id, action, resource_type, resource_id)
+               id, user_id, email, action, resource_type, resource_id, created_at
         FROM audit_log
         {_FEED_WHERE}
-        ORDER BY created_at DESC
-        LIMIT $4 OFFSET $5;
+        ORDER BY user_id, action, resource_type, resource_id, created_at DESC;
         """,
         workspace_id,
         _FEED_ACTIONS,
         _FEED_RESOURCES,
-        limit,
-        offset,
     )
-    return [dict(r) for r in rows]
+    # Re-sort by time and apply pagination in Python (DISTINCT ON needs its
+    # own ORDER BY which conflicts with created_at DESC + LIMIT).
+    rows = sorted(rows, key=lambda r: r["created_at"], reverse=True)
+    page = rows[offset : offset + limit]
+    return [dict(r) for r in page]
 
 
 async def count_workspace_activity(pool: asyncpg.Pool, workspace_id: int) -> int:
-    """Total number of feed events in a workspace (for pagination)."""
+    """Total number of deduplicated feed events in a workspace."""
     total = await pool.fetchval(
-        f"SELECT COUNT(*) FROM audit_log {_FEED_WHERE};",
+        f"""
+        SELECT COUNT(*) FROM (
+            SELECT DISTINCT ON (user_id, action, resource_type, resource_id) id
+            FROM audit_log
+            {_FEED_WHERE}
+        ) sub;
+        """,
         workspace_id,
         _FEED_ACTIONS,
         _FEED_RESOURCES,

@@ -81,6 +81,8 @@ async def create_agent(
     agent = await agent_service.create_agent(
         pool, data, created_by=auth.user_id, workspace_id=workspace_id
     )
+    from app.core import cache
+    await cache.delete_pattern(f"agents:ws:{workspace_id}:*")
     return {
         "success": True,
         "message": "Agent created",
@@ -133,6 +135,17 @@ async def list_agents(
                 {"filter_field": field, "filter_op": op, "filter_value": value}
             )
     workspace_id = workspace["id"] if workspace else None
+
+    # Cache simple unfiltered list calls (the most common pattern from the UI)
+    from app.core import cache
+
+    cache_key = None
+    if not search and not parsed_filters and not sort_field:
+        cache_key = f"agents:ws:{workspace_id}:u:{auth.user_id}:{limit}:{offset}"
+        cached = await cache.get(cache_key)
+        if cached is not None:
+            return cached
+
     try:
         agents, total = await agent_service.list_agents(
             pool,
@@ -150,19 +163,27 @@ async def list_agents(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
         ) from exc
     page = (offset // limit) + 1 if limit else 1
-    return {
+    pagination = Pagination(limit=limit, offset=offset, total=total, page=page, page_size=limit)
+    result = {
         "success": True,
         "message": "Agents fetched",
         "data": agents,
-        "pagination": Pagination(
-            limit=limit, offset=offset, total=total, page=page, page_size=limit
-        ),
+        "pagination": pagination.model_dump(),
     }
+    if cache_key:
+        await cache.set(cache_key, result, ttl=300)
+    return result
 
 
 @router.get("/builtin-tools/list", response_model=ApiResponse)
 async def list_builtin_tools() -> dict:
     """List available builtin tool names for agent configuration."""
+    from app.core import cache
+
+    cached = await cache.get("builtin_tools")
+    if cached is not None:
+        return {"success": True, "message": "Builtin tools fetched", "data": cached, "pagination": None}
+
     from app.agents.tool_registry import get_all_builtin_tool_names
 
     names = get_all_builtin_tool_names()
@@ -176,6 +197,8 @@ async def list_builtin_tools() -> dict:
     names.append("web_search")  # search the web via Google Custom Search
     names.append("self_learning")  # let the agent save skills from conversations
     names.append("ui")        # render plan / todo / info cards in the chat UI
+
+    await cache.set("builtin_tools", names, ttl=86400)
     return {
         "success": True,
         "message": "Builtin tools fetched",
@@ -212,6 +235,9 @@ async def update_agent(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found"
         )
+    from app.core import cache
+    ws_id = agent.get("workspace_id")
+    await cache.delete_pattern(f"agents:ws:{ws_id}:*")
     return {
         "success": True,
         "message": "Agent updated",
@@ -226,12 +252,14 @@ async def delete_agent(
     pool: asyncpg.Pool = Depends(get_db),
     auth: AuthContext = Depends(require_google_auth),
 ) -> dict:
-    await _require_agent_access(agent_id, pool, auth)
+    agent = await _require_agent_access(agent_id, pool, auth)
     deleted = await agent_service.delete_agent(pool, agent_id)
     if not deleted:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found"
         )
+    from app.core import cache
+    await cache.delete_pattern(f"agents:ws:{agent.get('workspace_id')}:*")
     return {
         "success": True,
         "message": "Agent deleted",
@@ -715,6 +743,8 @@ async def bulk_delete(
     deleted_ids = await agent_service.bulk_delete_agents(
         pool, payload.ids, user_id=auth.user_id, workspace_id=workspace_id
     )
+    from app.core import cache
+    await cache.delete_pattern(f"agents:ws:{workspace_id}:*")
     return {
         "success": True,
         "message": "Agents deleted",

@@ -37,6 +37,13 @@ async def lifespan(app: FastAPI):
 
     await init_db(app)
 
+    # Connect to Redis for caching
+    try:
+        from app.core.cache import init_redis
+        await init_redis()
+    except Exception:
+        logger.warning("Redis init failed (non-fatal — caching disabled)")
+
     # Mount A2A endpoints for every agent in the database
     try:
         from app.a2a.server import mount_all_a2a
@@ -76,6 +83,11 @@ async def lifespan(app: FastAPI):
     try:
         from app.services.event_worker import stop_worker
         stop_worker()
+    except Exception:
+        pass
+    try:
+        from app.core.cache import close_redis
+        await close_redis()
     except Exception:
         pass
     await close_db(app)

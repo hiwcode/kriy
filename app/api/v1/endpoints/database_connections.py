@@ -41,6 +41,8 @@ async def create_database_connection(
         created_by=auth.user_id,
         workspace_id=workspace_id,
     )
+    from app.core import cache
+    await cache.delete_pattern(f"dbconn:ws:{workspace_id}:*")
     return {
         "success": True,
         "message": "Database connection created",
@@ -93,6 +95,16 @@ async def list_database_connections(
                 {"filter_field": field, "filter_op": op, "filter_value": value}
             )
     workspace_id = workspace["id"] if workspace else None
+
+    from app.core import cache
+
+    cache_key = None
+    if not search and not parsed_filters and not sort_field:
+        cache_key = f"dbconn:ws:{workspace_id}:u:{auth.user_id}:{limit}:{offset}"
+        cached = await cache.get(cache_key)
+        if cached is not None:
+            return cached
+
     try:
         effective_sort_field = sort_field or "created_at"
         effective_sort_order = sort_order or "desc"
@@ -118,14 +130,16 @@ async def list_database_connections(
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)
         ) from exc
-    return {
+    pagination = Pagination(limit=limit, offset=offset, total=total, page=1, page_size=limit)
+    result = {
         "success": True,
         "message": "Database connections fetched",
         "data": connections,
-        "pagination": Pagination(
-            limit=limit, offset=offset, total=total, page=1, page_size=limit
-        ),
+        "pagination": pagination.model_dump(),
     }
+    if cache_key:
+        await cache.set(cache_key, result, ttl=300)
+    return result
 
 
 @router.get("/{connection_id}", response_model=ApiResponse)
@@ -178,6 +192,8 @@ async def update_database_connection(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Database connection not found",
         )
+    from app.core import cache
+    await cache.delete_pattern(f"dbconn:ws:{existing.get('workspace_id')}:*")
     return {
         "success": True,
         "message": "Database connection updated",
@@ -211,6 +227,8 @@ async def delete_database_connection(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Database connection not found",
         )
+    from app.core import cache
+    await cache.delete_pattern(f"dbconn:ws:{existing.get('workspace_id')}:*")
     return {
         "success": True,
         "message": "Database connection deleted",
