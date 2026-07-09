@@ -172,6 +172,8 @@ async def list_builtin_tools() -> dict:
     names.append("events")    # CRUD the user's event-type registry
     names.append("notify")    # send the user an in-app notification
     names.append("send_email")  # send email via the user's configured Gmail
+    names.append("call_api")  # make HTTP requests to external APIs
+    names.append("web_search")  # search the web via Google Custom Search
     names.append("self_learning")  # let the agent save skills from conversations
     names.append("ui")        # render plan / todo / info cards in the chat UI
     return {

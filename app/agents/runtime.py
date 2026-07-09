@@ -21,6 +21,7 @@ from app.agents.workflow_tool import make_workflow_tools
 from app.agents.event_tool import make_event_tools
 from app.agents.notify_tool import make_notify_tools
 from app.agents.email_tool import make_email_tools
+from app.agents.call_api_tool import make_call_api_tools
 from app.agents.self_learning_tool import make_self_learning_tools
 from app.agents.ui_tools import make_ui_tools, UI_TOOL_NAMES
 from app.agents.custom_skill_toolset import DynamicSkillToolset
@@ -276,6 +277,13 @@ async def _build_tools(
             elif name == "send_email":
                 result.extend(make_email_tools(pool, created_by))
                 logger.info("Email tool added (via builtin)")
+            elif name == "call_api":
+                result.extend(make_call_api_tools())
+                logger.info("Call API tool added (via builtin)")
+            elif name == "web_search":
+                from google.adk.tools import google_search
+                result.append(google_search)
+                logger.info("Web search (ADK google_search) added (via builtin)")
             elif name == "self_learning":
                 result.extend(make_self_learning_tools(pool, created_by, workspace_id, agent_id=default_agent_id))
                 logger.info("Self-learning tools added (via builtin)")
@@ -374,6 +382,13 @@ async def _build_tools(
         elif tool_type == "send_email":
             result.extend(make_email_tools(pool, created_by))
             logger.info("Email tool added")
+        elif tool_type == "call_api":
+            result.extend(make_call_api_tools())
+            logger.info("Call API tool added")
+        elif tool_type == "web_search":
+            from google.adk.tools import google_search
+            result.append(google_search)
+            logger.info("Web search (ADK google_search) added")
         elif tool_type == "self_learning":
             result.extend(make_self_learning_tools(pool, created_by, workspace_id, agent_id=default_agent_id))
             logger.info("Self-learning tools added")
