@@ -736,13 +736,6 @@ function QueueDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o: 
     if (open) refresh();
   }, [open, refresh]);
 
-  // Auto-refresh while open
-  React.useEffect(() => {
-    if (!open) return;
-    const interval = setInterval(refresh, 5000);
-    return () => clearInterval(interval);
-  }, [open, refresh]);
-
   const filtered = filter === "all" ? runs : runs.filter((r) => r.status === filter);
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
 
