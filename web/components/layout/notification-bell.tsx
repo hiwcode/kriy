@@ -117,7 +117,7 @@ export function NotificationBell() {
             </Button>
           )}
         </div>
-        <ScrollArea className="max-h-96">
+        <ScrollArea className="max-h-96 overflow-auto">
           {items.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-2 px-4 py-12 text-center">
               <Bell className="size-6 text-muted-foreground" />

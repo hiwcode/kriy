@@ -8,6 +8,7 @@ import {
   Loader2,
   MoreHorizontal,
   Pause,
+  Pencil,
   Play,
   Plus,
   Trash2,
@@ -77,6 +78,7 @@ export default function SchedulesPage() {
   const [total, setTotal] = React.useState(0);
   const [loading, setLoading] = React.useState(true);
   const [dialogOpen, setDialogOpen] = React.useState(false);
+  const [editingId, setEditingId] = React.useState<number | null>(null);
   const [saving, setSaving] = React.useState(false);
   const [resultDialog, setResultDialog] = React.useState<{
     open: boolean;
@@ -163,14 +165,30 @@ export default function SchedulesPage() {
 
   const handleOpenCreate = () => {
     resetForm();
+    setEditingId(null);
     setDialogOpen(true);
   };
 
-  const handleCreate = async () => {
+  const handleOpenEdit = (s: ScheduleItem) => {
+    setForm({
+      name: s.name,
+      description: s.description || "",
+      agent_id: s.agent_id,
+      message: s.message || "",
+      schedule_type: s.schedule_type as "one_time" | "recurring",
+      cron_expression: s.cron_expression || "",
+      run_at: s.run_at ? new Date(s.run_at).toISOString().slice(0, 16) : "",
+      max_runs: s.max_runs ? String(s.max_runs) : "",
+    });
+    setEditingId(s.id);
+    setDialogOpen(true);
+  };
+
+  const handleSave = async () => {
     if (!form.name || !form.agent_id || !form.message) return;
     setSaving(true);
     try {
-      await createSchedule({
+      const payload = {
         name: form.name,
         description: form.description || undefined,
         agent_id: form.agent_id,
@@ -185,8 +203,14 @@ export default function SchedulesPage() {
             ? new Date(form.run_at).toISOString()
             : undefined,
         max_runs: form.max_runs ? parseInt(form.max_runs) : undefined,
-      });
+      };
+      if (editingId) {
+        await updateSchedule(editingId, payload);
+      } else {
+        await createSchedule(payload);
+      }
       setDialogOpen(false);
+      setEditingId(null);
       resetForm();
       fetchData();
     } catch {
@@ -351,6 +375,10 @@ export default function SchedulesPage() {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => handleOpenEdit(row.original)}>
+              <Pencil className="size-4 mr-2" />
+              Edit
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleTrigger(row.original.id)}>
               <Zap className="size-4 mr-2" />
               Run Now
@@ -444,9 +472,9 @@ export default function SchedulesPage() {
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>New Schedule</DialogTitle>
+            <DialogTitle>{editingId ? "Edit Schedule" : "New Schedule"}</DialogTitle>
             <DialogDescription>
-              Schedule an agent to run automatically.
+              {editingId ? "Update this schedule's configuration." : "Schedule an agent to run automatically."}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
@@ -589,11 +617,11 @@ export default function SchedulesPage() {
               Cancel
             </Button>
             <Button
-              onClick={handleCreate}
+              onClick={handleSave}
               disabled={saving || !form.name || !form.agent_id || !form.message}
             >
               {saving && <Loader2 className="size-4 mr-1.5 animate-spin" />}
-              Create Schedule
+              {editingId ? "Save Changes" : "Create Schedule"}
             </Button>
           </DialogFooter>
         </DialogContent>
