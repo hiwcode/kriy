@@ -204,6 +204,7 @@ async def run_agent_stream(
     session_id: str | None = None,
     user_id: str = "user",
     db_user_id: int | None = None,
+    document_ids: list[int] | None = None,
 ) -> AsyncGenerator[str, None]:
     """Run an agent and stream the response as SSE events."""
     agent_config = await agent_service.get_agent(pool, agent_id)
@@ -221,9 +222,13 @@ async def run_agent_stream(
     async with _agent_run_lock:
         ctx = api_key_context(env_var, api_key)
         with ctx:
+            existing_session_id = session_id
+            session_id = session_id or str(uuid.uuid4())
+
             try:
                 agent = await build_agent_from_config(
-                    pool, agent_config, include_memory_tool=True
+                    pool, agent_config, include_memory_tool=True,
+                    session_id=session_id,
                 )
             except Exception as e:
                 logger.exception("Failed to build agent")
@@ -235,8 +240,6 @@ async def run_agent_stream(
             memory_service = PostgresMemoryService(
                 pool, agent_id, workspace_id=agent_config.get("workspace_id")
             )
-            existing_session_id = session_id
-            session_id = session_id or str(uuid.uuid4())
             if existing_session_id:
                 logger.info("Using existing session %s for context", existing_session_id)
 
@@ -261,7 +264,37 @@ async def run_agent_stream(
 
             yield f"data: {json.dumps({'type': 'session', 'session_id': session_id})}\n\n"
 
-            content = types.Content(parts=[types.Part(text=user_input)])
+            parts = [types.Part(text=user_input)]
+
+            # Inject uploaded image documents as inline image parts for vision
+            if document_ids:
+                from app.repositories import document_repo
+                from app.core import storage as doc_storage
+                for doc_id in document_ids:
+                    try:
+                        doc = await document_repo.get(pool, doc_id)
+                        if not doc or not doc.get("mime_type", "").startswith("image/"):
+                            continue
+                        if doc.get("bucket_key"):
+                            img_bytes = doc_storage.download_bytes(doc["bucket_key"])
+                        elif doc.get("url"):
+                            import httpx
+                            async with httpx.AsyncClient(timeout=30) as hc:
+                                resp = await hc.get(doc["url"])
+                                resp.raise_for_status()
+                                img_bytes = resp.content
+                        else:
+                            continue
+                        parts.append(types.Part(
+                            inline_data=types.Blob(
+                                mime_type=doc["mime_type"],
+                                data=img_bytes,
+                            )
+                        ))
+                    except Exception as exc:
+                        logger.warning("Failed to inject image doc %s: %s", doc_id, exc)
+
+            content = types.Content(parts=parts)
 
             # Store runner for potential confirmation round-trip
             key = f"{agent_id}:{session_id}"
@@ -329,7 +362,8 @@ async def confirm_tool_stream(
             with ctx:
                 try:
                     agent = await build_agent_from_config(
-                        pool, agent_config, include_memory_tool=True
+                        pool, agent_config, include_memory_tool=True,
+                        session_id=session_id,
                     )
                 except Exception as e:
                     yield f"data: {json.dumps({'type': 'error', 'error': str(e)})}\n\n"

@@ -21,6 +21,7 @@ import asyncpg
 class AgentRunRequest(BaseModel):
     message: str
     session_id: str | None = None
+    document_ids: list[int] | None = None
 
 
 class ToolConfirmRequest(BaseModel):
@@ -195,6 +196,7 @@ async def list_builtin_tools() -> dict:
     names.append("send_email")  # send email via the user's configured Gmail
     names.append("call_api")  # make HTTP requests to external APIs
     names.append("web_search")  # search the web via Google Custom Search
+    names.append("documents")  # list, read, and extract text from uploaded documents
     names.append("self_learning")  # let the agent save skills from conversations
     names.append("ui")        # render plan / todo / info cards in the chat UI
 
@@ -612,6 +614,7 @@ async def run_agent(
                 session_id=session_id,
                 user_id=session_user_id,
                 db_user_id=auth.user_id,
+                document_ids=data.document_ids,
             ),
         )
 

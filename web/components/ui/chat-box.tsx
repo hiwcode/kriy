@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Send, Bot, User, Loader2, ShieldCheck, ShieldX, Terminal, FileImage, Download } from "lucide-react";
+import { Send, Bot, User, Loader2, ShieldCheck, ShieldX, Terminal, FileImage, Download, Paperclip, X, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { siteConfig } from "@/config/site";
@@ -62,6 +62,7 @@ interface ChatBoxProps {
   messages: Message[];
   onSendMessage: (message: string) => void;
   onToolConfirmation?: (functionCallId: string, confirmed: boolean) => void;
+  onFileUpload?: (files: File[]) => Promise<void>;
   isLoading?: boolean;
   placeholder?: string;
   className?: string;
@@ -72,14 +73,18 @@ export function ChatBox({
   messages,
   onSendMessage,
   onToolConfirmation,
+  onFileUpload,
   isLoading = false,
   placeholder = "Type a message...",
   className,
   emptyState,
 }: ChatBoxProps) {
   const [input, setInput] = React.useState("");
+  const [pendingFiles, setPendingFiles] = React.useState<File[]>([]);
+  const [uploading, setUploading] = React.useState(false);
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
   const textareaRef = React.useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const Logo = siteConfig.logo;
 
@@ -96,15 +101,46 @@ export function ChatBox({
     }
   }, [input]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (input.trim() && !isLoading) {
+    if (isLoading || uploading) return;
+
+    if (pendingFiles.length > 0 && onFileUpload) {
+      setUploading(true);
+      try {
+        await onFileUpload(pendingFiles);
+      } catch {
+        setUploading(false);
+        return;
+      }
+      setUploading(false);
+      setPendingFiles([]);
+    }
+
+    if (input.trim()) {
       onSendMessage(input.trim());
       setInput("");
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
       }
     }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const selected = Array.from(e.target.files || []);
+    if (!selected.length) return;
+    setPendingFiles((prev) => {
+      const combined = [...prev, ...selected];
+      if (combined.length > 5) {
+        return combined.slice(0, 5);
+      }
+      return combined;
+    });
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const removePendingFile = (index: number) => {
+    setPendingFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -145,15 +181,56 @@ export function ChatBox({
 
       {/* Input Area */}
       <div className="border-t border-border p-4">
-        <form onSubmit={handleSubmit} className="flex gap-4 justify-between items-start">
+        {pendingFiles.length > 0 && (
+          <div className="mb-2 flex flex-wrap gap-1.5">
+            {pendingFiles.map((f, i) => (
+              <div key={`${f.name}-${i}`} className="flex items-center gap-1.5 rounded-lg border bg-muted/50 px-2.5 py-1.5 text-xs">
+                <FileText className="size-3.5 shrink-0 text-primary" />
+                <span className="max-w-[140px] truncate">{f.name}</span>
+                <span className="shrink-0 text-muted-foreground">{(f.size / 1024).toFixed(0)}K</span>
+                <button
+                  type="button"
+                  onClick={() => removePendingFile(i)}
+                  className="shrink-0 rounded p-0.5 text-muted-foreground hover:text-destructive"
+                >
+                  <X className="size-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+        <form onSubmit={handleSubmit} className="flex gap-2 items-end">
+          {onFileUpload && (
+            <>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                accept=".pdf,.txt,.csv,.json,.xml,.doc,.docx,.png,.jpg,.jpeg,.webp"
+                onChange={handleFileSelect}
+              />
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isLoading || uploading || pendingFiles.length >= 5}
+                className="size-10 shrink-0 rounded-full text-muted-foreground hover:text-foreground"
+                title={pendingFiles.length >= 5 ? "Max 5 files" : "Attach documents (max 5, 5 MB each)"}
+              >
+                <Paperclip className="size-4" />
+              </Button>
+            </>
+          )}
           <div className="relative flex-1">
             <textarea
               ref={textareaRef}
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={placeholder}
-              disabled={isLoading}
+              placeholder={pendingFiles.length ? `Message about ${pendingFiles.length} file(s)...` : placeholder}
+              disabled={isLoading || uploading}
               rows={1}
               className={cn(
                 "w-full resize-none rounded-lg border border-border bg-background px-4 py-3 text-sm h-full",
@@ -168,10 +245,10 @@ export function ChatBox({
             type="submit"
             size="icon"
             variant="secondary"
-            disabled={!input.trim() || isLoading}
+            disabled={(!input.trim() && !pendingFiles.length) || isLoading || uploading}
             className="size-10 shrink-0 rounded-full"
           >
-            <Send className="size-4" />
+            {uploading ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
           </Button>
         </form>
         <p className="mt-2 text-xs text-muted-foreground">

@@ -22,6 +22,7 @@ from app.agents.event_tool import make_event_tools
 from app.agents.notify_tool import make_notify_tools
 from app.agents.email_tool import make_email_tools
 from app.agents.call_api_tool import make_call_api_tools
+from app.agents.document_tool import make_document_tools
 from app.agents.self_learning_tool import make_self_learning_tools
 from app.agents.ui_tools import make_ui_tools, UI_TOOL_NAMES
 from app.agents.custom_skill_toolset import DynamicSkillToolset
@@ -245,6 +246,7 @@ async def _build_tools(
     workspace_id: int | None = None,
     default_agent_id: int | None = None,
     agent_name: str | None = None,
+    session_id: str | None = None,
 ) -> list[Any]:
     """Build tool instances from tools JSON config."""
     result: list[Any] = []
@@ -284,6 +286,9 @@ async def _build_tools(
                 from google.adk.tools import google_search
                 result.append(google_search)
                 logger.info("Web search (ADK google_search) added (via builtin)")
+            elif name == "documents":
+                result.extend(make_document_tools(pool, workspace_id, agent_id=default_agent_id, session_id=session_id))
+                logger.info("Document tools added (via builtin)")
             elif name == "self_learning":
                 result.extend(make_self_learning_tools(pool, created_by, workspace_id, agent_id=default_agent_id))
                 logger.info("Self-learning tools added (via builtin)")
@@ -389,6 +394,9 @@ async def _build_tools(
             from google.adk.tools import google_search
             result.append(google_search)
             logger.info("Web search (ADK google_search) added")
+        elif tool_type == "documents":
+            result.extend(make_document_tools(pool, workspace_id))
+            logger.info("Document tools added")
         elif tool_type == "self_learning":
             result.extend(make_self_learning_tools(pool, created_by, workspace_id, agent_id=default_agent_id))
             logger.info("Self-learning tools added")
@@ -427,6 +435,7 @@ async def build_agent_from_config(
     *,
     as_sub_agent: bool = False,
     include_memory_tool: bool = False,
+    session_id: str | None = None,
 ) -> LlmAgent:
     """
     Build an LlmAgent or RemoteA2aAgent from a database agent config.
@@ -494,6 +503,7 @@ async def build_agent_from_config(
         workspace_id=_workspace_id,
         default_agent_id=_self_agent_id,
         agent_name=_agent_name,
+        session_id=session_id,
     )
 
     # Inject skills via ADK SkillToolset + direct tool registration

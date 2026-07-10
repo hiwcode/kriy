@@ -561,6 +561,7 @@ export async function getTraceDetail(
 export interface AgentRunParams {
   message: string;
   session_id?: string | null;
+  document_ids?: number[];
 }
 
 export async function* confirmToolStream(

@@ -20,6 +20,7 @@ from app.api.v1.endpoints import (
     notifications,
     auth,
     activity,
+    documents,
 )
 
 router = APIRouter()
@@ -47,3 +48,4 @@ router.include_router(notifications.router)
 router.include_router(notifications.ws_router)
 router.include_router(auth.router)
 router.include_router(activity.router)
+router.include_router(documents.router)

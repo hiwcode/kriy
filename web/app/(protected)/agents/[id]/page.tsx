@@ -43,6 +43,7 @@ import {
   AgentSessionItem,
 } from "@/lib/api/agents";
 import { toast } from "sonner";
+import { uploadDocuments } from "@/lib/api/documents";
 import { listPrompts, type PromptLibraryItem } from "@/lib/api/prompt-library";
 import {
   listMcpConnections,
@@ -1278,6 +1279,41 @@ function ChatTab({
     }
   };
 
+  const pendingDocIds = React.useRef<number[] | undefined>(undefined);
+
+  const handleFileUpload = async (files: File[]) => {
+    if (!agentId) return;
+    // Ensure a session exists before uploading so docs are scoped correctly
+    let sid = sessionId;
+    if (!sid) {
+      try {
+        sid = await createSessionSilent(agentId);
+      } catch { /* fall through */ }
+      if (sid) {
+        setSessionId(sid);
+        router.replace(`${pathname}?session=${sid}`);
+      }
+    }
+    const docs = await uploadDocuments(files, agentId, sid || undefined);
+    const imageIds = docs.filter((d) => d.mime_type.startsWith("image/")).map((d) => d.id);
+    const nonImageDocs = docs.filter((d) => !d.mime_type.startsWith("image/"));
+
+    const lines = docs.map(
+      (d) => `- document_id=${d.id}, name="${d.name}", type=${d.mime_type}, size=${(d.size_bytes / 1024).toFixed(0)}KB`
+    );
+    let msg = `I uploaded ${docs.length} document(s):\n${lines.join("\n")}`;
+    if (nonImageDocs.length > 0) {
+      msg += "\n\nUse extract_document_text with the document_id to read text files/PDFs.";
+    }
+    if (imageIds.length > 0) {
+      msg += "\n\nThe images are attached inline — analyze them directly.";
+    }
+
+    // Pass image document IDs so they're injected as inline image parts for vision
+    pendingDocIds.current = imageIds.length > 0 ? docs.map((d) => d.id) : undefined;
+    handleSendMessage(msg);
+  };
+
   const handleSendMessage = async (content: string) => {
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -1319,9 +1355,12 @@ function ChatTab({
       if (sid) markPending(agentId, sid);
       try {
         let fullText = "";
+        const docIds = pendingDocIds.current;
+        pendingDocIds.current = undefined;
         for await (const chunk of runAgentStream(agentId, {
           message: content,
           session_id: sid ?? undefined,
+          document_ids: docIds,
         })) {
           if (chunk.type === "session" && chunk.session_id) {
             isNewChatRef.current = false;
@@ -1472,6 +1511,7 @@ function ChatTab({
           <ChatBox
           messages={messages}
           onSendMessage={handleSendMessage}
+          onFileUpload={handleFileUpload}
           onToolConfirmation={async (fcId, userConfirmed) => {
             console.log("[CONFIRM]", { agentId, sessionId, fcId, userConfirmed });
             if (!agentId || !sessionId) {

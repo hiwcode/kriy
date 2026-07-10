@@ -72,6 +72,13 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = Field(default="", description="Redis URL for caching", env="REDIS_URL")
 
+    # Object Storage (DigitalOcean Spaces / S3-compatible)
+    SPACES_REGION: str = Field(default="", env="SPACES_REGION")
+    SPACES_ACCESS_KEY: str = Field(default="", env="SPACES_ACCESS_KEY")
+    SPACES_SECRET_KEY: str = Field(default="", env="SPACES_SECRET_KEY")
+    SPACES_BUCKET: str = Field(default="", env="SPACES_BUCKET")
+    SPACES_CDN_URL: str = Field(default="", description="CDN/public URL prefix (optional)", env="SPACES_CDN_URL")
+
     # CORS
     CORS_ORIGINS: list[str] = Field(default=["*"], description="Allowed CORS origins", env="CORS_ORIGINS")
     
