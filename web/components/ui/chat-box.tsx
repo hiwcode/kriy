@@ -260,7 +260,7 @@ function ChatMessage({ message, Logo, onToolConfirmation }: { message: Message; 
             {!isUser && message.cards && message.cards.length > 0 && (
               <ChatCards cards={message.cards} />
             )}
-            {!isUser && <WorkspaceFiles content={message.content} />}
+            {/* {!isUser && <WorkspaceFiles content={message.content} />} */}
             {message.timestamp && (
               <p className="mt-1 text-xs">
                 {message.timestamp.toLocaleTimeString([], {

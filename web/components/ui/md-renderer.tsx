@@ -82,7 +82,7 @@ export function MdRenderer({ content, className, variant = "default" }: MdRender
   return (
     <div
       className={cn(
-        "max-w-none text-foreground",
+        "max-w-none text-foreground overflow-scroll",
         isDocs && "docs-prose text-base",
         !isDocs && "prose prose-sm dark:prose-invert",
         className
