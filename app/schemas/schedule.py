@@ -17,6 +17,8 @@ class ScheduleCreate(BaseModel):
     cron_expression: str | None = None
     run_at: datetime | None = None
     max_runs: int | None = None
+    max_retries: int = 0
+    retry_delay_seconds: int = 60
 
 
 class ScheduleUpdate(BaseModel):
@@ -29,4 +31,6 @@ class ScheduleUpdate(BaseModel):
     cron_expression: str | None = None
     run_at: datetime | None = None
     max_runs: int | None = None
+    max_retries: int | None = None
+    retry_delay_seconds: int | None = None
     status: str | None = None

@@ -103,6 +103,8 @@ export default function SchedulesPage() {
     cron_expression: "",
     run_at: "",
     max_runs: "",
+    max_retries: "0",
+    retry_delay_seconds: "60",
   });
 
   const fetchData = React.useCallback(
@@ -161,6 +163,8 @@ export default function SchedulesPage() {
       cron_expression: "",
       run_at: "",
       max_runs: "",
+      max_retries: "0",
+      retry_delay_seconds: "60",
     });
 
   const handleOpenCreate = () => {
@@ -179,6 +183,8 @@ export default function SchedulesPage() {
       cron_expression: s.cron_expression || "",
       run_at: s.run_at ? new Date(s.run_at).toISOString().slice(0, 16) : "",
       max_runs: s.max_runs ? String(s.max_runs) : "",
+      max_retries: String(s.max_retries ?? 0),
+      retry_delay_seconds: String(s.retry_delay_seconds ?? 60),
     });
     setEditingId(s.id);
     setDialogOpen(true);
@@ -203,6 +209,8 @@ export default function SchedulesPage() {
             ? new Date(form.run_at).toISOString()
             : undefined,
         max_runs: form.max_runs ? parseInt(form.max_runs) : undefined,
+        max_retries: parseInt(form.max_retries) || 0,
+        retry_delay_seconds: parseInt(form.retry_delay_seconds) || 60,
       };
       if (editingId) {
         await updateSchedule(editingId, payload);
@@ -342,15 +350,24 @@ export default function SchedulesPage() {
       header: "Last Run",
       cell: ({ row }) => {
         const s = row.original.last_run_status;
+        const retryCount = row.original.retry_count;
+        const maxRetries = row.original.max_retries;
         if (!s) return <span className="text-muted-foreground">-</span>;
         return (
-          <span
-            className={`text-xs font-medium ${
-              s === "success" ? "text-emerald-600" : "text-red-600"
-            }`}
-          >
-            {s}
-          </span>
+          <div>
+            <span
+              className={`text-xs font-medium ${
+                s === "success" ? "text-emerald-600" : "text-red-600"
+              }`}
+            >
+              {s}
+            </span>
+            {s === "failed" && maxRetries > 0 && (
+              <p className="text-[10px] text-muted-foreground">
+                retry {retryCount}/{maxRetries}
+              </p>
+            )}
+          </div>
         );
       },
     },
@@ -607,6 +624,38 @@ export default function SchedulesPage() {
                 </div>
               </>
             )}
+            {/* Retry on failure */}
+            <div className="space-y-1">
+              <Label className="text-sm font-medium">Retries on failure</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={10}
+                    placeholder="0"
+                    value={form.max_retries}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, max_retries: e.target.value }))
+                    }
+                  />
+                  <p className="mt-0.5 text-[10px] text-muted-foreground">Max retries (0 = no retry)</p>
+                </div>
+                <div>
+                  <Input
+                    type="number"
+                    min={1}
+                    placeholder="60"
+                    value={form.retry_delay_seconds}
+                    onChange={(e) =>
+                      setForm((f) => ({ ...f, retry_delay_seconds: e.target.value }))
+                    }
+                    disabled={!parseInt(form.max_retries)}
+                  />
+                  <p className="mt-0.5 text-[10px] text-muted-foreground">Delay between retries (seconds)</p>
+                </div>
+              </div>
+            </div>
           </div>
           <DialogFooter>
             <Button

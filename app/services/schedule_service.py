@@ -40,6 +40,8 @@ async def create_schedule(
         run_at=data.run_at,
         next_run_at=next_run,
         max_runs=data.max_runs,
+        max_retries=data.max_retries,
+        retry_delay_seconds=data.retry_delay_seconds,
         workspace_id=workspace_id,
         created_by=created_by,
     )
@@ -91,14 +93,35 @@ async def mark_schedule_run(
     status: str,
     result: str | None = None,
 ) -> dict | None:
-    """Update schedule after a run: bump count, set next_run, mark complete if done."""
-    new_count = schedule["run_count"] + 1
+    """Update schedule after a run: bump count, set next_run, mark complete if done.
+
+    On failure, if retries are configured and not exhausted, schedules a retry
+    instead of moving to the next run or completing.
+    """
+    now = datetime.now(timezone.utc)
+    is_retry = bool(schedule.get("next_retry_at"))
+    max_retries = schedule.get("max_retries", 0)
+    retry_count = schedule.get("retry_count", 0)
+    retry_delay = schedule.get("retry_delay_seconds", 60)
+
     updates: dict[str, Any] = {
-        "run_count": new_count,
-        "last_run_at": datetime.now(timezone.utc),
+        "last_run_at": now,
         "last_run_status": status,
         "last_run_result": (result or "")[:2000],
+        "next_retry_at": None,  # clear retry by default
     }
+
+    if status == "failed" and max_retries > 0 and retry_count < max_retries:
+        # Schedule a retry — don't bump run_count, don't advance next_run_at
+        updates["retry_count"] = retry_count + 1
+        from datetime import timedelta
+        updates["next_retry_at"] = now + timedelta(seconds=retry_delay)
+        return await schedule_repo.update_schedule(pool, schedule["id"], **updates)
+
+    # Success or retries exhausted — reset retry_count, bump run_count, advance
+    new_count = schedule["run_count"] + 1
+    updates["run_count"] = new_count
+    updates["retry_count"] = 0
 
     if schedule["schedule_type"] == "one_time":
         updates["status"] = "completed"
@@ -108,7 +131,6 @@ async def mark_schedule_run(
             updates["status"] = "completed"
             updates["next_run_at"] = None
         elif schedule.get("cron_expression"):
-            now = datetime.now(timezone.utc)
             cron = croniter(schedule["cron_expression"], now)
             updates["next_run_at"] = cron.get_next(datetime).replace(tzinfo=timezone.utc)
         else:

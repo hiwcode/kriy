@@ -18,6 +18,10 @@ export interface ScheduleItem {
   status: "active" | "paused" | "completed" | "failed";
   run_count: number;
   max_runs: number | null;
+  max_retries: number;
+  retry_count: number;
+  retry_delay_seconds: number;
+  next_retry_at: string | null;
   workspace_id: number | null;
   created_by: number | null;
   created_at: string;

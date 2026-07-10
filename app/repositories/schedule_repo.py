@@ -16,7 +16,8 @@ def _row_to_dict(row: asyncpg.Record | None) -> dict[str, Any] | None:
 _SELECT_FIELDS = (
     "id, name, description, agent_id, message, schedule_type, cron_expression, "
     "run_at, next_run_at, last_run_at, last_run_status, last_run_result, "
-    "status, run_count, max_runs, workspace_id, created_by, created_at, updated_at"
+    "status, run_count, max_runs, max_retries, retry_count, retry_delay_seconds, "
+    "next_retry_at, workspace_id, created_by, created_at, updated_at"
 )
 
 
@@ -31,20 +32,24 @@ async def create_schedule(
     run_at: datetime | None = None,
     next_run_at: datetime | None = None,
     max_runs: int | None = None,
+    max_retries: int = 0,
+    retry_delay_seconds: int = 60,
     description: str | None = None,
     workspace_id: int | None = None,
     created_by: int | None = None,
 ) -> dict[str, Any]:
     sql = f"""
         INSERT INTO schedules (name, description, agent_id, message, schedule_type,
-            cron_expression, run_at, next_run_at, max_runs, workspace_id, created_by)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            cron_expression, run_at, next_run_at, max_runs, max_retries, retry_delay_seconds,
+            workspace_id, created_by)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
         RETURNING {_SELECT_FIELDS}
     """
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
             sql, name, description, agent_id, message, schedule_type,
-            cron_expression, run_at, next_run_at, max_runs, workspace_id, created_by,
+            cron_expression, run_at, next_run_at, max_runs, max_retries,
+            retry_delay_seconds, workspace_id, created_by,
         )
     return _row_to_dict(row)
 
@@ -111,6 +116,7 @@ async def update_schedule(
         "name", "description", "message", "cron_expression", "run_at",
         "next_run_at", "last_run_at", "last_run_status", "last_run_result",
         "status", "run_count", "max_runs", "schedule_type",
+        "max_retries", "retry_count", "retry_delay_seconds", "next_retry_at",
     }
     updates = {k: v for k, v in kwargs.items() if k in allowed}
     if not updates:
@@ -142,11 +148,15 @@ async def delete_schedule(pool: asyncpg.Pool, schedule_id: int) -> bool:
 
 
 async def get_due_schedules(pool: asyncpg.Pool) -> list[dict[str, Any]]:
-    """Get all active schedules whose next_run_at is in the past (due now)."""
+    """Get all active schedules that are due: either next_run_at or next_retry_at is past."""
     sql = f"""
         SELECT {_SELECT_FIELDS} FROM schedules
-        WHERE status = 'active' AND next_run_at IS NOT NULL AND next_run_at <= NOW()
-        ORDER BY next_run_at ASC
+        WHERE status = 'active'
+          AND (
+            (next_run_at IS NOT NULL AND next_run_at <= NOW())
+            OR (next_retry_at IS NOT NULL AND next_retry_at <= NOW())
+          )
+        ORDER BY COALESCE(next_retry_at, next_run_at) ASC
     """
     async with pool.acquire() as conn:
         rows = await conn.fetch(sql)
