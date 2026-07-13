@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.security import AuthContext, api_key_auth, require_google_auth
+from app.core.access import require_resource_access
 from app.deps import get_db, get_current_workspace
 from app.schemas.schedule import ScheduleCreate, ScheduleUpdate
 from app.schemas.response import ApiResponse, Pagination
@@ -70,6 +71,7 @@ async def get_schedule(
     schedule = await schedule_service.get_schedule(pool, schedule_id)
     if not schedule:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Schedule not found")
+    await require_resource_access(schedule, pool, auth)
     return {
         "success": True,
         "message": "Schedule retrieved",
@@ -85,6 +87,10 @@ async def update_schedule(
     pool: asyncpg.Pool = Depends(get_db),
     auth: AuthContext = Depends(require_google_auth),
 ) -> dict:
+    existing = await schedule_service.get_schedule(pool, schedule_id)
+    if not existing:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Schedule not found")
+    await require_resource_access(existing, pool, auth)
     schedule = await schedule_service.update_schedule(pool, schedule_id, data)
     if not schedule:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Schedule not found")
@@ -102,6 +108,10 @@ async def delete_schedule(
     pool: asyncpg.Pool = Depends(get_db),
     auth: AuthContext = Depends(require_google_auth),
 ) -> dict:
+    existing = await schedule_service.get_schedule(pool, schedule_id)
+    if not existing:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Schedule not found")
+    await require_resource_access(existing, pool, auth)
     deleted = await schedule_service.delete_schedule(pool, schedule_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Schedule not found")
@@ -125,6 +135,7 @@ async def trigger_schedule(
     schedule = await schedule_service.get_schedule(pool, schedule_id)
     if not schedule:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Schedule not found")
+    await require_resource_access(schedule, pool, auth)
 
     result = await run_schedule_now(pool, schedule, db_user_id=auth.user_id)
     return {

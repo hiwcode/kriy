@@ -16,10 +16,12 @@ class Settings(BaseSettings):
     APP_VERSION: str = Field(default="0.1.0", description="Application version")
     DEBUG: bool = Field(default=False, description="Debug mode")
     ENVIRONMENT: str = Field(
-        default="development",
+        default="production",
         description="Deployment environment: 'development' or 'production'. "
         "Local-only tools (bash, file access, run_python, claude_code) are "
-        "disabled in production.",
+        "disabled in production. Defaults to 'production' so a forgotten/typo'd "
+        "env var fails safe (RCE-class tools stay OFF) — set ENVIRONMENT=development "
+        "locally to enable them.",
         env="ENVIRONMENT",
     )
 
@@ -69,8 +71,25 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_TTL_MINUTES: int = Field(default=1440, description="Access token lifetime (minutes)")
     REFRESH_TOKEN_TTL_DAYS: int = Field(default=30, description="Refresh token lifetime (days)")
 
+    # Email safety
+    EMAIL_ALLOWED_DOMAINS: str = Field(
+        default="",
+        description="Comma-separated recipient domain allowlist for the send_email tool "
+        "(e.g. 'portpro.io,example.com'). When empty, all recipients are allowed. "
+        "When set, the agent can only email addresses in these domains — a guard against "
+        "prompt-injection data exfiltration from the owner's account.",
+        env="EMAIL_ALLOWED_DOMAINS",
+    )
+
     # Redis
     REDIS_URL: str = Field(default="", description="Redis URL for caching", env="REDIS_URL")
+
+    # Object Storage (DigitalOcean Spaces / S3-compatible)
+    SPACES_REGION: str = Field(default="", env="SPACES_REGION")
+    SPACES_ACCESS_KEY: str = Field(default="", env="SPACES_ACCESS_KEY")
+    SPACES_SECRET_KEY: str = Field(default="", env="SPACES_SECRET_KEY")
+    SPACES_BUCKET: str = Field(default="", env="SPACES_BUCKET")
+    SPACES_CDN_URL: str = Field(default="", description="CDN/public URL prefix (optional)", env="SPACES_CDN_URL")
 
     # CORS
     CORS_ORIGINS: list[str] = Field(default=["*"], description="Allowed CORS origins", env="CORS_ORIGINS")

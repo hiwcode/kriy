@@ -38,10 +38,12 @@ class PostgresMemoryService(BaseMemoryService):
         user_id: str,
         query: str,
     ) -> SearchMemoryResponse:
-        """Search stored facts for this agent.
-        In workspace mode, searches across all users' memories.
+        """Search stored facts for this agent, scoped to the calling user.
+
+        Memories are always filtered by user_id so a shared (workspace) agent
+        cannot surface one user's personal facts to another user.
         """
-        search_user_id = None if self.workspace_id else user_id
+        search_user_id = user_id
         rows = await memory_repo.search_memories(
             self.pool,
             agent_id=self.agent_id,

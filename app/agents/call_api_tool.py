@@ -8,6 +8,8 @@ import logging
 import httpx
 from google.adk.tools import FunctionTool
 
+from app.core.net_guard import assert_public_url as _assert_public_url
+
 logger = logging.getLogger(__name__)
 
 _TIMEOUT = 60
@@ -38,6 +40,11 @@ def make_call_api_tools() -> list[FunctionTool]:
         if method not in {"GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"}:
             return json.dumps({"error": f"unsupported HTTP method: {method}"})
 
+        try:
+            _assert_public_url(url)
+        except ValueError as e:
+            return json.dumps({"error": f"blocked URL: {e}"})
+
         parsed_headers: dict[str, str] = {}
         if headers:
             try:
@@ -61,7 +68,7 @@ def make_call_api_tools() -> list[FunctionTool]:
                 parsed_body = body
 
         try:
-            async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
+            async with httpx.AsyncClient(timeout=_TIMEOUT, follow_redirects=False) as client:
                 kwargs: dict = {
                     "method": method,
                     "url": url,

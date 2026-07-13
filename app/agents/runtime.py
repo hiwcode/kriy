@@ -22,6 +22,7 @@ from app.agents.event_tool import make_event_tools
 from app.agents.notify_tool import make_notify_tools
 from app.agents.email_tool import make_email_tools
 from app.agents.call_api_tool import make_call_api_tools
+from app.agents.analyze_tools import make_analyze_tools
 from app.agents.self_learning_tool import make_self_learning_tools
 from app.agents.ui_tools import make_ui_tools, UI_TOOL_NAMES
 from app.agents.custom_skill_toolset import DynamicSkillToolset
@@ -237,6 +238,22 @@ def _normalize_tools_config(tools_config: Any) -> list[Any]:
     return []
 
 
+def _conn_in_tenant(conn: dict | None, workspace_id: int | None, created_by: int | None) -> bool:
+    """Tenancy gate for id-referenced connections (DB / MCP).
+
+    A connection is usable by an agent only when it lives in the agent's
+    workspace. When the agent has no workspace, fall back to owner match so a
+    workspace-less connection isn't shared across users. Prevents an agent
+    config from referencing another tenant's connection id (IDOR).
+    """
+    if not conn:
+        return False
+    conn_ws = conn.get("workspace_id")
+    if workspace_id is not None:
+        return conn_ws == workspace_id
+    return conn_ws is None and conn.get("created_by") == created_by
+
+
 async def _build_tools(
     pool: asyncpg.Pool,
     tools_config: Any,
@@ -245,6 +262,7 @@ async def _build_tools(
     workspace_id: int | None = None,
     default_agent_id: int | None = None,
     agent_name: str | None = None,
+    session_id: str | None = None,
 ) -> list[Any]:
     """Build tool instances from tools JSON config."""
     result: list[Any] = []
@@ -284,6 +302,10 @@ async def _build_tools(
                 from google.adk.tools import google_search
                 result.append(google_search)
                 logger.info("Web search (ADK google_search) added (via builtin)")
+            elif name in ("analyze_document", "analyze_image"):
+                tools = make_analyze_tools(pool, created_by, workspace_id, agent_id=default_agent_id, session_id=session_id)
+                result.extend(t for t in tools if t.name == name)
+                logger.info("Analyze tool %s added (via builtin)", name)
             elif name == "self_learning":
                 result.extend(make_self_learning_tools(pool, created_by, workspace_id, agent_id=default_agent_id))
                 logger.info("Self-learning tools added (via builtin)")
@@ -302,6 +324,9 @@ async def _build_tools(
                 conn = await database_connection_repo.get_database_connection(
                     pool, int(db_id)
                 )
+                if conn and not _conn_in_tenant(conn, workspace_id, created_by):
+                    logger.warning("Database connection %s outside agent tenant — refused", db_id)
+                    conn = None
                 if conn:
                     tools = make_database_tool(
                         connection_url=conn["connection_url"],
@@ -318,6 +343,9 @@ async def _build_tools(
                 conn = await mcp_connection_repo.get_mcp_connection(
                     pool, mcp_id
                 )
+                if conn and not _conn_in_tenant(conn, workspace_id, created_by):
+                    logger.warning("MCP connection %s outside agent tenant — refused", mcp_id)
+                    conn = None
                 if conn:
                     headers = conn.get("headers") or {}
                     if not isinstance(headers, dict):
@@ -389,6 +417,10 @@ async def _build_tools(
             from google.adk.tools import google_search
             result.append(google_search)
             logger.info("Web search (ADK google_search) added")
+        elif tool_type in ("analyze_document", "analyze_image"):
+            tools = make_analyze_tools(pool, created_by, workspace_id, agent_id=default_agent_id, session_id=session_id)
+            result.extend(t for t in tools if t.name == tool_type)
+            logger.info("Analyze tool %s added", tool_type)
         elif tool_type == "self_learning":
             result.extend(make_self_learning_tools(pool, created_by, workspace_id, agent_id=default_agent_id))
             logger.info("Self-learning tools added")
@@ -427,6 +459,7 @@ async def build_agent_from_config(
     *,
     as_sub_agent: bool = False,
     include_memory_tool: bool = False,
+    session_id: str | None = None,
 ) -> LlmAgent:
     """
     Build an LlmAgent or RemoteA2aAgent from a database agent config.
@@ -494,6 +527,7 @@ async def build_agent_from_config(
         workspace_id=_workspace_id,
         default_agent_id=_self_agent_id,
         agent_name=_agent_name,
+        session_id=session_id,
     )
 
     # Inject skills via ADK SkillToolset + direct tool registration
@@ -514,6 +548,7 @@ async def build_agent_from_config(
                     workspace_id=_workspace_id,
                     default_agent_id=_self_agent_id,
                     agent_name=_agent_name,
+                    session_id=session_id,
                 )
                 tools = list(tools) + built
                 logger.info("Added %d direct tools from skill '%s'", len(built), sc.get("name"))

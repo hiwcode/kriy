@@ -5,15 +5,32 @@ import zipfile
 
 from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, status
 from app.core.security import AuthContext, api_key_auth, require_google_auth
+from app.core.access import require_resource_access
 from app.deps import get_db, get_current_workspace
 from app.schemas.skill_file import SkillFileCreate, SkillFileUpdate, SkillFileBulkDelete
 from app.schemas.response import ApiResponse
 from app.services import skill_file_service
-from app.repositories import skill_file_repo, skill_folder_repo
+from app.repositories import skill_file_repo, skill_folder_repo, skill_repo
 import asyncpg
 import httpx
 
 router = APIRouter(prefix="/skill-files", tags=["skill-files"], dependencies=[Depends(api_key_auth)])
+
+
+async def _require_skill_access(skill_id: int, pool: asyncpg.Pool, auth: AuthContext) -> dict:
+    skill = await skill_repo.get_skill(pool, skill_id)
+    if not skill:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Skill not found")
+    await require_resource_access(skill, pool, auth)
+    return skill
+
+
+async def _require_file_access(file_id: int, pool: asyncpg.Pool, auth: AuthContext) -> dict:
+    f = await skill_file_service.get_file(pool, file_id)
+    if not f:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
+    await require_resource_access(f, pool, auth)
+    return f
 
 
 @router.post("/", response_model=ApiResponse, status_code=status.HTTP_201_CREATED)
@@ -24,6 +41,7 @@ async def create_file(
     workspace: dict | None = Depends(get_current_workspace),
 ) -> dict:
     workspace_id = workspace["id"] if workspace else None
+    await _require_skill_access(data.skill_id, pool, auth)
     f = await skill_file_service.create_file(pool, data, created_by=auth.user_id, workspace_id=workspace_id)
     return {"success": True, "message": "File created", "data": f, "pagination": None}
 
@@ -34,6 +52,7 @@ async def get_skill_tree(
     pool: asyncpg.Pool = Depends(get_db),
     auth: AuthContext = Depends(require_google_auth),
 ) -> dict:
+    await _require_skill_access(skill_id, pool, auth)
     tree = await skill_file_service.get_skill_tree(pool, skill_id)
     return {"success": True, "message": "Tree fetched", "data": tree, "pagination": None}
 
@@ -44,9 +63,7 @@ async def get_file(
     pool: asyncpg.Pool = Depends(get_db),
     auth: AuthContext = Depends(require_google_auth),
 ) -> dict:
-    f = await skill_file_service.get_file(pool, file_id)
-    if not f:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
+    f = await _require_file_access(file_id, pool, auth)
     return {"success": True, "message": "File fetched", "data": f, "pagination": None}
 
 
@@ -57,6 +74,7 @@ async def update_file(
     pool: asyncpg.Pool = Depends(get_db),
     auth: AuthContext = Depends(require_google_auth),
 ) -> dict:
+    await _require_file_access(file_id, pool, auth)
     f = await skill_file_service.update_file(pool, file_id, data)
     if not f:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
@@ -69,6 +87,7 @@ async def delete_file(
     pool: asyncpg.Pool = Depends(get_db),
     auth: AuthContext = Depends(require_google_auth),
 ) -> dict:
+    await _require_file_access(file_id, pool, auth)
     deleted = await skill_file_service.delete_file(pool, file_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="File not found")
@@ -81,7 +100,18 @@ async def bulk_delete_files(
     pool: asyncpg.Pool = Depends(get_db),
     auth: AuthContext = Depends(require_google_auth),
 ) -> dict:
-    deleted_ids = await skill_file_service.bulk_delete_files(pool, payload.ids)
+    # Only delete files the caller can actually access.
+    owned: list[int] = []
+    for fid in payload.ids:
+        f = await skill_file_service.get_file(pool, fid)
+        if not f:
+            continue
+        try:
+            await require_resource_access(f, pool, auth)
+        except HTTPException:
+            continue
+        owned.append(fid)
+    deleted_ids = await skill_file_service.bulk_delete_files(pool, owned) if owned else []
     return {"success": True, "message": "Files deleted", "data": {"deleted_ids": deleted_ids}, "pagination": None}
 
 
@@ -125,6 +155,7 @@ async def upload_files(
     workspace: dict | None = Depends(get_current_workspace),
 ) -> dict:
     """Upload a file or ZIP archive. ZIP files are extracted automatically."""
+    await _require_skill_access(skill_id, pool, auth)
     workspace_id = workspace["id"] if workspace else None
     content = await file.read()
     filename = file.filename or "uploaded"

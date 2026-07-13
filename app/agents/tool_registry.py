@@ -78,6 +78,7 @@ def get_current_date() -> str:
 # ============================================================
 
 import os
+import contextvars
 import subprocess
 import time
 import pathlib
@@ -90,6 +91,31 @@ _PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[2]
 WORKSPACE_DIR = pathlib.Path(os.getenv("ATELIER_WORKSPACE_DIR") or (_PROJECT_ROOT / "temp"))
 WORKSPACE_DIR.mkdir(parents=True, exist_ok=True)
 _BASH_WORKSPACE = WORKSPACE_DIR
+
+# Per-run session id, set by the agent runner so code-exec/file tools write into
+# a session-private subdirectory instead of one shared global dir.
+current_session: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "workspace_session", default=None
+)
+
+
+def _sanitize_session(session: str) -> str:
+    """Keep only path-safe chars so a session id can't escape the workspace dir."""
+    return "".join(c for c in session if c.isalnum() or c in "-_")[:128]
+
+
+def session_workspace() -> pathlib.Path:
+    """Return this run's private workspace dir (a subdir per session), or the
+    base dir when there is no session context."""
+    session = current_session.get()
+    if not session:
+        return WORKSPACE_DIR
+    safe = _sanitize_session(session)
+    if not safe:
+        return WORKSPACE_DIR
+    ws = WORKSPACE_DIR / safe
+    ws.mkdir(parents=True, exist_ok=True)
+    return ws
 
 
 def run_bash(command: str) -> str:
@@ -105,7 +131,7 @@ def run_bash(command: str) -> str:
             capture_output=True,
             text=True,
             timeout=600,
-            cwd=str(_BASH_WORKSPACE),
+            cwd=str(session_workspace()),
         )
         output = ""
         if result.stdout:
@@ -138,7 +164,8 @@ def run_python(code: str) -> str:
     # Lazy import to avoid pulling ADK code-executor deps at module load.
     from app.agents.skill_code_executor import AutoVenvSkillCodeExecutor
 
-    ws = WORKSPACE_DIR
+    ws = session_workspace()
+    rel_prefix = f"{ws.name}/" if ws != WORKSPACE_DIR else ""
     script = ws / f"_interp_{time.time_ns()}.py"
     try:
         before = {p.name for p in ws.iterdir() if p.is_file()}
@@ -163,9 +190,11 @@ def run_python(code: str) -> str:
         if err:
             parts.append(f"[stderr]\n{err}")
         if created:
-            lines = "\n".join(
-                f"- {name}  ->  /api/v1/agents/workspace-file/{name}" for name in created
-            )
+            from app.core.workspace_signing import sign_path
+            def _url(name: str) -> str:
+                rel = f"{rel_prefix}{name}"
+                return f"/api/v1/agents/workspace-file/{rel}?sig={sign_path(rel)}"
+            lines = "\n".join(f"- {name}  ->  {_url(name)}" for name in created)
             parts.append(
                 "[files created — include the filename in your reply so the user sees it]\n"
                 + lines

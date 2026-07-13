@@ -35,6 +35,13 @@ async def lifespan(app: FastAPI):
             "print(Fernet.generate_key().decode())\" and set ENCRYPTION_KEY.",
         )
 
+    # Fail fast in production if there's no secret to sign session tokens with —
+    # otherwise tokens would be unsignable (or, previously, forgeable).
+    if settings.is_production and not (settings.JWT_SECRET or settings.ENCRYPTION_KEY):
+        raise RuntimeError(
+            "JWT_SECRET or ENCRYPTION_KEY must be set in production to sign session tokens"
+        )
+
     await init_db(app)
 
     # Connect to Redis for caching
@@ -93,14 +100,39 @@ async def lifespan(app: FastAPI):
     await close_db(app)
 
 
-app = FastAPI(title="Atelier API", version="0.1.0", lifespan=lifespan, docs_url=None, redoc_url=None)
+app = FastAPI(
+    title="Atelier API",
+    version="0.1.0",
+    lifespan=lifespan,
+    docs_url=None,
+    redoc_url=None,
+    # Don't expose the full API schema unauthenticated in production.
+    openapi_url=None if settings.is_production else "/openapi.json",
+)
+# Never combine a wildcard origin with credentials — the browser would let any
+# site send credentialed requests and read the response. If origins are
+# wildcarded, disable credentials; pin CORS_ORIGINS in prod to enable them.
+_cors_wildcard = "*" in settings.CORS_ORIGINS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=True,
+    allow_credentials=not _cors_wildcard,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def security_headers(request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "no-referrer")
+    if settings.is_production:
+        response.headers.setdefault(
+            "Strict-Transport-Security", "max-age=31536000; includeSubDomains"
+        )
+    return response
 app.include_router(api_router)
 
 

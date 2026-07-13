@@ -224,6 +224,9 @@ async def remove_member(
     if user_id != auth.user_id:
         if not await workspace_repo.user_can_manage_workspace(pool, workspace_id, auth.user_id):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not allowed to remove members")
+        # The owner can't be removed by an admin — that would orphan the workspace.
+        if await workspace_repo.get_member_role(pool, workspace_id, user_id) == "owner":
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Cannot remove the workspace owner")
     await workspace_repo.remove_member(pool, workspace_id, user_id)
     return {"success": True, "message": "Member removed", "data": None, "pagination": None}
 
@@ -486,13 +489,15 @@ async def transfer_workspace_resources(
     if not target_ws:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Target workspace not found")
     
-    # Check if user is a member of both workspaces
-    if not await workspace_repo.user_is_member(pool, data.source_workspace_id, auth.user_id):
+    # Transfer moves ALL resources in the source workspace (including other
+    # members' MCP/DB connections with stored credentials), so require the
+    # caller to be the OWNER of the source — not merely a member.
+    if await workspace_repo.get_member_role(pool, data.source_workspace_id, auth.user_id) != "owner":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="You must be a member of the source workspace"
+            detail="You must be the owner of the source workspace to transfer its resources"
         )
-    
+
     if not await workspace_repo.user_is_member(pool, data.target_workspace_id, auth.user_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

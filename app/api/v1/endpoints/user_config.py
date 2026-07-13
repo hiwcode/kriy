@@ -18,6 +18,23 @@ router = APIRouter(
     dependencies=[Depends(api_key_auth)],
 )
 
+# Secret fields are write-only: never echoed back to the client or cached in
+# Redis in plaintext (that would defeat encryption-at-rest). We return a
+# boolean `<field>_set` so the UI can still show "configured".
+_SECRET_FIELDS = (
+    "google_api_key", "openai_api_key", "anthropic_api_key", "opik_api_key",
+    "slack_bot_token", "slack_signing_secret", "slack_app_token", "gmail_app_password",
+)
+
+
+def _redact_secrets(config: dict) -> dict:
+    out = dict(config)
+    for f in _SECRET_FIELDS:
+        if f in out:
+            out[f"{f}_set"] = bool(out.get(f))
+            out[f] = None
+    return out
+
 
 @router.get("/", response_model=ApiResponse)
 async def get_config(
@@ -59,6 +76,7 @@ async def get_config(
             "gmail_address": None,
             "gmail_app_password": None,
         }
+    config = _redact_secrets(config)
     await cache.set(f"user_config:{auth.user_id}", config, ttl=600)
     return {
         "success": True,
@@ -114,7 +132,7 @@ async def update_config(
     return {
         "success": True,
         "message": "Config updated",
-        "data": config,
+        "data": _redact_secrets(config) if config else config,
         "pagination": None,
     }
 

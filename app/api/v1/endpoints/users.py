@@ -30,7 +30,11 @@ async def get_current_user(
 
 
 @router.post("/", response_model=ApiResponse, status_code=status.HTTP_201_CREATED)
-async def create_user(user_in: UserCreate, pool: asyncpg.Pool = Depends(get_db)) -> dict:
+async def create_user(
+    user_in: UserCreate,
+    pool: asyncpg.Pool = Depends(get_db),
+    auth: AuthContext = Depends(require_google_auth),
+) -> dict:
     try:
         user = await user_service.create_user(pool, user_in)
     except asyncpg.UniqueViolationError as exc:
@@ -48,23 +52,31 @@ async def create_user(user_in: UserCreate, pool: asyncpg.Pool = Depends(get_db))
 @router.get("/", response_model=ApiResponse)
 async def list_users(
     pool: asyncpg.Pool = Depends(get_db),
+    auth: AuthContext = Depends(require_google_auth),
     limit: int = Query(20, ge=1, le=200),
     offset: int = Query(0, ge=0),
-) -> list[dict]:
-    users, total = await user_service.list_users(pool, limit=limit, offset=offset)
-    page = (offset // limit) + 1 if limit else 1
+) -> dict:
+    # No admin role exists — a user may only see themselves, not the directory.
+    user = await user_service.get_user(pool, auth.user_id)
+    users = [user] if user else []
     return {
         "success": True,
         "message": "Users fetched",
         "data": users,
         "pagination": Pagination(
-            limit=limit, offset=offset, total=total, page=page, page_size=limit
+            limit=limit, offset=offset, total=len(users), page=1, page_size=limit
         ),
     }
 
 
 @router.get("/{user_id}", response_model=ApiResponse)
-async def get_user(user_id: int, pool: asyncpg.Pool = Depends(get_db)) -> dict:
+async def get_user(
+    user_id: int,
+    pool: asyncpg.Pool = Depends(get_db),
+    auth: AuthContext = Depends(require_google_auth),
+) -> dict:
+    if user_id != auth.user_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     user = await user_service.get_user(pool, user_id)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
@@ -78,8 +90,13 @@ async def get_user(user_id: int, pool: asyncpg.Pool = Depends(get_db)) -> dict:
 
 @router.patch("/{user_id}", response_model=ApiResponse)
 async def update_user(
-    user_id: int, user_in: UserUpdate, pool: asyncpg.Pool = Depends(get_db)
+    user_id: int,
+    user_in: UserUpdate,
+    pool: asyncpg.Pool = Depends(get_db),
+    auth: AuthContext = Depends(require_google_auth),
 ) -> dict:
+    if user_id != auth.user_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     try:
         user = await user_service.update_user(pool, user_id, user_in)
     except asyncpg.UniqueViolationError as exc:
@@ -97,7 +114,13 @@ async def update_user(
 
 
 @router.delete("/{user_id}", response_model=ApiResponse, status_code=status.HTTP_200_OK)
-async def delete_user(user_id: int, pool: asyncpg.Pool = Depends(get_db)) -> dict:
+async def delete_user(
+    user_id: int,
+    pool: asyncpg.Pool = Depends(get_db),
+    auth: AuthContext = Depends(require_google_auth),
+) -> dict:
+    if user_id != auth.user_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     deleted = await user_service.delete_user(pool, user_id)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")

@@ -91,7 +91,7 @@ def make_schedule_tools(pool: asyncpg.Pool, workspace_id: int | None = None, cre
 
         try:
             items, total = await schedule_service.list_schedules(
-                pool, workspace_id=workspace_id, limit=50, offset=0,
+                pool, workspace_id=workspace_id, created_by=created_by, limit=50, offset=0,
             )
             schedules = []
             for s in items:
@@ -121,7 +121,9 @@ def make_schedule_tools(pool: asyncpg.Pool, workspace_id: int | None = None, cre
         from app.services import schedule_service
 
         try:
-            deleted = await schedule_service.delete_schedule(pool, schedule_id)
+            deleted = await schedule_service.delete_schedule(
+                pool, schedule_id, workspace_id=workspace_id, created_by=created_by,
+            )
             if deleted:
                 return json.dumps({"success": True, "message": f"Schedule {schedule_id} deleted"})
             return json.dumps({"error": f"Schedule {schedule_id} not found"})
