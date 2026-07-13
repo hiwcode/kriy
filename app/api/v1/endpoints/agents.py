@@ -197,6 +197,7 @@ async def list_builtin_tools() -> dict:
     names.append("call_api")  # make HTTP requests to external APIs
     names.append("web_search")  # search the web via Google Custom Search
     names.append("documents")  # list, read, and extract text from uploaded documents
+    names.append("analyze")  # vision-based analysis of uploaded documents and images
     names.append("self_learning")  # let the agent save skills from conversations
     names.append("ui")        # render plan / todo / info cards in the chat UI
 
@@ -710,20 +711,42 @@ _ALLOWED_EXTENSIONS = {
     ".pdf", ".txt", ".json", ".csv", ".html", ".md",
 }
 
+# Extensions that can execute as active content in the browser — served as a
+# download (attachment, neutral type) instead of inline to prevent stored XSS.
+_ACTIVE_EXTENSIONS = {".html", ".htm", ".svg", ".xml", ".xhtml"}
+
+# Safe inline content types for renderable artifacts (charts, images, docs).
+_INLINE_MEDIA_TYPES = {
+    ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+    ".gif": "image/gif", ".webp": "image/webp", ".bmp": "image/bmp",
+    ".ico": "image/x-icon", ".pdf": "application/pdf", ".txt": "text/plain",
+    ".json": "application/json", ".csv": "text/csv", ".md": "text/plain",
+}
+
 # Separate router without auth for serving workspace files (used by <img> tags)
 workspace_router = APIRouter(prefix="/agents", tags=["agents"])
 
 
 @workspace_router.get("/workspace-file/{file_path:path}")
-async def serve_workspace_file(file_path: str):
-    """Serve a file from the agent workspace (temp dir) for inline display."""
-    safe_path = _WORKSPACE_DIR / file_path
+async def serve_workspace_file(file_path: str, sig: str | None = Query(default=None)):
+    """Serve a file from the agent workspace (temp dir) for inline display.
+
+    Access is gated by an HMAC signature over the relative path (minted by the
+    tool that created the file). A valid `sig` is always required — the shared
+    file namespace means the signature is the only cross-session guard.
+    """
+    from app.core import workspace_signing
+
+    # Always require a valid HMAC signature — the file namespace is shared, so
+    # this is the only thing stopping cross-session artifact reads.
+    if not workspace_signing.verify_path(file_path, sig):
+        raise HTTPException(status_code=403, detail="Invalid or missing signature")
+
+    safe_path = (_WORKSPACE_DIR / file_path).resolve()
     try:
-        safe_path = safe_path.resolve()
-        if not str(safe_path).startswith(str(_WORKSPACE_DIR.resolve())):
-            raise HTTPException(status_code=403, detail="Access denied")
-    except Exception:
-        raise HTTPException(status_code=403, detail="Invalid path")
+        safe_path.relative_to(_WORKSPACE_DIR.resolve())
+    except ValueError:
+        raise HTTPException(status_code=403, detail="Access denied")
 
     if not safe_path.is_file():
         raise HTTPException(status_code=404, detail="File not found")
@@ -732,7 +755,15 @@ async def serve_workspace_file(file_path: str):
     if ext not in _ALLOWED_EXTENSIONS:
         raise HTTPException(status_code=403, detail=f"File type {ext} not allowed")
 
-    return FileResponse(safe_path)
+    # Active content (html/svg/xml) is served as a neutral download so it can't
+    # execute as script in the app origin; images/pdf/etc render inline as before.
+    if ext in _ACTIVE_EXTENSIONS:
+        return FileResponse(
+            safe_path,
+            media_type="application/octet-stream",
+            content_disposition_type="attachment",
+        )
+    return FileResponse(safe_path, media_type=_INLINE_MEDIA_TYPES.get(ext))
 
 
 @router.post("/bulk-delete", response_model=ApiResponse)

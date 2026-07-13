@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.core.security import AuthContext, api_key_auth, require_google_auth
+from app.core.access import require_resource_access
 from app.deps import get_db, get_current_workspace
 from app.schemas.skill_folder import SkillFolderCreate, SkillFolderUpdate
 from app.schemas.response import ApiResponse
@@ -16,6 +17,14 @@ router = APIRouter(
     tags=["skill-folders"],
     dependencies=[Depends(api_key_auth)],
 )
+
+
+async def _require_folder_access(folder_id: int, pool: asyncpg.Pool, auth: AuthContext) -> dict:
+    folder = await skill_folder_service.get_folder(pool, folder_id)
+    if not folder:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Folder not found")
+    await require_resource_access(folder, pool, auth)
+    return folder
 
 
 @router.post("/", response_model=ApiResponse, status_code=status.HTTP_201_CREATED)
@@ -67,11 +76,7 @@ async def get_folder(
     pool: asyncpg.Pool = Depends(get_db),
     auth: AuthContext = Depends(require_google_auth),
 ) -> dict:
-    folder = await skill_folder_service.get_folder(pool, folder_id)
-    if not folder:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Folder not found"
-        )
+    folder = await _require_folder_access(folder_id, pool, auth)
     return {
         "success": True,
         "message": "Folder fetched",
@@ -86,6 +91,7 @@ async def get_folder_path(
     pool: asyncpg.Pool = Depends(get_db),
     auth: AuthContext = Depends(require_google_auth),
 ) -> dict:
+    await _require_folder_access(folder_id, pool, auth)
     path = await skill_folder_service.get_folder_path(pool, folder_id)
     return {
         "success": True,
@@ -102,6 +108,7 @@ async def update_folder(
     pool: asyncpg.Pool = Depends(get_db),
     auth: AuthContext = Depends(require_google_auth),
 ) -> dict:
+    await _require_folder_access(folder_id, pool, auth)
     folder = await skill_folder_service.update_folder(pool, folder_id, data)
     if not folder:
         raise HTTPException(
@@ -121,6 +128,7 @@ async def delete_folder(
     pool: asyncpg.Pool = Depends(get_db),
     auth: AuthContext = Depends(require_google_auth),
 ) -> dict:
+    await _require_folder_access(folder_id, pool, auth)
     deleted = await skill_folder_service.delete_folder(pool, folder_id)
     if not deleted:
         raise HTTPException(

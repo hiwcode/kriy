@@ -101,6 +101,16 @@ def make_email_tools(pool: asyncpg.Pool, user_id: int | None) -> list[FunctionTo
         if not recipients:
             return json.dumps({"error": "no valid recipient address provided"})
 
+        # Optional recipient-domain allowlist (guards against exfiltration).
+        from app.core.config import settings
+        allowed = [d.strip().lower() for d in (settings.EMAIL_ALLOWED_DOMAINS or "").split(",") if d.strip()]
+        if allowed:
+            blocked = [r for r in recipients if r.rsplit("@", 1)[-1].lower() not in allowed]
+            if blocked:
+                return json.dumps({
+                    "error": f"recipient(s) not in allowed domains {allowed}: {', '.join(blocked)}",
+                })
+
         try:
             await asyncio.to_thread(
                 _send_via_gmail,

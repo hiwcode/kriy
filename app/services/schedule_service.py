@@ -83,8 +83,16 @@ async def update_schedule(
     return await schedule_repo.update_schedule(pool, schedule_id, **updates)
 
 
-async def delete_schedule(pool: asyncpg.Pool, schedule_id: int) -> bool:
-    return await schedule_repo.delete_schedule(pool, schedule_id)
+async def delete_schedule(
+    pool: asyncpg.Pool,
+    schedule_id: int,
+    *,
+    workspace_id: int | None = None,
+    created_by: int | None = None,
+) -> bool:
+    return await schedule_repo.delete_schedule(
+        pool, schedule_id, workspace_id=workspace_id, created_by=created_by
+    )
 
 
 async def mark_schedule_run(

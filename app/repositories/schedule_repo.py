@@ -140,10 +140,31 @@ async def update_schedule(
     return _row_to_dict(row)
 
 
-async def delete_schedule(pool: asyncpg.Pool, schedule_id: int) -> bool:
-    sql = "DELETE FROM schedules WHERE id = $1"
+async def delete_schedule(
+    pool: asyncpg.Pool,
+    schedule_id: int,
+    *,
+    workspace_id: int | None = None,
+    created_by: int | None = None,
+) -> bool:
+    """Delete a schedule by id.
+
+    When workspace_id / created_by are supplied they are added to the WHERE
+    clause so a caller can only delete rows within its own tenant (prevents
+    cross-tenant IDOR from the agent-facing tool). Passing neither preserves
+    the legacy id-only delete for trusted callers (e.g. admin endpoints).
+    """
+    conditions = ["id = $1"]
+    params: list[Any] = [schedule_id]
+    if workspace_id is not None:
+        params.append(workspace_id)
+        conditions.append(f"workspace_id IS NOT DISTINCT FROM ${len(params)}")
+    if created_by is not None:
+        params.append(created_by)
+        conditions.append(f"created_by IS NOT DISTINCT FROM ${len(params)}")
+    sql = f"DELETE FROM schedules WHERE {' AND '.join(conditions)}"
     async with pool.acquire() as conn:
-        result = await conn.execute(sql, schedule_id)
+        result = await conn.execute(sql, *params)
     return result == "DELETE 1"
 
 

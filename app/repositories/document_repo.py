@@ -9,6 +9,24 @@ import asyncpg
 _COLS = "id, name, mime_type, size_bytes, bucket_key, url, agent_id, session_id, user_id, workspace_id, created_at"
 
 
+def is_visible(doc: dict[str, Any], agent_id: int | None, session_id: str | None) -> bool:
+    """Resource-level scope check for a single document.
+
+    A document is visible to an agent when it belongs to that agent AND is either:
+      - agent-level (session_id IS NULL) — a shared / knowledge-base doc, or
+      - owned by the current session (doc.session_id == session_id).
+
+    Session uploads never leak across sessions: when running without a session
+    (scheduled / A2A runs), only agent-level docs are visible.
+    """
+    if agent_id is None or doc.get("agent_id") != agent_id:
+        return False
+    doc_session = doc.get("session_id")
+    if doc_session is None:
+        return True
+    return doc_session == session_id
+
+
 async def create(
     pool: asyncpg.Pool,
     *,
@@ -39,12 +57,18 @@ async def get(pool: asyncpg.Pool, doc_id: int) -> dict[str, Any] | None:
 
 
 async def list_for_session(
-    pool: asyncpg.Pool, agent_id: int, session_id: str, *, limit: int = 50
+    pool: asyncpg.Pool, agent_id: int, session_id: str | None, *, limit: int = 50
 ) -> list[dict[str, Any]]:
+    """List docs an agent may see in a session: this session's uploads plus
+    agent-level (session_id IS NULL) shared docs.
+
+    When session_id is None (scheduled / A2A runs), the `= $2` clause matches
+    nothing, so only agent-level docs are returned — never another session's.
+    """
     rows = await pool.fetch(
         f"""
         SELECT {_COLS} FROM documents
-        WHERE agent_id = $1 AND session_id = $2
+        WHERE agent_id = $1 AND (session_id = $2 OR session_id IS NULL)
         ORDER BY created_at DESC
         LIMIT $3;
         """,

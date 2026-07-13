@@ -84,6 +84,11 @@ def _extract_confirmations(event) -> list[dict]:
 
 async def _process_events(runner, user_id, session_id, message, agent_id, opik_tracer):
     """Process runner events and yield SSE data, handling confirmations."""
+    # Scope code-exec / file tools to a per-session workspace subdir so one
+    # session's artifacts can't collide with or leak into another's.
+    from app.agents import tool_registry
+    tool_registry.current_session.set(session_id)
+
     pending_confirmations = []
     emitted_text = False
     emitted_card = False
@@ -275,11 +280,17 @@ async def run_agent_stream(
                         doc = await document_repo.get(pool, doc_id)
                         if not doc or not doc.get("mime_type", "").startswith("image/"):
                             continue
+                        # Scope check: only inject docs this agent+session may see
+                        # (prevents cross-tenant image read via arbitrary doc ids).
+                        if not document_repo.is_visible(doc, agent_id, session_id):
+                            continue
                         if doc.get("bucket_key"):
                             img_bytes = doc_storage.download_bytes(doc["bucket_key"])
                         elif doc.get("url"):
                             import httpx
-                            async with httpx.AsyncClient(timeout=30) as hc:
+                            from app.core.net_guard import assert_public_url
+                            assert_public_url(doc["url"])  # SSRF guard
+                            async with httpx.AsyncClient(timeout=30, follow_redirects=False) as hc:
                                 resp = await hc.get(doc["url"])
                                 resp.raise_for_status()
                                 img_bytes = resp.content

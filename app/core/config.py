@@ -16,10 +16,12 @@ class Settings(BaseSettings):
     APP_VERSION: str = Field(default="0.1.0", description="Application version")
     DEBUG: bool = Field(default=False, description="Debug mode")
     ENVIRONMENT: str = Field(
-        default="development",
+        default="production",
         description="Deployment environment: 'development' or 'production'. "
         "Local-only tools (bash, file access, run_python, claude_code) are "
-        "disabled in production.",
+        "disabled in production. Defaults to 'production' so a forgotten/typo'd "
+        "env var fails safe (RCE-class tools stay OFF) — set ENVIRONMENT=development "
+        "locally to enable them.",
         env="ENVIRONMENT",
     )
 
@@ -68,6 +70,16 @@ class Settings(BaseSettings):
     )
     ACCESS_TOKEN_TTL_MINUTES: int = Field(default=1440, description="Access token lifetime (minutes)")
     REFRESH_TOKEN_TTL_DAYS: int = Field(default=30, description="Refresh token lifetime (days)")
+
+    # Email safety
+    EMAIL_ALLOWED_DOMAINS: str = Field(
+        default="",
+        description="Comma-separated recipient domain allowlist for the send_email tool "
+        "(e.g. 'portpro.io,example.com'). When empty, all recipients are allowed. "
+        "When set, the agent can only email addresses in these domains — a guard against "
+        "prompt-injection data exfiltration from the owner's account.",
+        env="EMAIL_ALLOWED_DOMAINS",
+    )
 
     # Redis
     REDIS_URL: str = Field(default="", description="Redis URL for caching", env="REDIS_URL")

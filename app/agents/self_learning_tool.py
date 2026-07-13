@@ -98,7 +98,7 @@ def make_self_learning_tools(
         payload: dict = {"instructions": instructions}
         if description is not None:
             payload["description"] = description
-        await skill_repo.update_skill(pool, target["id"], payload)
+        await skill_repo.update_skill(pool, target["id"], payload, workspace_id=workspace_id)
         return json.dumps({"success": True, "skill_id": target["id"], "name": name})
 
     async def list_learned_skills() -> str:

@@ -189,7 +189,11 @@ async def count_skills(
 
 
 async def update_skill(
-    pool: asyncpg.Pool, skill_id: int, payload: dict[str, Any]
+    pool: asyncpg.Pool,
+    skill_id: int,
+    payload: dict[str, Any],
+    *,
+    workspace_id: int | None = None,
 ) -> dict[str, Any] | None:
     if not payload:
         return await get_skill(pool, skill_id)
@@ -207,13 +211,19 @@ async def update_skill(
             index += 1
 
     set_clauses.append("updated_at = NOW()")
+    values.append(skill_id)
+    where = f"id = ${len(values)}"
+    # Defense-in-depth: when a workspace is supplied, refuse to update a skill
+    # outside it (the id is already agent-scoped at the tool boundary).
+    if workspace_id is not None:
+        values.append(workspace_id)
+        where += f" AND workspace_id IS NOT DISTINCT FROM ${len(values)}"
     query = f"""
     UPDATE skills
     SET {', '.join(set_clauses)}
-    WHERE id = ${index}
+    WHERE {where}
     RETURNING {_SELECT_FIELDS};
     """
-    values.append(skill_id)
     row = await pool.fetchrow(query, *values)
     return _row_to_dict(row)
 

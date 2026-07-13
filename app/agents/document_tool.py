@@ -1,8 +1,9 @@
 """Document tools for agents — list, read, and extract text from uploaded documents.
 
 Documents are scoped per-agent. Each agent only sees its own uploads.
-For images, returns a presigned URL the LLM can use with vision.
 For PDFs/text, extracts and returns the text content.
+For images (and deeper document understanding), use the `analyze` tools
+(analyze_image / analyze_document), which run vision-based analysis.
 """
 
 from __future__ import annotations
@@ -32,10 +33,8 @@ def make_document_tools(pool: asyncpg.Pool, workspace_id: int | None = None, age
         """
         if not agent_id:
             return json.dumps({"error": "No agent context"})
-        if session_id:
-            docs = await document_repo.list_for_session(pool, agent_id, session_id, limit=limit)
-        else:
-            docs = await document_repo.list_for_agent(pool, agent_id, limit=limit)
+        # Session-scoped: this session's uploads + agent-level (shared) docs.
+        docs = await document_repo.list_for_session(pool, agent_id, session_id, limit=limit)
         items = []
         for d in docs:
             items.append({
@@ -54,9 +53,7 @@ def make_document_tools(pool: asyncpg.Pool, workspace_id: int | None = None, age
             document_id: The document ID from list_documents.
         """
         doc = await document_repo.get(pool, document_id)
-        if not doc:
-            return json.dumps({"error": "Document not found"})
-        if doc.get("agent_id") != agent_id or (session_id and doc.get("session_id") != session_id):
+        if not doc or not document_repo.is_visible(doc, agent_id, session_id):
             return json.dumps({"error": "Document not found"})
 
         result = {
@@ -79,40 +76,27 @@ def make_document_tools(pool: asyncpg.Pool, workspace_id: int | None = None, age
         return json.dumps(result, default=str)
 
     async def extract_document_text(document_id: int) -> str:
-        """Extract and return the content of a document.
+        """Extract and return the raw text of a document.
 
         For PDFs and text files: returns the extracted text.
-        For images: returns a presigned URL you can use to view/analyze the image.
+        For images: there is no text to extract — use the analyze_image tool instead.
 
         Args:
             document_id: The document ID from list_documents.
         """
         doc = await document_repo.get(pool, document_id)
-        if not doc:
-            return json.dumps({"error": "Document not found"})
-        if doc.get("agent_id") != agent_id or (session_id and doc.get("session_id") != session_id):
+        if not doc or not document_repo.is_visible(doc, agent_id, session_id):
             return json.dumps({"error": "Document not found"})
 
         mime = doc["mime_type"]
 
-        # Images are injected as inline parts when uploaded via chat (vision).
-        # If the tool is called directly, return a presigned URL.
+        # Images have no extractable text — defer to the vision-based analyze tool.
         if mime.startswith("image/"):
-            url = None
-            if doc.get("bucket_key"):
-                from app.core import storage
-                try:
-                    url = storage.get_presigned_url(doc["bucket_key"])
-                except Exception:
-                    pass
-            else:
-                url = doc.get("url")
             return json.dumps({
                 "document": doc["name"],
                 "type": "image",
                 "mime_type": mime,
-                "download_url": url,
-                "note": "Images uploaded via chat are automatically analyzed via vision. Use the download_url to reference this image.",
+                "note": "This is an image — there is no text to extract. Use the analyze_image tool to describe it or read text from it via vision.",
             })
 
         # For PDFs and text, download and extract
@@ -148,7 +132,9 @@ async def _download_doc(doc: dict) -> bytes:
         return storage.download_bytes(doc["bucket_key"])
     if doc.get("url"):
         import httpx
-        async with httpx.AsyncClient(timeout=60) as client:
+        from app.core.net_guard import assert_public_url
+        assert_public_url(doc["url"])  # SSRF guard: block internal/metadata hosts
+        async with httpx.AsyncClient(timeout=60, follow_redirects=False) as client:
             resp = await client.get(doc["url"])
             resp.raise_for_status()
             return resp.content

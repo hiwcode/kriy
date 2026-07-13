@@ -157,6 +157,11 @@ async def get_database_connection(
             detail="Database connection not found",
         )
     await require_resource_access(conn, pool, auth)
+    # Never echo the connection URL (contains the DB password) back to clients.
+    conn = dict(conn)
+    if conn.get("connection_url") is not None:
+        conn["connection_url"] = None
+        conn["connection_url_set"] = True
     return {
         "success": True,
         "message": "Database connection fetched",

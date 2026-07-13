@@ -10,6 +10,7 @@ Documents are scoped to an agent — docs uploaded for one agent are not visible
 from __future__ import annotations
 
 import io
+import os
 import uuid
 from typing import List
 
@@ -18,10 +19,22 @@ from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, 
 from pydantic import BaseModel
 
 from app.core.security import AuthContext, api_key_auth, require_google_auth
+from app.core.access import require_resource_access
 from app.core import storage
+from app.core.net_guard import is_public_url
 from app.deps import get_db, get_current_workspace
 from app.repositories import document_repo
 from app.schemas.response import ApiResponse, Pagination
+from app.services import agent_service
+
+
+async def _require_agent_access(agent_id: int, pool: asyncpg.Pool, auth: AuthContext) -> dict:
+    """404 unless the caller can access this agent (mirrors agents.py)."""
+    agent = await agent_service.get_agent(pool, agent_id)
+    if not agent:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")
+    await require_resource_access(agent, pool, auth)
+    return agent
 
 router = APIRouter(
     prefix="/documents",
@@ -55,6 +68,7 @@ async def upload_documents(
             detail=f"Too many files. Maximum is {MAX_FILES} at once.",
         )
 
+    await _require_agent_access(agent_id, pool, auth)
     ws_id = workspace["id"] if workspace else None
     uploaded = []
 
@@ -66,13 +80,20 @@ async def upload_documents(
                 detail=f"'{file.filename}' is too large ({len(content) // 1024} KB). Maximum is {MAX_FILE_SIZE // (1024 * 1024)} MB per file.",
             )
 
-        key = f"{ws_id or 'personal'}/{agent_id}/{uuid.uuid4().hex[:12]}/{file.filename or 'upload'}"
-        storage.upload_file(key, io.BytesIO(content), content_type=file.content_type or "application/octet-stream")
+        # Neutralize content that would execute if served inline (stored XSS /
+        # MIME-sniffing). Presigned downloads echo the stored content-type.
+        raw_type = file.content_type or "application/octet-stream"
+        _DANGEROUS = {"text/html", "application/xhtml+xml", "image/svg+xml", "application/xml", "text/xml"}
+        safe_type = "application/octet-stream" if raw_type.lower() in _DANGEROUS else raw_type
+
+        safe_name = os.path.basename(file.filename or "upload") or "upload"
+        key = f"{ws_id or 'personal'}/{agent_id}/{uuid.uuid4().hex[:12]}/{safe_name}"
+        storage.upload_file(key, io.BytesIO(content), content_type=safe_type)
 
         doc = await document_repo.create(
             pool,
-            name=file.filename or "upload",
-            mime_type=file.content_type or "application/octet-stream",
+            name=safe_name,
+            mime_type=safe_type,
             size_bytes=len(content),
             bucket_key=f"docs/{key}",
             agent_id=agent_id,
@@ -105,6 +126,12 @@ async def register_document_url(
     workspace: dict | None = Depends(get_current_workspace),
 ) -> dict:
     """Register an external document URL for a specific agent."""
+    await _require_agent_access(data.agent_id, pool, auth)
+    if not is_public_url(data.url):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="URL must be a public http(s) address (internal/loopback addresses are blocked).",
+        )
     ws_id = workspace["id"] if workspace else None
     name = data.name or data.url.rsplit("/", 1)[-1] or "document"
     doc = await document_repo.create(
@@ -129,6 +156,7 @@ async def list_documents(
     auth: AuthContext = Depends(require_google_auth),
 ) -> dict:
     """List documents for a specific agent."""
+    await _require_agent_access(agent_id, pool, auth)
     docs = await document_repo.list_for_agent(pool, agent_id, limit=limit, offset=offset)
     total = await document_repo.count_for_agent(pool, agent_id)
     return {
@@ -148,6 +176,7 @@ async def get_document(
     doc = await document_repo.get(pool, doc_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
+    await require_resource_access(doc, pool, auth, created_by_field="user_id")
     if doc.get("bucket_key"):
         try:
             doc["download_url"] = storage.get_presigned_url(doc["bucket_key"])
@@ -167,6 +196,7 @@ async def delete_document(
     doc = await document_repo.get(pool, doc_id)
     if not doc:
         raise HTTPException(status_code=404, detail="Document not found")
+    await require_resource_access(doc, pool, auth, created_by_field="user_id")
     if doc.get("bucket_key"):
         storage.delete_file(doc["bucket_key"])
     await document_repo.delete(pool, doc_id)

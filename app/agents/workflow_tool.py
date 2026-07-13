@@ -26,6 +26,16 @@ def make_workflow_tools(
 ) -> list[FunctionTool]:
     """Create workflow-management tools with pool + owner context baked in."""
 
+    def _owns_workflow(row: dict) -> bool:
+        """Row must be in this agent's workspace and, when we know the owner,
+        belong to this agent's owner — so peers in a shared workspace can't
+        edit each other's workflows."""
+        if row.get("workspace_id") != workspace_id:
+            return False
+        if user_id is not None and row.get("user_id") != user_id:
+            return False
+        return True
+
     async def list_workflows() -> str:
         """List the workspace's event-driven workflows (what runs when an event fires)."""
         try:
@@ -94,7 +104,7 @@ def make_workflow_tools(
         """Update fields of an existing workflow (only the ones you pass)."""
         try:
             existing = await workflow_repo.get(pool, workflow_id)
-            if not existing or existing.get("workspace_id") != workspace_id:
+            if not existing or not _owns_workflow(existing):
                 return json.dumps({"error": f"workflow {workflow_id} not found"})
             updated = await workflow_repo.update(
                 pool,
@@ -114,7 +124,7 @@ def make_workflow_tools(
         """Delete a workflow by id."""
         try:
             existing = await workflow_repo.get(pool, workflow_id)
-            if not existing or existing.get("workspace_id") != workspace_id:
+            if not existing or not _owns_workflow(existing):
                 return json.dumps({"error": f"workflow {workflow_id} not found"})
             await workflow_repo.delete(pool, workflow_id)
             return json.dumps({"success": True, "deleted": workflow_id})

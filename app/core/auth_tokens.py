@@ -20,7 +20,14 @@ _ALGO = "HS256"
 
 
 def _secret() -> str:
-    return settings.JWT_SECRET or settings.ENCRYPTION_KEY or "dev-insecure-change-me"
+    # No hardcoded fallback: signing with a source-visible literal would let
+    # anyone forge a session token for any user. Require a real secret.
+    secret = settings.JWT_SECRET or settings.ENCRYPTION_KEY
+    if not secret:
+        raise RuntimeError(
+            "JWT_SECRET (or ENCRYPTION_KEY) must be set to sign session tokens"
+        )
+    return secret
 
 
 def create_access_token(user_id: int, email: str | None = None) -> tuple[str, int]:
