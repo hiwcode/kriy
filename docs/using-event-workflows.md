@@ -23,7 +23,7 @@ There are three pieces:
 | --- | --- |
 | **Event** | A named signal your app sends, e.g. `todo.completed`. Registered in the **Events** catalog. |
 | **Workflow** | "When event *X* fires, run agent *A* with these instructions." Belongs to an agent. |
-| **Emit** | Your app sends the event via the SDK (`emit`) or `POST /api/v1/events`. |
+| **Emit** | Your app sends the event with `POST /api/v1/events`. |
 
 Everything is **workspace-scoped** — workflows and events belong to a workspace, like schedules.
 
@@ -55,27 +55,31 @@ You can also **describe it in plain English** and let the agent compile the work
 
 ## 3. Emit events from your app
 
-Install the SDK and emit — no agent id or rules in your app; the workflow owns those.
+Emit with a plain HTTP `POST` — no agent id or rules in your app; the workflow owns those.
 
 **Python**
 
 ```python
-from atelier_agentic import AtelierClient
+import requests
 
-atelier = AtelierClient(api_key="ate-...")   # per-user key; no agent_id needed
-atelier.emit("todo.completed", {"todos": todos})
+requests.post(
+    "http://localhost:8000/api/v1/events",
+    headers={"X-API-Key": "ate-..."},   # per-user key; no agent_id needed
+    json={"type": "todo.completed", "payload": {"todos": todos}},
+)
 ```
 
 **Node**
 
 ```ts
-import { AtelierClient } from "@atelier/agentic";
-
-const atelier = new AtelierClient({ apiKey: "ate-..." });
-await atelier.emit("todo.completed", { todos });
+await fetch("http://localhost:8000/api/v1/events", {
+  method: "POST",
+  headers: { "X-API-Key": "ate-...", "Content-Type": "application/json" },
+  body: JSON.stringify({ type: "todo.completed", payload: { todos } }),
+});
 ```
 
-**HTTP**
+**curl**
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/events \
@@ -85,8 +89,8 @@ curl -X POST http://localhost:8000/api/v1/events \
 ```
 
 > Use a **per-user API key** (starts with `ate-`, from **Config → API key**), not the global
-> `API_KEYS` value. The workspace is taken from the `X-Workspace-Id` header (set
-> `ATELIER_WORKSPACE_ID` for the SDK) or your personal workspace by default.
+> `API_KEYS` value. The workspace is taken from the `X-Workspace-Id` header, or your
+> personal workspace by default.
 
 ## 4. How runs execute
 
@@ -107,4 +111,3 @@ create, list, update, and delete workflows/events from chat — scoped to its wo
 
 - [Notifications](using-notifications.md) — have a workflow's agent notify you when it runs
 - [Schedules](using-schedules.md) — time-based runs instead of event-based
-- [Embedding Agents (SDK)](embedding-agents.md) — put an agent in the path of your code

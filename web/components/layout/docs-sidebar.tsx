@@ -32,7 +32,6 @@ import {
   Settings,
   GraduationCap,
   Wrench,
-  Code2,
 } from "lucide-react";
 
 import Logo from "@/components/logo";
@@ -55,12 +54,6 @@ const DOC_SECTIONS: DocSection[] = [
       { slug: "using-skills", name: "Skills", href: "/docs/using-skills", icon: GraduationCap },
       { slug: "using-tools", name: "Tools & Prompts", href: "/docs/using-tools", icon: Wrench },
       { slug: "using-memory", name: "Memory", href: "/docs/using-memory", icon: MemoryStick },
-    ],
-  },
-  {
-    label: "Embed in your code",
-    items: [
-      { slug: "embedding-agents", name: "Embedding Agents (SDK)", href: "/docs/embedding-agents", icon: Code2 },
     ],
   },
   {

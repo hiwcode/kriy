@@ -72,7 +72,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ChevronDown, ChevronRight, Loader2, Plug, Wrench, Puzzle, Plus, Trash2, Clock, Database, Globe, Link2, Copy, Check, ExternalLink, Play, RefreshCw, Send, AlertTriangle, Sparkles, Save, Cpu, ShieldCheck, Activity } from "lucide-react";
+import { ChevronDown, ChevronRight, Loader2, Plug, Wrench, Puzzle, Plus, Trash2, Clock, Database, Globe, Link2, Copy, Check, ExternalLink, Play, RefreshCw, Send, AlertTriangle, Sparkles, Save, Cpu } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { SheetTitle } from "@/components/ui/sheet";
 import { ResizableDrawer } from "@/components/ui/resizable-drawer";
@@ -89,8 +89,6 @@ import {
 } from "@/lib/api/integration";
 import { siteConfig } from "@/config/site";
 import { ensureExtraFields, cn } from "@/lib/utils";
-import { PoliciesContent } from "@/components/agents/policies-tab";
-import { DecisionsContent } from "@/components/agents/decisions-tab";
 
 interface HistoryItem {
   id: string;
@@ -2472,18 +2470,6 @@ export default function AgentDetailPage() {
       },
       ...(agentId !== "new"
         ? [
-            {
-              id: "policies",
-              name: "Policies",
-              icon: <ShieldCheck className="size-4" />,
-              component: <PoliciesContent agentId={parseInt(agentId, 10)} />,
-            } as const,
-            {
-              id: "decisions",
-              name: "Decisions",
-              icon: <Activity className="size-4" />,
-              component: <DecisionsContent agentId={parseInt(agentId, 10)} />,
-            } as const,
             {
               id: "integrate",
               name: "Integrate",

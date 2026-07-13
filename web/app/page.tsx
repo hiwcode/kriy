@@ -27,11 +27,6 @@ import {
   Activity,
   Zap,
   DollarSign,
-  Wand2,
-  Ban,
-  Eye,
-  Check,
-  Code2,
   Workflow,
   Bell,
   Heart,
@@ -380,131 +375,6 @@ function HeroVisual() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Agentify-legacy section                                            */
-/* ------------------------------------------------------------------ */
-
-const AGENTIFY_CAPS = [
-  { icon: Eye, title: "Observe", desc: "Shadow-mode first — the agent logs what it would do, changing nothing." },
-  { icon: Wand2, title: "Modify", desc: "Rewrite payloads in-flight — mask PII, enrich, or clamp to policy." },
-  { icon: Ban, title: "Deny", desc: "Block risky actions before they ever hit your API or database." },
-];
-
-const AGENTIFY_CODE: Record<"python" | "node", string> = {
-  python: `from atelier_agentic import AtelierClient
-
-atelier = AtelierClient(agent_id=12, mode="enforce")
-
-# put an agent in the path of any action
-order = atelier.guard(
-    "db.update", order,
-    mutable_fields=["discount"],   # agent may only touch these
-)
-db.update(order)`,
-  node: `import { AtelierClient } from "@atelier/agentic";
-
-const atelier = new AtelierClient({ agentId: 12, mode: "enforce" });
-
-// put an agent in the path of any action
-const order = await atelier.guard("db.update", order, {
-  mutableFields: ["discount"],   // agent may only touch these
-});
-await db.orders.update(order);`,
-};
-
-function AgentifySection() {
-  const [lang, setLang] = React.useState<"python" | "node">("python");
-
-  return (
-    <section className="scroll-mt-20 py-24 md:py-32">
-      <div className="mx-auto max-w-6xl px-6">
-        <div className="mx-auto max-w-2xl text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-            Legacy → Agentic
-          </p>
-          <h2 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
-            Agentify your existing codebase
-          </h2>
-          <p className="mt-4 text-muted-foreground">
-            Drop the SDK into your Python or Node app and put an agent in the decision
-            path of any API call, DB write, or function — one call site at a time.
-          </p>
-        </div>
-
-        <div className="mt-14 grid grid-cols-1 items-center gap-10 lg:grid-cols-2">
-          {/* Left — capabilities */}
-          <div>
-            <div className="space-y-4">
-              {AGENTIFY_CAPS.map((cap) => {
-                const Icon = cap.icon;
-                return (
-                  <div key={cap.title} className="flex gap-4">
-                    <div className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary ring-1 ring-inset ring-primary/10">
-                      <Icon className="size-5" />
-                    </div>
-                    <div>
-                      <h3 className="font-semibold tracking-tight">{cap.title}</h3>
-                      <p className="mt-1 text-sm leading-relaxed text-muted-foreground">{cap.desc}</p>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Roll-out modes */}
-            <div className="mt-8 flex flex-wrap items-center gap-2">
-              <span className="text-xs font-medium text-muted-foreground">Roll out safely:</span>
-              {["observe", "suggest", "enforce"].map((m, i) => (
-                <span key={m} className="inline-flex items-center gap-1.5">
-                  {i > 0 && <ArrowRight className="size-3 text-muted-foreground/50" />}
-                  <span className="rounded-full border border-primary/20 bg-primary/5 px-2.5 py-0.5 text-xs font-medium text-primary">
-                    {m}
-                  </span>
-                </span>
-              ))}
-            </div>
-          </div>
-
-          {/* Right — code card. min-w-0 so the <pre> scrolls instead of blowing out the page width on mobile. */}
-          <div className="min-w-0 overflow-hidden rounded-2xl border border-border bg-zinc-950 shadow-xl shadow-primary/[0.06]">
-            {/* tabs */}
-            <div className="flex items-center gap-1 border-b border-white/10 px-3 py-2">
-              <div className="mr-2 flex items-center gap-1.5">
-                <span className="size-2.5 rounded-full bg-white/15" />
-                <span className="size-2.5 rounded-full bg-white/10" />
-                <span className="size-2.5 rounded-full bg-white/10" />
-              </div>
-              {(["python", "node"] as const).map((l) => (
-                <button
-                  key={l}
-                  onClick={() => setLang(l)}
-                  className={
-                    "rounded-md px-2.5 py-1 text-xs font-medium transition-colors " +
-                    (lang === l ? "bg-white/10 text-white" : "text-zinc-400 hover:text-zinc-200")
-                  }
-                >
-                  {l === "python" ? "Python" : "Node"}
-                </button>
-              ))}
-            </div>
-            <pre className="overflow-x-auto p-5 font-mono text-[13px] leading-relaxed text-zinc-100">
-              {AGENTIFY_CODE[lang]}
-            </pre>
-            {/* faux verdict — wraps on small screens instead of overflowing */}
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 border-t border-white/10 px-5 py-3 text-xs">
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/15 px-2 py-0.5 font-medium text-emerald-400">
-                <Check className="size-3" /> modify
-              </span>
-              <span className="font-mono text-zinc-400">discount: 80 → 50</span>
-              <span className="text-zinc-500 sm:ml-auto">clamped to policy · logged to traces</span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ------------------------------------------------------------------ */
 /*  Page                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -570,12 +440,6 @@ export default function LandingPage() {
               >
                 How it works
               </button>
-              <Link
-                href="/sdk"
-                className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-              >
-                SDK
-              </Link>
               <Link
                 href="/docs"
                 className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
@@ -650,9 +514,9 @@ export default function LandingPage() {
 
             {/* Subtitle */}
             <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-              Drop an agent into the path of any API call, DB write, or event &mdash; to
-              guard, automate, and extend the systems you already run. Or build new
-              agents and orchestrate them. One open-source platform, both directions.
+              Build AI agents, give them tools and skills, and let your app&apos;s events
+              trigger the right agent automatically &mdash; so the systems you already run
+              get automated and extended. One open-source platform.
             </p>
 
             {/* CTAs */}
@@ -756,114 +620,6 @@ export default function LandingPage() {
 
       {/* -- A closer look (feature mockups) ------------------------ */}
       <FeatureShowcase />
-
-      {/* Divider */}
-      <div className="mx-auto max-w-6xl px-6">
-        <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-      </div>
-
-      {/* -- Two ways to use it ------------------------------------- */}
-      <section className="scroll-mt-20 py-24 md:py-32">
-        <div className="mx-auto max-w-6xl px-6">
-          <div className="mx-auto max-w-2xl text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-              Two ways to use it
-            </p>
-            <h2 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
-              Build agents. Embed agents.
-            </h2>
-            <p className="mt-4 text-muted-foreground">
-              Atelier works in both directions — give an agent the tools to do work, or drop an
-              agent into code you already have. Same platform, opposite control flow.
-            </p>
-          </div>
-
-          <div className="mt-14 grid grid-cols-1 gap-5 lg:grid-cols-2">
-            {/* Build */}
-            <div className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="flex size-11 items-center justify-center rounded-xl bg-muted text-foreground">
-                  <BrainCircuit className="size-5" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold tracking-tight">Build agents</h3>
-                  <p className="text-sm text-muted-foreground">The agent does the work.</p>
-                </div>
-              </div>
-              <div className="mt-4 inline-flex items-center gap-1.5 rounded-full border bg-muted/40 px-2.5 py-1 font-mono text-xs text-muted-foreground">
-                agent <ArrowRight className="size-3" /> your systems
-              </div>
-              <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-                It reasons, then reaches out — calling tools, running skills, and coordinating
-                sub-agents, on demand or on a schedule.
-              </p>
-              <ul className="mt-5 grid grid-cols-2 gap-2 text-sm">
-                {["MCP tools", "Skills", "Orchestration", "Schedules"].map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-foreground/80">
-                    <Check className="size-4 shrink-0 text-primary" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {/* Embed */}
-            <div className="relative overflow-hidden rounded-2xl border border-primary/30 bg-card p-6 shadow-sm">
-              <span className="absolute right-4 top-4 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
-                The wedge
-              </span>
-              <div className="flex items-center gap-3">
-                <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                  <Code2 className="size-5" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold tracking-tight">Embed agents</h3>
-                  <p className="text-sm text-muted-foreground">An agent rides along in your code.</p>
-                </div>
-              </div>
-              <div className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 font-mono text-xs text-primary">
-                your code <ArrowRight className="size-3" /> agent
-              </div>
-              <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-                Keep your codebase as-is. The agent sits in the path of calls you already make — to
-                observe, modify, or deny them before they happen.
-              </p>
-              <ul className="mt-5 grid grid-cols-2 gap-2 text-sm">
-                {["Python & Node SDK", "API · DB · fn intercept", "Policies & guardrails", "Shadow → enforce"].map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-foreground/80">
-                    <Check className="size-4 shrink-0 text-primary" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <div className="mt-5 flex flex-wrap gap-2">
-                <Button size="sm" asChild>
-                  <Link href="/sdk">
-                    Explore the SDK
-                    <ArrowRight className="size-4" />
-                  </Link>
-                </Button>
-                <Button size="sm" variant="outline" onClick={() => scrollTo("playground")}>
-                  Try the playground
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Divider */}
-      <div className="mx-auto max-w-6xl px-6">
-        <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-      </div>
-
-      {/* -- Agentify your codebase --------------------------------- */}
-      <AgentifySection />
-
-      {/* Divider */}
-      <div className="mx-auto max-w-6xl px-6">
-        <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-      </div>
 
       {/* -- Interactive playground --------------------------------- */}
       <Playground />
@@ -1060,12 +816,6 @@ export default function LandingPage() {
             >
               Contact
             </a>
-            <Link
-              href="/sdk"
-              className="text-muted-foreground transition-colors hover:text-foreground"
-            >
-              SDK
-            </Link>
             <Link
               href="/docs"
               className="text-muted-foreground transition-colors hover:text-foreground"

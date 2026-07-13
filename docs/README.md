@@ -2,10 +2,7 @@
 
 An open-source workspace for building, managing, and orchestrating AI agents. Atelier gives teams a unified platform to create agents powered by **Google Gemini**, **OpenAI GPT**, and **Anthropic Claude** — with collaborative workspaces, scheduling, memory, and extensible tooling.
 
-It works in **two directions**:
-
-- **Build agents** — give an agent the tools to *do* work (MCP tools, skills, orchestration, schedules). The agent is the driver.
-- **Embed agents** — drop an agent into code you already have. Your app's API calls, DB writes, and function calls flow through the agent, which can **observe**, **modify**, or **deny** them. Your code is the driver. → [Embedding Agents (SDK)](embedding-agents.md)
+Build agents and give them the tools to *do* work — MCP tools, skills, orchestration, and schedules — then let your app's events trigger the right agent automatically.
 
 ---
 
@@ -19,8 +16,7 @@ It works in **two directions**:
 | **Tools & MCP** | Built-in tools, file system access, Claude Code, shell, MCP servers, databases |
 | **Schedules** | Run agents on cron schedules or one-time triggers |
 | **Memory** | Short-term session context plus auto-extracted long-term facts |
-| **Embed (SDK)** | Python & Node SDKs put an agent in the path of your existing code |
-| **Policies & Decisions** | Deterministic guardrails on intercepted actions, with a shadow-mode decision log |
+| **Event Workflows** | Your app emits an event; the matching workflow runs the right agent |
 | **Workspaces** | Personal and team workspaces with role-based access |
 
 ---
@@ -41,12 +37,6 @@ It works in **two directions**:
 | [Skills](using-skills.md) | Create reusable skill definitions and attach them to agents |
 | [Tools & Prompts](using-tools.md) | Built-in tools, file tools, Claude Code, MCP connections, databases, prompt library |
 | [Memory](using-memory.md) | Session context and intelligent long-term fact extraction |
-
-### Embed in your code
-
-| Guide | Description |
-|-------|-------------|
-| [Embedding Agents (SDK)](embedding-agents.md) | Put an agent in the path of your API calls, DB writes & functions — observe, modify, deny, with policies & a decisions log |
 
 ### Advanced
 

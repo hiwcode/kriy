@@ -8,12 +8,7 @@ import {
   CheckCircle2,
   Circle,
   Loader2,
-  Ban,
-  Wand2,
   Check,
-  Clock,
-  ShieldCheck,
-  Zap,
   RefreshCw,
   Bot,
   ArrowRight,
@@ -148,75 +143,6 @@ function ChatCardsMock() {
 }
 
 /* ------------------------------------------------------------------ */
-/*  Mockup 2 — Interception decisions log                              */
-/* ------------------------------------------------------------------ */
-
-const DECISIONS = [
-  { kind: "deny", icon: Ban, cls: "bg-destructive/10 text-destructive", action: "order.delete", reason: "Standup block: name contains 'Standup'", time: "just now" },
-  { kind: "modify", icon: Wand2, cls: "bg-primary/10 text-primary", action: "db.update", reason: "clamped discount 80 → 50", time: "2m ago" },
-  { kind: "allow", icon: Check, cls: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400", action: "todo.complete", reason: "within policy", time: "5m ago" },
-  { kind: "allow", icon: Check, cls: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400", action: "invoice.create", reason: "within policy", time: "8m ago" },
-] as const;
-
-function DecisionsMock() {
-  return (
-    <MockFrame url="atelier.app / agents / guard · decisions">
-      <div className="flex h-[380px] flex-col gap-3 overflow-hidden text-left">
-        {/* toolbar */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="inline-flex rounded-lg border bg-muted/40 p-0.5 text-[10px]">
-            {["All", "Deny", "Modify", "Allow"].map((f, i) => (
-              <span
-                key={f}
-                className={cn(
-                  "rounded-md px-2 py-0.5 font-medium",
-                  i === 0 ? "bg-card text-foreground shadow-sm" : "text-muted-foreground"
-                )}
-              >
-                {f}
-              </span>
-            ))}
-          </div>
-          <div className="flex items-center gap-1 rounded-md border border-border/60 px-2 py-1 text-[9px] text-muted-foreground/60">
-            <ShieldCheck className="size-3 text-primary" /> enforce mode
-          </div>
-        </div>
-
-        {/* rows */}
-        <div className="space-y-2">
-          {DECISIONS.map((d) => {
-            const Icon = d.icon;
-            return (
-              <div
-                key={d.action + d.time}
-                className="flex items-center gap-2 rounded-xl border bg-background/60 p-2.5"
-              >
-                <span className={cn("inline-flex items-center gap-1 rounded-full px-1.5 py-0.5 text-[9px] font-semibold capitalize", d.cls)}>
-                  <Icon className="size-2.5" />
-                  {d.kind}
-                </span>
-                <code className="shrink-0 font-mono text-[10px]">{d.action}</code>
-                <span className="truncate text-[10px] text-muted-foreground">{d.reason}</span>
-                <span className="ml-auto flex shrink-0 items-center gap-1 text-[9px] text-muted-foreground">
-                  <Clock className="size-2.5" />
-                  {d.time}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* footer chip */}
-        <div className="mt-auto flex items-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2 text-[10px] text-primary">
-          <Zap className="size-3.5" />
-          Deterministic policies decide in <span className="font-semibold">0&nbsp;ms</span> — no model call, no quota.
-        </div>
-      </div>
-    </MockFrame>
-  );
-}
-
-/* ------------------------------------------------------------------ */
 /*  Mockup 3 — Event-driven workflows                                  */
 /* ------------------------------------------------------------------ */
 
@@ -308,14 +234,6 @@ const ROWS: Row[] = [
     mock: <ChatCardsMock />,
   },
   {
-    eyebrow: "Guardrails",
-    title: "Put an agent in the path — observe, modify, or deny",
-    description:
-      "Every intercepted action is logged with its verdict and reason. Deterministic policies decide instantly with no model call, and per-user conditions scope rules to exactly who they should apply to.",
-    points: ["Full decision log", "0 ms deterministic policies", "Shadow → suggest → enforce"],
-    mock: <DecisionsMock />,
-  },
-  {
     eyebrow: "Event workflows",
     title: "Your app emits an event, the right agent handles it",
     description:
@@ -337,8 +255,7 @@ export function FeatureShowcase() {
             See what it actually looks like
           </h2>
           <p className="mt-4 text-muted-foreground">
-            Real screens from the product — the agentic chat, the guardrail decision log, and
-            event-driven workflows.
+            Real screens from the product — the agentic chat and event-driven workflows.
           </p>
         </div>
 

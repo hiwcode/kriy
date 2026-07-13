@@ -15,7 +15,6 @@ const DOC_FILES: Record<string, string> = {
   "using-skills": "using-skills",
   "using-orchestrator": "using-orchestrator",
   "using-tools": "using-tools",
-  "embedding-agents":"embedding-agents",
   "using-schedules": "using-schedules",
   "using-memory": "using-memory",
   "using-profile": "using-profile",
