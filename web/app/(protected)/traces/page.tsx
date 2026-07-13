@@ -554,12 +554,12 @@ function AgentTracesContent({ agent }: { agent: AgentItem }) {
       ) : (
         <>
           <div className="space-y-2.5">
-            {traces.map((t) => {
+            {traces.map((t, index) => {
               const isActive = detailTrace?.session_id === t.session_id;
               const cost = computeCost(t.input_tokens, t.output_tokens, agent.model ?? undefined);
               return (
                 <div
-                  key={t.session_id}
+                  key={index}
                   className={cn(
                     "group flex items-center gap-3 rounded-xl border bg-card p-4 shadow-sm transition-colors",
                     isActive ? "border-primary/40 ring-1 ring-primary/20" : "hover:border-primary/30"

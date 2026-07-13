@@ -56,7 +56,7 @@ except ImportError:  # SDK not installed — app still works, events disabled
     AtelierDenied = Exception  # type: ignore[assignment,misc]
 
 # One client for both patterns:
-#   - emit(...)  → fire-and-forget event workflows (react AFTER)
+#   - emit(...)  → fire-and-forget Triggers (react AFTER)
 #   - guard(...) → synchronous, blocking policy check (decide BEFORE). Needs an
 #     agent id so its deterministic policies (e.g. "deny todo.complete if name
 #     contains 'Standup'") are enforced. Set ATELIER_AGENT_ID to enable guards.

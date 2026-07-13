@@ -1,11 +1,11 @@
-# Event Workflows
+# Triggers
 
-Event Workflows connect an **external app** to your agents. When your app emits an event
+Triggers connect an **external app** to your agents. When your app emits an event
 (e.g. `todo.completed`), Atelier runs the matching agent automatically to handle it — no
 code in your app beyond a one-line `emit`.
 
 > Not to be confused with the **Orchestrator** (visual multi-agent flows) or **Schedules**
-> (time-based runs). Event Workflows are **event-driven**: something happens in your app →
+> (time-based runs). Triggers are **event-driven**: something happens in your app →
 > an agent reacts.
 
 ```mermaid
@@ -31,7 +31,7 @@ Everything is **workspace-scoped** — workflows and events belong to a workspac
 
 ## 1. Register an event
 
-Open **Event Workflows** in the sidebar (under Automation) → **Events** button.
+Open **Triggers** in the sidebar (under Automation) → **Events** button.
 
 - **Name** — the event your app emits, e.g. `todo.completed`
 - **Description** — what it means
@@ -42,7 +42,7 @@ agents) subscribing to it. The Events list shows the subscriber count per event.
 
 ## 2. Create a workflow
 
-In **Event Workflows**, pick an **agent tab**, then **New workflow**:
+In **Triggers**, pick an **agent tab**, then **New workflow**:
 
 - **Name** — a short label
 - **Event type** — the event to react to (glob ok: `todo.*`)

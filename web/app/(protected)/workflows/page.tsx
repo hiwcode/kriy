@@ -14,6 +14,8 @@ import {
   Webhook,
   ArrowUpDown,
   Check,
+  Copy,
+  Code2,
   X,
   AlertTriangle,
   Clock,
@@ -70,6 +72,134 @@ const emptyWorkflow = (): Workflow => ({
   execution_mode: "serial",
   max_concurrency: 3,
 });
+
+/** A labelled, copyable code block used inside the integration drawer. */
+function CopyBlock({ filename, code }: { filename: string; code: string }) {
+  const [copied, setCopied] = React.useState(false);
+  return (
+    <div className="overflow-hidden rounded-lg border">
+      <div className="flex items-center justify-between gap-2 border-b bg-muted/40 px-3 py-1.5">
+        <span className="font-mono text-xs text-muted-foreground">{filename}</span>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="h-6 w-6"
+          onClick={() => {
+            navigator.clipboard.writeText(code);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 1500);
+          }}
+        >
+          {copied ? <Check className="size-3.5 text-green-500" /> : <Copy className="size-3.5" />}
+        </Button>
+      </div>
+      <pre className="overflow-x-auto bg-muted/40 p-4 font-mono text-[12px] leading-relaxed">
+        {code}
+      </pre>
+    </div>
+  );
+}
+
+/** Drawer with a generic, drop-in integration sample so users know how to emit
+ *  events from their own app. */
+function CodeDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+  const base = (
+    typeof window !== "undefined"
+      ? process.env.NEXT_PUBLIC_API_BASE_URL ?? window.location.origin.replace(":3000", ":8000")
+      : process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"
+  ).replace(/\/$/, "");
+
+  const envExample = `ATELIER_URL=${base}
+ATELIER_API_KEY=ate-...          # Config → API key (per-user key)
+ATELIER_WORKSPACE_ID=1           # optional — omit for your personal workspace`;
+
+  const integrationPy = `import httpx
+import os
+import dotenv
+import logging
+
+dotenv.load_dotenv()
+
+ATELIER_URL = os.getenv("ATELIER_URL", "")
+ATELIER_API_KEY = os.getenv("ATELIER_API_KEY", "")
+ATELIER_WORKSPACE_ID = os.getenv("ATELIER_WORKSPACE_ID", "")
+
+http = httpx.AsyncClient(
+    timeout=10,
+    base_url=ATELIER_URL,
+    headers={
+        "X-API-Key": ATELIER_API_KEY,
+        "X-Workspace-Id": ATELIER_WORKSPACE_ID,
+    },
+)
+
+
+async def emit_event(event_type: str, payload: dict) -> None:
+    """Fire-and-forget an event to Atelier. Never blocks your operation."""
+    try:
+        await http.post("/api/v1/events", json={"type": event_type, "payload": payload})
+        logging.info("Emitted %s", event_type)
+    except Exception as e:
+        logging.warning("Failed to emit %s: %s", event_type, e)`;
+
+  const usagePy = `from integration import emit_event
+
+
+@app.post("/api/todos", status_code=201)
+async def create_todo(data: TodoCreate):
+    todo = {
+        "id": uuid.uuid4().hex[:8],
+        "title": data.title,
+        "completed": False,
+    }
+    todos[todo["id"]] = todo
+    # emit after the write — a matching workflow runs the agent
+    await emit_event("todo.created", todo)
+    return todo`;
+
+  return (
+    <ResizableDrawer open={open} onOpenChange={onOpenChange} defaultWidth={660}>
+      <SheetTitle className="sr-only">Integration sample</SheetTitle>
+      <div className="flex h-full flex-col">
+        <div className="flex items-center justify-between gap-2.5 border-b px-4 py-3">
+          <div className="flex items-center gap-2.5">
+            <span className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Code2 className="size-[18px]" />
+            </span>
+            <div>
+              <p className="font-semibold">Emit events from your app</p>
+              <p className="text-xs text-muted-foreground">
+                Drop this in and call <code className="font-mono">emit_event</code> — matching workflows run automatically.
+              </p>
+            </div>
+          </div>
+          <Button variant="ghost" size="icon-sm" onClick={() => onOpenChange(false)} aria-label="Close">
+            <X className="size-4" />
+          </Button>
+        </div>
+        <div className="flex-1 space-y-5 overflow-y-auto p-4">
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">1 · Configure</p>
+            <CopyBlock filename=".env" code={envExample} />
+          </div>
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">2 · Add the helper</p>
+            <CopyBlock filename="integration.py" code={integrationPy} />
+          </div>
+          <div className="space-y-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">3 · Emit where it happens</p>
+            <CopyBlock filename="app.py" code={usagePy} />
+          </div>
+          <p className="text-xs text-muted-foreground">
+            No dependency needed — any HTTP client works. Just POST{" "}
+            <code className="font-mono">/api/v1/events</code> with{" "}
+            <code className="font-mono">{"{ type, payload }"}</code> and your API key.
+          </p>
+        </div>
+      </div>
+    </ResizableDrawer>
+  );
+}
 
 export default function WorkflowsPage() {
   const [workflows, setWorkflows] = React.useState<Workflow[]>([]);
@@ -171,6 +301,7 @@ export default function WorkflowsPage() {
   };
 
   const [queueOpen, setQueueOpen] = React.useState(false);
+  const [codeOpen, setCodeOpen] = React.useState(false);
 
   const headerButtons = (
     <div className="flex gap-2">
@@ -182,15 +313,19 @@ export default function WorkflowsPage() {
         <Webhook className="size-4" />
         Events{eventTypes.length ? ` (${eventTypes.length})` : ""}
       </Button>
+      <Button variant="outline" size="sm" onClick={() => setCodeOpen(true)}>
+        <Code2 className="size-4" />
+        Integrate
+      </Button>
     </div>
   );
 
   // One tab per agent (like Traces); each shows that agent's workflows.
   const config: TabConfig = {
     id: "workflows",
-    tabName: "Event Workflows",
+    tabName: "Triggers",
     description:
-      "Connect an external app to your agents: when your app emits an event (e.g. “todo.completed”), the matching agent runs automatically to handle it. Pick an agent below to see its triggers; manage the events your apps send from the Events button.",
+      "When your app emits an event (e.g. “todo.completed”), the matching agent runs automatically to handle it. Pick an agent below to see its triggers; manage the events your apps send from the Events button, or grab the emit snippet from Integrate.",
     headerActions: headerButtons,
     items: agents.map((a) => ({
       id: a.id,
@@ -211,6 +346,7 @@ export default function WorkflowsPage() {
             loading={loading}
             agentName={agentName}
             onNew={() => openNew(a.id)}
+            onShowCode={() => setCodeOpen(true)}
             onEdit={openEdit}
             onRuns={setRunsFor}
             onToggle={toggle}
@@ -278,6 +414,7 @@ export default function WorkflowsPage() {
       <RunsDrawer workflow={runsFor} onOpenChange={(o) => !o && setRunsFor(null)} />
 
       <QueueDrawer open={queueOpen} onOpenChange={setQueueOpen} />
+      <CodeDrawer open={codeOpen} onOpenChange={setCodeOpen} />
 
       <EventsDrawer
         open={eventsOpen}
@@ -303,6 +440,7 @@ function WorkflowsList({
   onRuns,
   onToggle,
   onRemove,
+  onShowCode,
 }: {
   workflows: Workflow[];
   loading: boolean;
@@ -312,6 +450,7 @@ function WorkflowsList({
   onRuns: (w: Workflow) => void;
   onToggle: (w: Workflow) => void;
   onRemove: (w: Workflow) => void;
+  onShowCode: () => void;
 }) {
   if (loading) {
     return (
@@ -327,11 +466,16 @@ function WorkflowsList({
       <EmptyState
         icon={<WorkflowIcon className="size-7" />}
         title="No workflows yet"
-        body="Add a workflow so this agent reacts to an event your app sends — e.g. on “todo.completed”, run the agent to reset the list."
+        body="Add a workflow so this agent reacts to an event your app sends — e.g. on “todo.completed”, run the agent to reset the list. Then emit that event from your app to trigger it."
         action={
-          <Button size="sm" className="mt-5" onClick={onNew}>
-            <Plus className="size-4" /> New workflow
-          </Button>
+          <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
+            <Button size="sm" onClick={onNew}>
+              <Plus className="size-4" /> New workflow
+            </Button>
+            <Button size="sm" variant="outline" onClick={onShowCode}>
+              <Code2 className="size-4" /> Show integration code
+            </Button>
+          </div>
         }
       />
     );

@@ -234,7 +234,7 @@ const ROWS: Row[] = [
     mock: <ChatCardsMock />,
   },
   {
-    eyebrow: "Event workflows",
+    eyebrow: "Triggers",
     title: "Your app emits an event, the right agent handles it",
     description:
       "Fire an event from anywhere in your stack. Atelier routes it to the matching workflow through a priority queue with automatic retries and backoff — no orchestration glue to maintain.",

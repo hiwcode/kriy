@@ -87,7 +87,7 @@ export const navigationConfig: NavGroup[] = [
     name: "Automation",
     items: [
       { id: 1, name: "Schedules", url: "/schedules", icon: CalendarClock },
-      { id: 2, name: "Event Workflows", url: "/workflows", icon: Workflow },
+      { id: 2, name: "Triggers", url: "/workflows", icon: Workflow },
     ],
   },
   {

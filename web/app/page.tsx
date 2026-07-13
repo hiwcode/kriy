@@ -80,7 +80,7 @@ const FEATURES = [
   },
   {
     icon: Workflow,
-    title: "Event Workflows",
+    title: "Triggers",
     description:
       "Connect your app: emit an event and the right agent handles it automatically — a priority queue with retries, no glue code.",
   },

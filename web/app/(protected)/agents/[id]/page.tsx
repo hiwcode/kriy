@@ -79,13 +79,10 @@ import { ResizableDrawer } from "@/components/ui/resizable-drawer";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
-  listIntegrationSessions,
   chatSync,
-  deleteIntegrationSession,
   reloadA2A,
   getIntegrationAgent,
   type IntegrationAgent,
-  type IntegrationSession,
 } from "@/lib/api/integration";
 import { siteConfig } from "@/config/site";
 import { ensureExtraFields, cn } from "@/lib/utils";
@@ -183,6 +180,7 @@ function PanelSection({
   children,
   bodyClassName,
   defaultOpen = false,
+  flat = false,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   title: string;
@@ -191,8 +189,30 @@ function PanelSection({
   children?: React.ReactNode;
   bodyClassName?: string;
   defaultOpen?: boolean;
+  flat?: boolean;
 }) {
   const [open, setOpen] = React.useState(defaultOpen);
+  // Flat: static (non-collapsible) header, always shows children. Used when an
+  // outer nav controls which section is visible (no accordion needed).
+  if (flat) {
+    return (
+      <div className="p-5 sm:p-6">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex flex-1 items-start gap-3 text-left">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Icon className="size-[18px]" />
+            </span>
+            <div className="min-w-0">
+              <h3 className="font-semibold tracking-tight">{title}</h3>
+              {description && <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>}
+            </div>
+          </div>
+          {action && <div className="shrink-0">{action}</div>}
+        </div>
+        {children && <div className={cn("mt-5", bodyClassName)}>{children}</div>}
+      </div>
+    );
+  }
   return (
     <div className="p-5 sm:p-6">
       <div className="flex items-start justify-between gap-3">
@@ -252,6 +272,7 @@ function ConfigurationContent({
   allSkills: SkillItem[];
   databaseConnections: { id: number; name: string }[];
 }) {
+  const [activeSection, setActiveSection] = React.useState<string>("agent");
   const [mcpToolsCache, setMcpToolsCache] = React.useState<
     Record<
       number,
@@ -431,15 +452,52 @@ function ConfigurationContent({
         Number(t.mcp_connection_id) === connId
     );
 
+  const isLocal = formState.agent_type === "local";
+  const navSections = [
+    { id: "agent", title: "Agent Configuration", icon: Cpu, visible: true },
+    { id: "skills", title: "Skills", icon: Sparkles, visible: isLocal && allSkills.length > 0 },
+    { id: "tools", title: "Builtin Tools", icon: Wrench, visible: isLocal },
+    { id: "database", title: "Database Connections", icon: Database, visible: isLocal },
+    { id: "mcp", title: "MCP Connections", icon: Puzzle, visible: isLocal },
+  ].filter((s) => s.visible);
+  const currentSection = navSections.some((s) => s.id === activeSection) ? activeSection : "agent";
+
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6">
-      <div className="divide-y overflow-hidden rounded-xl border bg-card shadow-sm">
-        <PanelSection
-          icon={Cpu}
-          title="Agent Configuration"
-          description="Basic settings, system prompt, and instructions"
-          bodyClassName="space-y-4"
-        >
+    <div className="mx-auto grid w-full max-w-full gap-6 lg:grid-cols-[224px_minmax(0,1fr)]">
+      {/* Section nav — click a title to show it on the right */}
+      <nav className="flex flex-row gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
+        {navSections.map((s) => {
+          const SIcon = s.icon;
+          return (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => setActiveSection(s.id)}
+              className={cn(
+                "flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors",
+                currentSection === s.id
+                  ? "bg-primary/10 font-medium text-primary"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
+            >
+              <SIcon className="size-4 shrink-0" />
+              <span className="whitespace-nowrap">{s.title}</span>
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* Section content */}
+      <div className="min-w-0">
+        <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+          <div className={cn(currentSection !== "agent" && "hidden")}>
+            <PanelSection
+              flat
+              icon={Cpu}
+              title="Agent Configuration"
+              description="Basic settings, system prompt, and instructions"
+              bodyClassName="space-y-4"
+            >
               <div className="space-y-2">
                 <Label>Agent type</Label>
                 <Select
@@ -783,10 +841,11 @@ function ConfigurationContent({
               )}
                 </div>
               )}
-        </PanelSection>
+            </PanelSection>
+          </div>
 
-        {formState.agent_type === "local" && allSkills.length > 0 && (
-          <PanelSection icon={Sparkles} title="Skills" description="Attach reusable skills to this agent">
+          <div className={cn(currentSection !== "skills" && "hidden")}>
+            <PanelSection flat icon={Sparkles} title="Skills" description="Attach reusable skills to this agent">
                 <div className="flex flex-wrap gap-2">
                   {allSkills.map((skill) => {
                     const isSelected = formState.skill_ids.includes(skill.id);
@@ -806,12 +865,11 @@ function ConfigurationContent({
                     );
                   })}
                 </div>
-        </PanelSection>
-        )}
+            </PanelSection>
+          </div>
 
-        {formState.agent_type === "local" && (
-          <>
-            <PanelSection icon={Wrench} title="Builtin Tools" description="Select the capabilities this agent can use">
+          <div className={cn(currentSection !== "tools" && "hidden")}>
+            <PanelSection flat icon={Wrench} title="Builtin Tools" description="Select the capabilities this agent can use">
               {builtinTools.length === 0 ? (
                 <p className="text-sm text-muted-foreground">No builtin tools available.</p>
               ) : (
@@ -827,8 +885,10 @@ function ConfigurationContent({
                 </div>
               )}
             </PanelSection>
+          </div>
 
-            <PanelSection icon={Database} title="Database Connections" description="Let the agent query PostgreSQL databases via SQL">
+          <div className={cn(currentSection !== "database" && "hidden")}>
+            <PanelSection flat icon={Database} title="Database Connections" description="Let the agent query PostgreSQL databases via SQL">
               {databaseConnections.length === 0 ? (
                 <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
                   No database connections yet.{" "}
@@ -850,8 +910,10 @@ function ConfigurationContent({
                 </div>
               )}
             </PanelSection>
+          </div>
 
-            <PanelSection icon={Puzzle} title="MCP Connections" description="Connect MCP servers and select which tools to give this agent">
+          <div className={cn(currentSection !== "mcp" && "hidden")}>
+            <PanelSection flat icon={Puzzle} title="MCP Connections" description="Connect MCP servers and select which tools to give this agent">
               <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
                 {mcpConnections.map((conn) => {
                   const entry = getMcpToolEntry(conn.id);
@@ -995,10 +1057,9 @@ function ConfigurationContent({
                 })}
               </div>
             </PanelSection>
-          </>
-        )}
-      </div>
-      <div className="sticky bottom-0 -mx-6 -mb-6 flex items-center justify-between gap-3 border-t bg-background/85 px-6 py-3 backdrop-blur-md">
+          </div>
+        </div>
+        <div className="sticky bottom-0 mt-4 flex items-center justify-between gap-3 border-t bg-background/85 px-4 py-3 backdrop-blur-md">
         <p className="hidden text-xs text-muted-foreground sm:block">
           {agentId === "new"
             ? "Create the agent to enable chat and integrations."
@@ -1008,6 +1069,7 @@ function ConfigurationContent({
           {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
           {saving ? "Saving…" : agentId === "new" ? "Create agent" : "Save changes"}
         </Button>
+        </div>
       </div>
     </div>
   );
@@ -1728,8 +1790,15 @@ function IntegrationEndpointRow({
           ? "bg-red-500/10 text-red-600 dark:text-red-400"
           : "bg-muted text-muted-foreground";
 
+  // The row shows — and its copy button copies — a ready-to-run curl, not the bare URL.
+  const curl = [
+    `curl -X ${method} "${url}"`,
+    `  -H "X-API-Key: YOUR_API_KEY"`,
+    ...(body ? [`  -H "Content-Type: application/json"`, `  -d '${body}'`] : []),
+  ].join(" \\\n");
+
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1.5">
       <div className="flex items-center gap-2">
         <span
           className={cn(
@@ -1742,25 +1811,14 @@ function IntegrationEndpointRow({
         <span className="min-w-0 flex-1 truncate font-mono text-xs text-muted-foreground">
           {url}
         </span>
-        <IntegrationCopyButton text={url} />
+        <IntegrationCopyButton text={curl} />
       </div>
       <p className="text-xs text-muted-foreground">{description}</p>
-      {body && (
-        <code className="block rounded bg-muted px-2 py-1 font-mono text-[10px] text-muted-foreground">
-          {body}
-        </code>
-      )}
+      <pre className="overflow-x-auto rounded-md bg-zinc-950 px-3 py-2 font-mono text-[11px] leading-relaxed text-zinc-300">
+        {curl}
+      </pre>
     </div>
   );
-}
-
-function relativeTime(ts: number | null): string {
-  if (!ts) return "—";
-  const diff = Date.now() / 1000 - ts;
-  if (diff < 60) return "just now";
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
 }
 
 function CodeBlock({ code, id }: { code: string; id: string }) {
@@ -1793,10 +1851,9 @@ function IntegrateContent({
   agentId: number;
   agentName: string;
 }) {
-  const [sessions, setSessions] = React.useState<IntegrationSession[]>([]);
-  const [sessionsLoading, setSessionsLoading] = React.useState(false);
   const [a2aReloading, setA2aReloading] = React.useState(false);
   const [agentMeta, setAgentMeta] = React.useState<IntegrationAgent | null>(null);
+  const [activeSection, setActiveSection] = React.useState("endpoint");
 
   const [message, setMessage] = React.useState("");
   const [chatSessionId, setChatSessionId] = React.useState<string | null>(null);
@@ -1814,16 +1871,6 @@ function IntegrateContent({
     getIntegrationAgent(agentId)
       .then((data) => { if (!cancelled) setAgentMeta(data); })
       .catch(() => {});
-    return () => { cancelled = true; };
-  }, [agentId]);
-
-  React.useEffect(() => {
-    let cancelled = false;
-    setSessionsLoading(true);
-    setSessions([]);
-    listIntegrationSessions(agentId)
-      .then((data) => { if (!cancelled) { setSessions(data); setSessionsLoading(false); } })
-      .catch(() => { if (!cancelled) setSessionsLoading(false); });
     return () => { cancelled = true; };
   }, [agentId]);
 
@@ -1845,13 +1892,6 @@ function IntegrateContent({
     } finally {
       setChatLoading(false);
     }
-  };
-
-  const handleDeleteSession = async (sid: string) => {
-    try {
-      await deleteIntegrationSession(agentId, sid);
-      setSessions((prev) => prev.filter((s) => s.session_id !== sid));
-    } catch {}
   };
 
   const a2aUrl = agentMeta?.a2a_url || `${base}/a2a/${agentId}/`;
@@ -1904,16 +1944,51 @@ for line in response.iter_lines():
         if d.get("text"):
             print(d["text"], end="")`;
 
+  const navSections = [
+    { id: "endpoint", title: "API Endpoint", icon: Link2 },
+    { id: "examples", title: "Code Examples", icon: Wrench },
+    { id: "a2a", title: "A2A Protocol", icon: Globe },
+    { id: "tester", title: "Quick Tester", icon: Play },
+    { id: "reference", title: "API Reference", icon: Link2 },
+  ];
+  const currentSection = navSections.some((s) => s.id === activeSection) ? activeSection : "endpoint";
+
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6">
-      <div className="divide-y overflow-hidden rounded-xl border bg-card shadow-sm">
-        {/* API Endpoint */}
-        <PanelSection
-          icon={Link2}
-          title="API Endpoint"
-          description="Use your API key from Config to call this agent externally."
-          bodyClassName="flex flex-col gap-4"
-        >
+    <div className="mx-auto grid w-full max-w-full gap-6 lg:grid-cols-[224px_minmax(0,1fr)]">
+      {/* Section nav — click a title to show it on the right */}
+      <nav className="flex flex-row gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
+        {navSections.map((s) => {
+          const SIcon = s.icon;
+          return (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => setActiveSection(s.id)}
+              className={cn(
+                "flex shrink-0 items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm transition-colors",
+                currentSection === s.id
+                  ? "bg-primary/10 font-medium text-primary"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
+              )}
+            >
+              <SIcon className="size-4 shrink-0" />
+              <span className="whitespace-nowrap">{s.title}</span>
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* Section content */}
+      <div className="min-w-0">
+        <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+          <div className={cn(currentSection !== "endpoint" && "hidden")}>
+            <PanelSection
+              flat
+              icon={Link2}
+              title="API Endpoint"
+              description="Use your API key from Config to call this agent externally."
+              bodyClassName="flex flex-col gap-4"
+            >
           <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2">
             <span className="rounded px-1.5 py-0.5 font-mono text-[10px] font-bold bg-success/15 text-success">
               POST
@@ -1921,7 +1996,7 @@ for line in response.iter_lines():
             <code className="min-w-0 flex-1 truncate font-mono text-sm text-muted-foreground">
               {runUrl}
             </code>
-            <IntegrationCopyButton text={runUrl} />
+            <IntegrationCopyButton text={curlExample} />
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="flex flex-col gap-1">
@@ -1942,10 +2017,11 @@ for line in response.iter_lines():
           <p className="text-xs text-muted-foreground">
             Response: SSE stream — each event: <code className="rounded bg-muted px-1 text-[10px]">{"data: {\"type\":\"text\",\"text\":\"...\"}"}</code>
           </p>
-        </PanelSection>
+            </PanelSection>
+          </div>
 
-        {/* Code Examples */}
-        <PanelSection icon={Wrench} title="Code Examples" description="Drop-in snippets to stream from this agent.">
+          <div className={cn(currentSection !== "examples" && "hidden")}>
+            <PanelSection flat icon={Wrench} title="Code Examples" description="Drop-in snippets to stream from this agent.">
           <Tabs defaultValue="curl">
             <TabsList variant="line">
               <TabsTrigger value="curl">cURL</TabsTrigger>
@@ -1962,12 +2038,14 @@ for line in response.iter_lines():
               <CodeBlock code={pythonExample} id="python" />
             </TabsContent>
           </Tabs>
-        </PanelSection>
+            </PanelSection>
+          </div>
 
-        {/* A2A Protocol */}
-        <PanelSection
-          icon={Globe}
-          title="A2A Protocol"
+          <div className={cn(currentSection !== "a2a" && "hidden")}>
+            <PanelSection
+              flat
+              icon={Globe}
+              title="A2A Protocol"
           description="Access this agent via the Agent-to-Agent (A2A) protocol."
           action={agentMeta?.model ? <Badge variant="secondary">{agentMeta.model}</Badge> : undefined}
           bodyClassName="flex flex-col gap-3"
@@ -1992,12 +2070,14 @@ for line in response.iter_lines():
             <RefreshCw className={cn("mr-1.5 h-3 w-3", a2aReloading && "animate-spin")} />
             {a2aReloading ? "Reloading…" : "Reload A2A"}
           </Button>
-        </PanelSection>
+            </PanelSection>
+          </div>
 
-        {/* Quick Tester */}
-        <PanelSection
-          icon={Play}
-          title="Quick Tester"
+          <div className={cn(currentSection !== "tester" && "hidden")}>
+            <PanelSection
+              flat
+              icon={Play}
+              title="Quick Tester"
           description="Send a message and see the response via the sync chat endpoint."
           action={
             chatSessionId ? (
@@ -2026,45 +2106,11 @@ for line in response.iter_lines():
               {chatResponse}
             </div>
           )}
-        </PanelSection>
+            </PanelSection>
+          </div>
 
-        {/* Sessions */}
-        <PanelSection icon={MessageSquare} title="Sessions" description="Active chat sessions for this agent.">
-          {sessionsLoading ? (
-            <p className="text-xs text-muted-foreground">Loading…</p>
-          ) : sessions.length === 0 ? (
-            <p className="text-xs text-muted-foreground">No sessions yet. Start a chat above.</p>
-          ) : (
-            <div className="flex max-h-48 flex-col gap-1 overflow-y-auto">
-              {sessions.map((s) => (
-                <div
-                  key={s.session_id}
-                  className="group flex items-center justify-between rounded-lg px-2 py-1.5 text-xs hover:bg-muted"
-                >
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium">
-                      {s.title || s.session_id.slice(0, 12) + "…"}
-                    </p>
-                    <p className="text-muted-foreground">
-                      {s.message_count ?? 0} msgs &middot; {relativeTime(s.last_update_time)}
-                    </p>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-6 w-6 opacity-0 group-hover:opacity-100"
-                    onClick={() => handleDeleteSession(s.session_id)}
-                  >
-                    <Trash2 className="h-3 w-3 text-destructive" />
-                  </Button>
-                </div>
-              ))}
-            </div>
-          )}
-        </PanelSection>
-
-        {/* API Reference */}
-        <PanelSection icon={Link2} title="API Reference" description="All endpoints for this agent." bodyClassName="flex flex-col gap-3">
+          <div className={cn(currentSection !== "reference" && "hidden")}>
+            <PanelSection flat icon={Link2} title="API Reference" description="All endpoints for this agent." bodyClassName="flex flex-col gap-3">
           <IntegrationEndpointRow
             method="POST"
             url={chatEndpoint}
@@ -2102,7 +2148,9 @@ for line in response.iter_lines():
             url={agentCardUrl}
             description="A2A Agent Card"
           />
-        </PanelSection>
+            </PanelSection>
+          </div>
+        </div>
       </div>
     </div>
   );

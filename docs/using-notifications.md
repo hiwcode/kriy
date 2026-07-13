@@ -31,7 +31,7 @@ notify(title="Reset done", body="Cleared 3 todos, added todo-1", level="success"
 ```
 
 It's delivered to the agent's owner and tagged with the agent's name as the source. Pair it
-with [Event Workflows](using-event-workflows.md) so a workflow notifies you when it runs.
+with [Triggers](using-event-workflows.md) so a workflow notifies you when it runs.
 
 ## Send one programmatically
 

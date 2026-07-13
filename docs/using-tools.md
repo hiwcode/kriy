@@ -157,7 +157,7 @@ See [Using Schedules](using-schedules.md) for more details.
 
 | Tool | Description |
 |------|-------------|
-| `workflow` | Let an agent manage its event workflows: `list_workflows`, `create_workflow` (defaults to running this agent), `update_workflow`, `delete_workflow`. Workspace-scoped. |
+| `workflow` | Let an agent manage its Triggers: `list_workflows`, `create_workflow` (defaults to running this agent), `update_workflow`, `delete_workflow`. Workspace-scoped. |
 
 ### Events Tool
 
@@ -166,7 +166,7 @@ See [Using Schedules](using-schedules.md) for more details.
 | `events` | Manage the event-type registry: `list_event_types`, `create_event_type`, `delete_event_type`. Workspace-scoped. |
 
 Together, `workflow` + `events` let an agent set up its own event-driven automations from
-chat. See [Event Workflows](using-event-workflows.md).
+chat. See [Triggers](using-event-workflows.md).
 
 ### Notify Tool
 

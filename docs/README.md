@@ -16,7 +16,7 @@ Build agents and give them the tools to *do* work — MCP tools, skills, orchest
 | **Tools & MCP** | Built-in tools, file system access, Claude Code, shell, MCP servers, databases |
 | **Schedules** | Run agents on cron schedules or one-time triggers |
 | **Memory** | Short-term session context plus auto-extracted long-term facts |
-| **Event Workflows** | Your app emits an event; the matching workflow runs the right agent |
+| **Triggers** | Your app emits an event; the matching workflow runs the right agent |
 | **Workspaces** | Personal and team workspaces with role-based access |
 
 ---
@@ -44,7 +44,7 @@ Build agents and give them the tools to *do* work — MCP tools, skills, orchest
 |-------|-------------|
 | [Orchestrator](using-orchestrator.md) | Build multi-agent flows with visual coordination |
 | [Schedules](using-schedules.md) | One-time and recurring automated agent runs |
-| [Event Workflows](using-event-workflows.md) | React to events from your app — emit an event, an agent handles it |
+| [Triggers](using-event-workflows.md) | React to events from your app — emit an event, an agent handles it |
 | [Notifications](using-notifications.md) | Live in-app notifications + the `notify` agent tool |
 | [Workspaces](using-workspaces.md) | Personal and team workspaces, roles, invitations, resource scoping |
 | [Workspace Transfer](workspace-transfer.md) | Move agents and resources between workspaces via API |
