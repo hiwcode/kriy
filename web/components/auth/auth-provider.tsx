@@ -95,8 +95,10 @@ function AuthProviderInner({ children }: { children: React.ReactNode }) {
         const rt = getRefreshToken();
         if (!rt) return;
         try {
-          const { access_token } = await refreshSession(rt);
+          const { access_token, refresh_token } = await refreshSession(rt);
           setAccessToken(access_token);
+          // Refresh tokens are now single-use — persist the rotated one.
+          if (refresh_token) setRefreshToken(refresh_token);
           schedule(); // schedule the next refresh
         } catch {
           // Refresh token expired/revoked — require a fresh sign-in.

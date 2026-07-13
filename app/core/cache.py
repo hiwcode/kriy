@@ -76,6 +76,24 @@ async def set(key: str, value: Any, ttl: int = 300) -> None:
         pass
 
 
+async def incr_window(key: str, window: int) -> int | None:
+    """Increment a fixed-window counter and return the new count.
+
+    The key expires `window` seconds after its first increment. Returns None
+    when Redis is unavailable (caller should fall back). Used by the rate limiter.
+    """
+    if _redis is None:
+        return None
+    try:
+        full = f"{_PREFIX}{key}"
+        count = await _redis.incr(full)
+        if count == 1:
+            await _redis.expire(full, window)
+        return int(count)
+    except Exception:
+        return None
+
+
 async def delete(key: str) -> None:
     """Delete a single cache key."""
     if _redis is None:

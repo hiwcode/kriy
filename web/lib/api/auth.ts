@@ -41,8 +41,10 @@ export function exchangeGoogleCredential(credential: string): Promise<GoogleExch
   return postJson<GoogleExchangeResult>("/api/v1/auth/google", { credential });
 }
 
-/** Get a fresh access token from a refresh token. */
-export function refreshSession(refreshToken: string): Promise<{ access_token: string; expires_in: number }> {
+/** Get a fresh access token + a rotated refresh token from a refresh token. */
+export function refreshSession(
+  refreshToken: string
+): Promise<{ access_token: string; refresh_token?: string; expires_in: number }> {
   return postJson("/api/v1/auth/refresh", { refresh_token: refreshToken });
 }
 

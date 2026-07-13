@@ -8,6 +8,7 @@ from fastapi.responses import StreamingResponse, FileResponse
 from pydantic import BaseModel
 
 from app.core.access import require_resource_access
+from app.core.rate_limit import rate_limit
 from app.core.security import AuthContext, api_key_auth, require_google_auth
 from app.deps import get_db, get_current_workspace
 from app.repositories import memory_repo, session_repo, trace_repo
@@ -583,7 +584,7 @@ _SSE_HEADERS = {
 }
 
 
-@router.post("/{agent_id}/run")
+@router.post("/{agent_id}/run", dependencies=[rate_limit(30, 60, "agent_run")])
 async def run_agent(
     agent_id: int,
     data: AgentRunRequest,
