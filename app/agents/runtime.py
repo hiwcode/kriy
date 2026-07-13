@@ -22,7 +22,6 @@ from app.agents.event_tool import make_event_tools
 from app.agents.notify_tool import make_notify_tools
 from app.agents.email_tool import make_email_tools
 from app.agents.call_api_tool import make_call_api_tools
-from app.agents.document_tool import make_document_tools
 from app.agents.analyze_tools import make_analyze_tools
 from app.agents.self_learning_tool import make_self_learning_tools
 from app.agents.ui_tools import make_ui_tools, UI_TOOL_NAMES
@@ -303,12 +302,10 @@ async def _build_tools(
                 from google.adk.tools import google_search
                 result.append(google_search)
                 logger.info("Web search (ADK google_search) added (via builtin)")
-            elif name == "documents":
-                result.extend(make_document_tools(pool, workspace_id, agent_id=default_agent_id, session_id=session_id))
-                logger.info("Document tools added (via builtin)")
-            elif name == "analyze":
-                result.extend(make_analyze_tools(pool, created_by, workspace_id, agent_id=default_agent_id, session_id=session_id))
-                logger.info("Analyze tools added (via builtin)")
+            elif name in ("analyze_document", "analyze_image"):
+                tools = make_analyze_tools(pool, created_by, workspace_id, agent_id=default_agent_id, session_id=session_id)
+                result.extend(t for t in tools if t.name == name)
+                logger.info("Analyze tool %s added (via builtin)", name)
             elif name == "self_learning":
                 result.extend(make_self_learning_tools(pool, created_by, workspace_id, agent_id=default_agent_id))
                 logger.info("Self-learning tools added (via builtin)")
@@ -420,12 +417,10 @@ async def _build_tools(
             from google.adk.tools import google_search
             result.append(google_search)
             logger.info("Web search (ADK google_search) added")
-        elif tool_type == "documents":
-            result.extend(make_document_tools(pool, workspace_id))
-            logger.info("Document tools added")
-        elif tool_type == "analyze":
-            result.extend(make_analyze_tools(pool, created_by, workspace_id, agent_id=default_agent_id, session_id=session_id))
-            logger.info("Analyze tools added")
+        elif tool_type in ("analyze_document", "analyze_image"):
+            tools = make_analyze_tools(pool, created_by, workspace_id, agent_id=default_agent_id, session_id=session_id)
+            result.extend(t for t in tools if t.name == tool_type)
+            logger.info("Analyze tool %s added", tool_type)
         elif tool_type == "self_learning":
             result.extend(make_self_learning_tools(pool, created_by, workspace_id, agent_id=default_agent_id))
             logger.info("Self-learning tools added")

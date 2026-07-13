@@ -22,10 +22,25 @@ from google.adk.tools import FunctionTool
 from google.genai import types
 
 from app.core.config import settings
+from app.core.net_guard import assert_public_url
 from app.repositories import document_repo, user_config_repo
-from app.agents.document_tool import _download_doc
 
 logger = logging.getLogger(__name__)
+
+
+async def _download_doc(doc: dict) -> bytes:
+    """Fetch a document's bytes from object storage (uploaded) or its URL."""
+    if doc.get("bucket_key"):
+        from app.core import storage
+        return storage.download_bytes(doc["bucket_key"])
+    if doc.get("url"):
+        import httpx
+        assert_public_url(doc["url"])  # SSRF guard: block internal/metadata hosts
+        async with httpx.AsyncClient(timeout=60, follow_redirects=False) as client:
+            resp = await client.get(doc["url"])
+            resp.raise_for_status()
+            return resp.content
+    raise ValueError("Document has no bucket_key or URL")
 
 # Gemini ingests these natively as a document/image part; everything else is
 # decoded to text and inlined into the prompt.
@@ -61,6 +76,25 @@ def make_analyze_tools(
         if not doc or not document_repo.is_visible(doc, agent_id, session_id):
             return None, json.dumps({"error": "Document not found"})
         return doc, None
+
+    async def _list(images: bool, hint_tool: str) -> str:
+        """List the docs the agent can see, filtered to images or non-images."""
+        docs = await document_repo.list_for_session(pool, agent_id, session_id, limit=50)
+        items = [
+            {
+                "id": d["id"],
+                "name": d["name"],
+                "mime_type": d["mime_type"],
+                "source": "uploaded" if d.get("bucket_key") else "url",
+            }
+            for d in docs
+            if d.get("mime_type", "").startswith("image/") == images
+        ]
+        return json.dumps({
+            "documents": items,
+            "total": len(items),
+            "hint": f"Call {hint_tool} again with one of these `document_id`s to analyze it.",
+        })
 
     async def _analyze(doc: dict, instruction: str, default_prompt: str) -> str:
         api_key = await _resolve_google_key(pool, user_id)
@@ -102,43 +136,63 @@ def make_analyze_tools(
             "analysis": response.text,
         })
 
-    async def analyze_document(document_id: int, instruction: str = "") -> str:
-        """Analyze an uploaded document (PDF, text, or image) with a vision LLM.
+    async def analyze_document(document_id: int = 0, instruction: str = "") -> str:
+        """Work with uploaded/registered documents (PDF, text, etc.) via a vision LLM.
 
-        Sends the document to a vision-capable model and returns an analysis.
-        Prefer this over extract_document_text when you need understanding,
-        summarization, or an answer to a question — not just the raw text.
+        This is the one tool for everything document-related — both uploaded files
+        and registered URLs.
+
+        - Call with no document_id (or 0) to LIST the documents available in this
+          conversation, each with its `id`.
+        - Call with a document_id to ANALYZE that document: summarize it, extract
+          fields, or answer a question about it.
 
         Args:
-            document_id: The document ID from list_documents.
+            document_id: The document's id (from the list call). Omit to list.
             instruction: What to do with the document — e.g. "Summarize the key
                 points" or "What is the total on this invoice?". Defaults to a
-                general summary if omitted.
+                general summary.
         """
         if not agent_id:
             return json.dumps({"error": "No agent context"})
+        if not document_id:
+            return await _list(images=False, hint_tool="analyze_document")
         doc, err = await _load_scoped_doc(document_id)
         if err:
             return err
+        if doc["mime_type"].startswith("image/"):
+            return json.dumps({
+                "error": f"'{doc['name']}' is an image — use analyze_image instead."
+            })
         return await _analyze(doc, instruction, "Summarize this document and list its key points.")
 
-    async def analyze_image(document_id: int, instruction: str = "") -> str:
-        """Analyze an uploaded image with a vision LLM (describe, OCR, inspect).
+    async def analyze_image(document_id: int = 0, instruction: str = "") -> str:
+        """Work with uploaded/registered images via a vision LLM.
+
+        This is the one tool for everything image-related — both uploaded images
+        and registered image URLs.
+
+        - Call with no document_id (or 0) to LIST the images available in this
+          conversation, each with its `id`.
+        - Call with a document_id to ANALYZE that image: describe it, OCR text,
+          or answer a question about it.
 
         Args:
-            document_id: The document ID from list_documents (must be an image).
+            document_id: The image's id (from the list call). Omit to list.
             instruction: What to look for — e.g. "Describe this image", "Extract
                 all text", "What objects are visible?". Defaults to a general
-                description if omitted.
+                description.
         """
         if not agent_id:
             return json.dumps({"error": "No agent context"})
+        if not document_id:
+            return await _list(images=True, hint_tool="analyze_image")
         doc, err = await _load_scoped_doc(document_id)
         if err:
             return err
         if not doc["mime_type"].startswith("image/"):
             return json.dumps({
-                "error": f"Document is not an image (mime: {doc['mime_type']}). Use analyze_document instead."
+                "error": f"'{doc['name']}' is not an image — use analyze_document instead."
             })
         return await _analyze(doc, instruction, "Describe this image in detail, including any visible text.")
 
