@@ -195,6 +195,7 @@ async def list_builtin_tools() -> dict:
     names.append("events")    # CRUD the user's event-type registry
     names.append("notify")    # send the user an in-app notification
     names.append("send_email")  # send email via the user's configured Gmail
+    names.append("slack")  # post a message to a Slack channel via the user's bot
     names.append("call_api")  # make HTTP requests to external APIs
     names.append("web_search")  # search the web via Google Custom Search
     names.append("analyze_document")  # vision-based analysis of an uploaded document

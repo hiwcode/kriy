@@ -21,6 +21,7 @@ from app.agents.workflow_tool import make_workflow_tools
 from app.agents.event_tool import make_event_tools
 from app.agents.notify_tool import make_notify_tools
 from app.agents.email_tool import make_email_tools
+from app.agents.slack_tool import make_slack_tools
 from app.agents.call_api_tool import make_call_api_tools
 from app.agents.analyze_tools import make_analyze_tools
 from app.agents.self_learning_tool import make_self_learning_tools
@@ -295,6 +296,9 @@ async def _build_tools(
             elif name == "send_email":
                 result.extend(make_email_tools(pool, created_by))
                 logger.info("Email tool added (via builtin)")
+            elif name == "slack":
+                result.extend(make_slack_tools(pool, created_by))
+                logger.info("Slack tool added (via builtin)")
             elif name == "call_api":
                 result.extend(make_call_api_tools())
                 logger.info("Call API tool added (via builtin)")
@@ -410,6 +414,9 @@ async def _build_tools(
         elif tool_type == "send_email":
             result.extend(make_email_tools(pool, created_by))
             logger.info("Email tool added")
+        elif tool_type == "slack":
+            result.extend(make_slack_tools(pool, created_by))
+            logger.info("Slack tool added")
         elif tool_type == "call_api":
             result.extend(make_call_api_tools())
             logger.info("Call API tool added")
