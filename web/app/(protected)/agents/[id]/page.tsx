@@ -1814,7 +1814,7 @@ function IntegrationEndpointRow({
         <IntegrationCopyButton text={curl} />
       </div>
       <p className="text-xs text-muted-foreground">{description}</p>
-      <pre className="overflow-x-auto rounded-md bg-zinc-950 px-3 py-2 font-mono text-[11px] leading-relaxed text-zinc-300">
+      <pre className="overflow-x-auto rounded-md bg-muted px-3 py-2 font-mono text-[11px] leading-relaxed">
         {curl}
       </pre>
     </div>
@@ -1825,13 +1825,13 @@ function CodeBlock({ code, id }: { code: string; id: string }) {
   const [copied, setCopied] = React.useState(false);
   return (
     <div className="relative">
-      <pre className="rounded-lg bg-zinc-950 text-zinc-100 p-4 font-mono text-sm overflow-x-auto pr-12 whitespace-pre-wrap leading-relaxed">
+      <pre className="rounded-lg bg-muted p-4 font-mono text-sm overflow-x-auto pr-12 whitespace-pre-wrap leading-relaxed">
         {code}
       </pre>
       <Button
         variant="ghost"
         size="icon"
-        className="absolute top-2 right-2 h-7 w-7 text-zinc-400 opacity-50 hover:opacity-100 hover:text-zinc-100 hover:bg-zinc-800"
+        className="absolute top-2 right-2 h-7 w-7 opacity-50 hover:opacity-100 "
         onClick={() => {
           navigator.clipboard.writeText(code);
           setCopied(true);
@@ -2001,14 +2001,14 @@ for line in response.iter_lines():
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="flex flex-col gap-1">
               <span className="text-xs font-medium text-muted-foreground">Headers</span>
-              <div className="rounded-lg bg-zinc-950 px-3 py-2 font-mono text-xs text-zinc-300 leading-relaxed">
+              <div className="rounded-lg bg-muted px-3 py-2 font-mono text-xs leading-relaxed">
                 <div>X-API-Key: YOUR_API_KEY</div>
                 <div>Content-Type: application/json</div>
               </div>
             </div>
             <div className="flex flex-col gap-1">
               <span className="text-xs font-medium text-muted-foreground">Request Body</span>
-              <div className="rounded-lg bg-zinc-950 px-3 py-2 font-mono text-xs text-zinc-300 leading-relaxed">
+              <div className="rounded-lg bg-muted px-3 py-2 font-mono text-xs leading-relaxed">
                 <div>{`{ "message": "Hello",`}</div>
                 <div>{`  "session_id": null }`}</div>
               </div>
