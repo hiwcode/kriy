@@ -96,6 +96,10 @@ function OpikLogo({ className }: { className?: string }) {
   );
 }
 
+/** Placeholder value shown in a secret field that's already saved. The real
+ *  secret is never sent to the client; leaving this untouched keeps it. */
+const SECRET_MASK = "••••••••••••";
+
 /** Password input with a show/hide toggle. */
 function SecretInput({
   value,
@@ -257,27 +261,11 @@ export default function ConfigPage() {
       setSaving(true);
       setError(null);
       try {
-        const base: ConfigPayload = {
-          google_api_key: config.google_api_key ?? null,
-          openai_api_key: config.openai_api_key ?? null,
-          anthropic_api_key: config.anthropic_api_key ?? null,
-          default_model: config.default_model ?? "gemini-2.5-flash",
-          opik_api_key: config.opik_api_key ?? null,
-          opik_workspace: config.opik_workspace ?? null,
-          opik_project_name: config.opik_project_name ?? "atelier",
-          opik_url_override: config.opik_url_override ?? null,
-          opik_enabled: config.opik_enabled ?? false,
-          slack_bot_token: config.slack_bot_token ?? null,
-          slack_signing_secret: config.slack_signing_secret ?? null,
-          slack_app_token: config.slack_app_token ?? null,
-          slack_bot_user_id: config.slack_bot_user_id ?? null,
-          slack_default_channel: config.slack_default_channel ?? null,
-          slack_default_agent_id: config.slack_default_agent_id ?? null,
-          slack_enabled: config.slack_enabled ?? false,
-          gmail_address: config.gmail_address ?? null,
-          gmail_app_password: config.gmail_app_password ?? null,
-        };
-        const updated = await updateUserConfig({ ...base, ...patch });
+        // Send only the changed fields. The backend leaves any field we omit
+        // unchanged, so we must NOT resend the whole config — secrets are no
+        // longer returned to the client (write-only), so a full resend would
+        // wipe every secret we can't see.
+        const updated = await updateUserConfig(patch);
         setConfig(updated);
         return true;
       } catch (e) {
@@ -330,7 +318,7 @@ export default function ConfigPage() {
 
   /* ----- derived state ----- */
   const providerCount = config
-    ? [config.google_api_key, config.openai_api_key, config.anthropic_api_key].filter(Boolean).length
+    ? [config.google_api_key_set, config.openai_api_key_set, config.anthropic_api_key_set].filter(Boolean).length
     : 0;
 
   if (loading) {
@@ -482,7 +470,7 @@ export default function ConfigPage() {
               description="Let agents send email from your Gmail via the send_email tool"
               status={
                 <StatusBadge
-                  active={!!config?.gmail_address && !!config?.gmail_app_password}
+                  active={!!config?.gmail_address && !!config?.gmail_app_password_set}
                   activeLabel="Connected"
                   inactiveLabel="Not configured"
                 />
@@ -580,20 +568,21 @@ function ProvidersDialog({
 
   React.useEffect(() => {
     if (open) {
-      setGoogle(config.google_api_key ?? "");
-      setOpenai(config.openai_api_key ?? "");
-      setAnthropic(config.anthropic_api_key ?? "");
+      setGoogle(config.google_api_key_set ? SECRET_MASK : "");
+      setOpenai(config.openai_api_key_set ? SECRET_MASK : "");
+      setAnthropic(config.anthropic_api_key_set ? SECRET_MASK : "");
       setModel(config.default_model ?? "gemini-2.5-flash");
     }
   }, [open, config]);
 
   const submit = async () => {
-    const ok = await onSave({
-      google_api_key: google.trim() || null,
-      openai_api_key: openai.trim() || null,
-      anthropic_api_key: anthropic.trim() || null,
-      default_model: model,
-    });
+    // Secrets are write-only (never returned to the client). Only send a key
+    // when the user actually typed one; a blank field means "keep the saved key".
+    const patch: ConfigPayload = { default_model: model };
+    if (google.trim() && google !== SECRET_MASK) patch.google_api_key = google.trim();
+    if (openai.trim() && openai !== SECRET_MASK) patch.openai_api_key = openai.trim();
+    if (anthropic.trim() && anthropic !== SECRET_MASK) patch.anthropic_api_key = anthropic.trim();
+    const ok = await onSave(patch);
     if (ok) onOpenChange(false);
   };
 
@@ -613,21 +602,21 @@ function ProvidersDialog({
         <div className="space-y-4 py-1">
           <div className="space-y-2">
             <Label htmlFor="google-api-key">Google API Key</Label>
-            <SecretInput id="google-api-key" value={google} onChange={setGoogle} placeholder="For Gemini models" />
+            <SecretInput id="google-api-key" value={google} onChange={setGoogle} placeholder={config.google_api_key_set ? "•••• saved — leave blank to keep" : "For Gemini models"} />
             <p className="text-xs text-muted-foreground">
               Get a key at <FieldLink href="https://aistudio.google.com/app/apikey">Google AI Studio</FieldLink>
             </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="openai-api-key">OpenAI API Key</Label>
-            <SecretInput id="openai-api-key" value={openai} onChange={setOpenai} placeholder="For GPT / o-series models" />
+            <SecretInput id="openai-api-key" value={openai} onChange={setOpenai} placeholder={config.openai_api_key_set ? "•••• saved — leave blank to keep" : "For GPT / o-series models"} />
             <p className="text-xs text-muted-foreground">
               Get a key at <FieldLink href="https://platform.openai.com/api-keys">OpenAI Platform</FieldLink>
             </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="anthropic-api-key">Anthropic API Key</Label>
-            <SecretInput id="anthropic-api-key" value={anthropic} onChange={setAnthropic} placeholder="For Claude models" />
+            <SecretInput id="anthropic-api-key" value={anthropic} onChange={setAnthropic} placeholder={config.anthropic_api_key_set ? "•••• saved — leave blank to keep" : "For Claude models"} />
             <p className="text-xs text-muted-foreground">
               Get a key at <FieldLink href="https://console.anthropic.com/settings/keys">Anthropic Console</FieldLink>
             </p>
@@ -681,15 +670,15 @@ function GmailDialog({
   React.useEffect(() => {
     if (open) {
       setAddress(config.gmail_address ?? "");
-      setAppPassword(config.gmail_app_password ?? "");
+      setAppPassword(config.gmail_app_password_set ? SECRET_MASK : "");
     }
   }, [open, config]);
 
   const submit = async () => {
-    const ok = await onSave({
-      gmail_address: address.trim() || null,
-      gmail_app_password: appPassword.trim() || null,
-    });
+    // App password is write-only; only send it when the user typed one (blank = keep).
+    const patch: ConfigPayload = { gmail_address: address.trim() || null };
+    if (appPassword.trim() && appPassword !== SECRET_MASK) patch.gmail_app_password = appPassword.trim();
+    const ok = await onSave(patch);
     if (ok) onOpenChange(false);
   };
 
@@ -725,7 +714,7 @@ function GmailDialog({
               id="gmail-app-password"
               value={appPassword}
               onChange={setAppPassword}
-              placeholder="16-character app password"
+              placeholder={config.gmail_app_password_set ? "•••••••• saved — leave blank to keep" : "16-character app password"}
             />
             <p className="text-xs text-muted-foreground">
               Requires 2-Step Verification. Create one at{" "}
@@ -774,7 +763,7 @@ function OpikDialog({
   React.useEffect(() => {
     if (open) {
       setEnabled(config.opik_enabled ?? false);
-      setApiKey(config.opik_api_key ?? "");
+      setApiKey(config.opik_api_key_set ? SECRET_MASK : "");
       setWorkspace(config.opik_workspace ?? "");
       setProject(config.opik_project_name ?? "atelier");
       setUrlOverride(config.opik_url_override ?? "");
@@ -782,13 +771,14 @@ function OpikDialog({
   }, [open, config]);
 
   const submit = async () => {
-    const ok = await onSave({
+    const patch: ConfigPayload = {
       opik_enabled: enabled,
-      opik_api_key: apiKey.trim() || null,
       opik_workspace: workspace.trim() || null,
       opik_project_name: project.trim() || "atelier",
       opik_url_override: urlOverride.trim() || null,
-    });
+    };
+    if (apiKey.trim() && apiKey !== SECRET_MASK) patch.opik_api_key = apiKey.trim();  // write-only secret
+    const ok = await onSave(patch);
     if (ok) onOpenChange(false);
   };
 
@@ -813,7 +803,7 @@ function OpikDialog({
           <div className={cn("space-y-4 transition-opacity", !enabled && "pointer-events-none opacity-50")}>
             <div className="space-y-2">
               <Label htmlFor="opik-api-key">Opik API Key</Label>
-              <SecretInput id="opik-api-key" value={apiKey} onChange={setApiKey} placeholder="Your Opik API key" disabled={!enabled} />
+              <SecretInput id="opik-api-key" value={apiKey} onChange={setApiKey} placeholder={config.opik_api_key_set ? "•••• saved — leave blank to keep" : "Your Opik API key"} disabled={!enabled} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="opik-workspace">Workspace</Label>
@@ -872,9 +862,9 @@ function SlackDialog({
   React.useEffect(() => {
     if (open) {
       setEnabled(config.slack_enabled ?? false);
-      setBotToken(config.slack_bot_token ?? "");
-      setSigningSecret(config.slack_signing_secret ?? "");
-      setAppToken(config.slack_app_token ?? "");
+      setBotToken(config.slack_bot_token_set ? SECRET_MASK : "");
+      setSigningSecret(config.slack_signing_secret_set ? SECRET_MASK : "");
+      setAppToken(config.slack_app_token_set ? SECRET_MASK : "");
       setBotUserId(config.slack_bot_user_id ?? "");
       setChannel(config.slack_default_channel ?? "");
       setAgentId(config.slack_default_agent_id ? String(config.slack_default_agent_id) : "");
@@ -882,15 +872,17 @@ function SlackDialog({
   }, [open, config]);
 
   const submit = async () => {
-    const ok = await onSave({
+    const patch: ConfigPayload = {
       slack_enabled: enabled,
-      slack_bot_token: botToken.trim() || null,
-      slack_signing_secret: signingSecret.trim() || null,
-      slack_app_token: appToken.trim() || null,
       slack_bot_user_id: botUserId.trim() || null,
       slack_default_channel: channel.trim() || null,
       slack_default_agent_id: agentId ? Number(agentId) : null,
-    });
+    };
+    // Write-only secrets: only send when the user typed one (blank = keep saved).
+    if (botToken.trim() && botToken !== SECRET_MASK) patch.slack_bot_token = botToken.trim();
+    if (signingSecret.trim() && signingSecret !== SECRET_MASK) patch.slack_signing_secret = signingSecret.trim();
+    if (appToken.trim() && appToken !== SECRET_MASK) patch.slack_app_token = appToken.trim();
+    const ok = await onSave(patch);
     if (ok) onOpenChange(false);
   };
 
@@ -916,15 +908,15 @@ function SlackDialog({
           <div className={cn("space-y-4 transition-opacity", !enabled && "pointer-events-none opacity-50")}>
             <div className="space-y-2">
               <Label htmlFor="slack-bot-token">Bot Token</Label>
-              <SecretInput id="slack-bot-token" value={botToken} onChange={setBotToken} placeholder="xoxb-…" disabled={!enabled} />
+              <SecretInput id="slack-bot-token" value={botToken} onChange={setBotToken} placeholder={config.slack_bot_token_set ? "•••• saved — leave blank to keep" : "xoxb-…"} disabled={!enabled} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="slack-signing-secret">Signing Secret</Label>
-              <SecretInput id="slack-signing-secret" value={signingSecret} onChange={setSigningSecret} placeholder="Slack signing secret" disabled={!enabled} />
+              <SecretInput id="slack-signing-secret" value={signingSecret} onChange={setSigningSecret} placeholder={config.slack_signing_secret_set ? "•••• saved — leave blank to keep" : "Slack signing secret"} disabled={!enabled} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="slack-app-token">App Token (Optional)</Label>
-              <SecretInput id="slack-app-token" value={appToken} onChange={setAppToken} placeholder="xapp-…" disabled={!enabled} />
+              <SecretInput id="slack-app-token" value={appToken} onChange={setAppToken} placeholder={config.slack_app_token_set ? "•••• saved — leave blank to keep" : "xapp-…"} disabled={!enabled} />
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">

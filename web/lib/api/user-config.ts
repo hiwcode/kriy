@@ -21,6 +21,16 @@ export interface UserConfig {
   slack_enabled: boolean | null;
   gmail_address: string | null;
   gmail_app_password: string | null;
+  // Secrets are write-only: the API returns `null` for the value and a
+  // `<field>_set` boolean so the UI can show "configured" without exposing it.
+  google_api_key_set?: boolean;
+  openai_api_key_set?: boolean;
+  anthropic_api_key_set?: boolean;
+  opik_api_key_set?: boolean;
+  slack_bot_token_set?: boolean;
+  slack_signing_secret_set?: boolean;
+  slack_app_token_set?: boolean;
+  gmail_app_password_set?: boolean;
   created_at?: string;
   updated_at?: string;
 }
