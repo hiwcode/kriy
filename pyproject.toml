@@ -23,3 +23,13 @@ dependencies = [
 
 # examples/ are standalone uv projects (each has its own pyproject + .venv),
 # intentionally NOT workspace members so they stay self-contained.
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["app/tests"]
