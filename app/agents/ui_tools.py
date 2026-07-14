@@ -26,6 +26,8 @@ def build_ui_card(name: str, args: dict | None) -> dict | None:
             "type": "plan",
             "title": a.get("title") or "Plan",
             "steps": [str(s) for s in (a.get("steps") or [])],
+            "done": [str(s) for s in (a.get("done") or [])],
+            "current": a.get("current") or "",
         }
     if name == "todo_write":
         return {
@@ -49,17 +51,26 @@ def build_ui_card(name: str, args: dict | None) -> dict | None:
 def make_ui_tools() -> list[FunctionTool]:
     """Return the presentational (chat-UI) tools."""
 
-    def plan(title: str, steps: list[str]) -> str:
-        """Show a PLAN card in the chat: an ordered list of steps you will take.
+    def plan(
+        title: str,
+        steps: list[str],
+        done: list[str] | None = None,
+        current: str = "",
+    ) -> str:
+        """Show (and update) a PLAN card in the chat with live progress.
 
-        Use this to outline your approach BEFORE starting multi-step work, so the
-        user can see the plan. Purely visual — it performs no actions.
+        Outline your approach BEFORE starting multi-step work. As you complete
+        steps, call this AGAIN with the SAME title + steps and an updated
+        `done` / `current` — the card updates in place (checkmarks for done, a
+        spinner on the current step). Purely visual — it performs no actions.
 
         Args:
-            title: Short heading for the plan.
+            title: Short heading for the plan (keep it identical across updates).
             steps: Ordered list of step descriptions.
+            done: Steps already completed — exact text from `steps` — shown checked off.
+            current: The single step currently in progress, if any.
         """
-        return f"Rendered a plan card with {len(steps)} step(s)."
+        return f"Rendered a plan card ({len(done or [])}/{len(steps)} done)."
 
     def todo_write(
         title: str,

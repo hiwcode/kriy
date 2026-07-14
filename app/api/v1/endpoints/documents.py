@@ -101,6 +101,12 @@ async def upload_documents(
             user_id=auth.user_id,
             workspace_id=ws_id,
         )
+        # Include a viewable URL so the chat can show a clickable attachment chip.
+        doc = dict(doc)
+        try:
+            doc["download_url"] = storage.get_presigned_url(doc["bucket_key"])
+        except Exception:
+            doc["download_url"] = None
         uploaded.append(doc)
 
     return {
@@ -150,19 +156,39 @@ async def register_document_url(
 @router.get("", response_model=ApiResponse)
 async def list_documents(
     agent_id: int = Query(...),
+    session_id: str | None = Query(None),
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     pool: asyncpg.Pool = Depends(get_db),
     auth: AuthContext = Depends(require_google_auth),
 ) -> dict:
-    """List documents for a specific agent."""
+    """List documents for an agent, optionally scoped to a session.
+
+    Each doc includes a viewable `download_url` so the chat can re-render
+    attachment chips after a reload.
+    """
     await _require_agent_access(agent_id, pool, auth)
-    docs = await document_repo.list_for_agent(pool, agent_id, limit=limit, offset=offset)
-    total = await document_repo.count_for_agent(pool, agent_id)
+    if session_id:
+        docs = await document_repo.list_for_session(pool, agent_id, session_id, limit=limit)
+        total = len(docs)
+    else:
+        docs = await document_repo.list_for_agent(pool, agent_id, limit=limit, offset=offset)
+        total = await document_repo.count_for_agent(pool, agent_id)
+    out = []
+    for d in docs:
+        d = dict(d)
+        if d.get("bucket_key"):
+            try:
+                d["download_url"] = storage.get_presigned_url(d["bucket_key"])
+            except Exception:
+                d["download_url"] = None
+        else:
+            d["download_url"] = d.get("url")
+        out.append(d)
     return {
         "success": True,
         "message": "Documents fetched",
-        "data": docs,
+        "data": out,
         "pagination": Pagination(limit=limit, offset=offset, total=total, page=1, page_size=limit),
     }
 
@@ -201,3 +227,37 @@ async def delete_document(
         storage.delete_file(doc["bucket_key"])
     await document_repo.delete(pool, doc_id)
     return {"success": True, "message": "Document deleted", "data": None, "pagination": None}
+
+
+# ---------------------------------------------------------------------------
+# Local-disk dev fallback: serve uploads stored under ./bucket when Spaces is
+# not configured. Unauthenticated but gated by an HMAC signature over the key
+# (minted in storage.get_presigned_url), so <img>/download links work in dev.
+# ---------------------------------------------------------------------------
+import mimetypes
+
+from fastapi import Response
+
+local_files_router = APIRouter(prefix="/documents", tags=["documents"])
+
+_ACTIVE_EXTS = {".html", ".htm", ".svg", ".xml", ".xhtml"}
+
+
+@local_files_router.get("/local/{key:path}")
+async def serve_local_document(key: str, sig: str | None = Query(default=None)):
+    from app.core import workspace_signing
+
+    if not workspace_signing.verify_path(key, sig):
+        raise HTTPException(status_code=403, detail="Invalid or missing signature")
+    try:
+        data = storage.download_bytes(key)
+    except Exception:
+        raise HTTPException(status_code=404, detail="File not found")
+
+    ext = os.path.splitext(key)[1].lower()
+    if ext in _ACTIVE_EXTS:
+        # never render active content inline (stored-XSS guard)
+        return Response(content=data, media_type="application/octet-stream",
+                        headers={"Content-Disposition": "attachment"})
+    media_type = mimetypes.guess_type(key)[0] or "application/octet-stream"
+    return Response(content=data, media_type=media_type)

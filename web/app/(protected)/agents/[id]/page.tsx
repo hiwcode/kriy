@@ -13,7 +13,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { TabLayout, TabConfig } from "@/components/ui/tab-layout";
-import { ChatBox, Message, type ChatCard } from "@/components/ui/chat-box";
+import { ChatBox, Message, type ChatCard, type MessageAttachment } from "@/components/ui/chat-box";
+import { upsertCards } from "@/components/chat/chat-cards";
 import { DataTable, ColumnFilter } from "@/components/ui/data-table";
 import { ColumnDef, SortingState } from "@tanstack/react-table";
 import {
@@ -43,7 +44,7 @@ import {
   AgentSessionItem,
 } from "@/lib/api/agents";
 import { toast } from "sonner";
-import { uploadDocuments } from "@/lib/api/documents";
+import { uploadDocuments, listSessionDocuments } from "@/lib/api/documents";
 import { listPrompts, type PromptLibraryItem } from "@/lib/api/prompt-library";
 import {
   listMcpConnections,
@@ -1201,7 +1202,7 @@ function ChatTab({
           setMessages((prev) => prev.map((m) => (m.id === liveId ? { ...m, content: fullText } : m)));
         } else if (chunk.type === "card" && chunk.card) {
           const card = chunk.card as ChatCard;
-          setMessages((prev) => prev.map((m) => (m.id === liveId ? { ...m, cards: [...(m.cards ?? []), card] } : m)));
+          setMessages((prev) => prev.map((m) => (m.id === liveId ? { ...m, cards: upsertCards(m.cards, card) } : m)));
         } else if (chunk.type === "error" && chunk.error) {
           setMessages((prev) => prev.map((m) => (m.id === liveId ? { ...m, content: `Error: ${chunk.error}` } : m)));
         } else if (chunk.type === "tool_confirmation" && chunk.function_call_id) {
@@ -1246,16 +1247,57 @@ function ChatTab({
         // For an active run, the in-flight (last) turn is owned by the live
         // reattach stream — skip its persisted assistant half to avoid a dupe.
         if (!(runState.active && isLast)) {
+          // History persists every card emission (e.g. each plan/todo progress
+          // update). Collapse them the same way the live view does — same
+          // type+title merges to its final state — so we show one card, not N.
+          const mergedCards = (ex.agent_cards as ChatCard[] | undefined)?.reduce(
+            (acc, c) => upsertCards(acc, c),
+            [] as ChatCard[]
+          );
           msgs.push({
             id: `assistant-${i}`,
             role: "assistant",
             content: ex.agent_response,
-            cards: ex.agent_cards as ChatCard[] | undefined,
+            cards: mergedCards,
             timestamp: new Date(ex.timestamp * 1000),
           });
         }
       });
       setMessages(msgs);
+      // History doesn't persist attachments — re-hydrate them from the session's
+      // documents, attaching each to the nearest user turn by upload time.
+      try {
+        const docs = await listSessionDocuments(agentId, sid);
+        if (docs.length) {
+          setMessages((prev) => {
+            const userMsgs = prev.filter((m) => m.role === "user");
+            if (!userMsgs.length) return prev;
+            const byMsg: Record<string, MessageAttachment[]> = {};
+            for (const d of docs) {
+              const dt = new Date(d.created_at).getTime();
+              let best = userMsgs[0];
+              let bestDelta = Infinity;
+              for (const m of userMsgs) {
+                const delta = Math.abs((m.timestamp?.getTime() ?? 0) - dt);
+                if (delta < bestDelta) { bestDelta = delta; best = m; }
+              }
+              (byMsg[best.id] ??= []).push({
+                id: d.id, name: d.name, mime_type: d.mime_type, url: d.download_url ?? d.url,
+              });
+            }
+            return prev.map((m) => {
+              const add = byMsg[m.id];
+              if (!add) return m;
+              // Dedupe by id — loadSession can run more than once for a session,
+              // so appending blindly would duplicate the same attachment.
+              const existing = m.attachments ?? [];
+              const seen = new Set(existing.map((a) => a.id));
+              const merged = [...existing, ...add.filter((a) => !seen.has(a.id))];
+              return { ...m, attachments: merged };
+            });
+          });
+        }
+      } catch { /* attachments are best-effort */ }
     } catch {
       // no history yet
     }
@@ -1341,8 +1383,13 @@ function ChatTab({
 
   const pendingDocIds = React.useRef<number[] | undefined>(undefined);
 
-  const handleFileUpload = async (files: File[]) => {
+  const handleFileUpload = async (files: File[], text: string) => {
     if (!agentId) return;
+    // We're interacting — mark init done BEFORE creating a session / changing the
+    // URL, so the ?session= effect doesn't fire loadSession() mid-upload (which
+    // clears messages → flicker, and could double-attach to the run we start).
+    didInitRef.current = true;
+    isNewChatRef.current = false;
     // Ensure a session exists before uploading so docs are scoped correctly
     let sid = sessionId;
     if (!sid) {
@@ -1356,34 +1403,44 @@ function ChatTab({
     }
     const docs = await uploadDocuments(files, agentId, sid || undefined);
     const imageIds = docs.filter((d) => d.mime_type.startsWith("image/")).map((d) => d.id);
-    const nonImageDocs = docs.filter((d) => !d.mime_type.startsWith("image/"));
-
-    const lines = docs.map(
-      (d) => `- document_id=${d.id}, name="${d.name}", type=${d.mime_type}, size=${(d.size_bytes / 1024).toFixed(0)}KB`
-    );
-    let msg = `I uploaded ${docs.length} document(s):\n${lines.join("\n")}`;
-    if (nonImageDocs.length > 0) {
-      msg += "\n\nUse extract_document_text with the document_id to read text files/PDFs.";
-    }
-    if (imageIds.length > 0) {
-      msg += "\n\nThe images are attached inline — analyze them directly.";
-    }
-
-    // Pass image document IDs so they're injected as inline image parts for vision
-    pendingDocIds.current = imageIds.length > 0 ? docs.map((d) => d.id) : undefined;
-    handleSendMessage(msg);
+    const attachments: MessageAttachment[] = docs.map((d) => ({
+      id: d.id,
+      name: d.name,
+      mime_type: d.mime_type,
+      url: d.download_url ?? d.url,
+    }));
+    const display = text.trim();
+    // One turn: the user's message carries the attachments AND the run. We send
+    // the user's plain text (no injected hint — it would be persisted and shown
+    // back on reload). Images are attached inline for vision; non-image docs are
+    // discoverable via the analyze_document tool. Empty text gets a sensible ask.
+    handleSendMessage(display, {
+      forcedSessionId: sid || undefined,
+      attachments,
+      runContent: display || "Please review the attached file(s).",
+      docIds: imageIds.length > 0 ? docs.map((d) => d.id) : undefined,
+    });
   };
 
-  const handleSendMessage = async (content: string) => {
+  const handleSendMessage = async (
+    content: string,
+    opts?: {
+      forcedSessionId?: string;
+      attachments?: MessageAttachment[];
+      runContent?: string;
+      docIds?: number[];
+    },
+  ) => {
+    didInitRef.current = true; // we're interacting — URL changes must not reload/wipe
     const userMessage: Message = {
       id: Date.now().toString(),
       role: "user",
       content,
       timestamp: new Date(),
+      attachments: opts?.attachments,
     };
     setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
-    didInitRef.current = true; // we're interacting — URL changes must not reload
 
     const assistantMessageId = (Date.now() + 1).toString();
     const assistantMessage: Message = {
@@ -1397,7 +1454,7 @@ function ChatTab({
     if (agentId) {
       // Ensure a session exists up front so the run is keyed and re-attachable,
       // and point the URL at it — navigating away and back resumes this run.
-      let sid = sessionId ?? sessionToLoad ?? sessionFromUrl ?? null;
+      let sid = opts?.forcedSessionId ?? sessionId ?? sessionToLoad ?? sessionFromUrl ?? null;
       if (!sid) {
         try {
           sid = await createSessionSilent(agentId);
@@ -1415,10 +1472,10 @@ function ChatTab({
       if (sid) markPending(agentId, sid);
       try {
         let fullText = "";
-        const docIds = pendingDocIds.current;
+        const docIds = opts?.docIds ?? pendingDocIds.current;
         pendingDocIds.current = undefined;
         for await (const chunk of runAgentStream(agentId, {
-          message: content,
+          message: opts?.runContent ?? content,
           session_id: sid ?? undefined,
           document_ids: docIds,
         })) {
@@ -1451,7 +1508,7 @@ function ChatTab({
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === assistantMessageId
-                  ? { ...m, cards: [...(m.cards ?? []), card] }
+                  ? { ...m, cards: upsertCards(m.cards, card) }
                   : m
               )
             );
@@ -1597,7 +1654,7 @@ function ChatTab({
                 }
                 if (chunk.type === "card" && chunk.card) {
                   const card = chunk.card as ChatCard;
-                  setMessages((prev) => prev.map((m) => m.id === resumeMsgId ? { ...m, cards: [...(m.cards ?? []), card] } : m));
+                  setMessages((prev) => prev.map((m) => m.id === resumeMsgId ? { ...m, cards: upsertCards(m.cards, card) } : m));
                 }
                 if (chunk.type === "tool_confirmation" && chunk.function_call_id) {
                   setMessages((prev) => [...prev, {

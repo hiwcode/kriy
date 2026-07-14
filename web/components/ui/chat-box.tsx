@@ -46,6 +46,14 @@ export interface ToolConfirmation {
   args: Record<string, any>;
 }
 
+/** A file attached to a user message, shown as a clickable chip. */
+export interface MessageAttachment {
+  id: number;
+  name: string;
+  mime_type: string;
+  url?: string | null;
+}
+
 export interface Message {
   id: string;
   role: "user" | "assistant";
@@ -54,6 +62,8 @@ export interface Message {
   toolConfirmation?: ToolConfirmation;
   /** Structured cards (plan / todo / info) streamed from presentational tools. */
   cards?: ChatCard[];
+  /** Files the user attached alongside this message. */
+  attachments?: MessageAttachment[];
 }
 
 export type { ChatCard };
@@ -62,7 +72,8 @@ interface ChatBoxProps {
   messages: Message[];
   onSendMessage: (message: string) => void;
   onToolConfirmation?: (functionCallId: string, confirmed: boolean) => void;
-  onFileUpload?: (files: File[]) => Promise<void>;
+  /** Send attached files together with the typed message (one turn). */
+  onFileUpload?: (files: File[], text: string) => Promise<void>;
   isLoading?: boolean;
   placeholder?: string;
   className?: string;
@@ -104,21 +115,26 @@ export function ChatBox({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isLoading || uploading) return;
+    const text = input.trim();
 
+    // Files + text go together as ONE turn (the attachments render on that message).
     if (pendingFiles.length > 0 && onFileUpload) {
       setUploading(true);
       try {
-        await onFileUpload(pendingFiles);
+        await onFileUpload(pendingFiles, text);
       } catch {
         setUploading(false);
         return;
       }
       setUploading(false);
       setPendingFiles([]);
+      setInput("");
+      if (textareaRef.current) textareaRef.current.style.height = "auto";
+      return;
     }
 
-    if (input.trim()) {
-      onSendMessage(input.trim());
+    if (text) {
+      onSendMessage(text);
       setInput("");
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
@@ -334,6 +350,9 @@ function ChatMessage({ message, Logo, onToolConfirmation }: { message: Message; 
             {message.content && (
               <MdRenderer content={message.content} variant={isUser ? "default" : "docs"}/>
             )}
+            {message.attachments && message.attachments.length > 0 && (
+              <MessageAttachments attachments={message.attachments} />
+            )}
             {!isUser && message.cards && message.cards.length > 0 && (
               <ChatCards cards={message.cards} />
             )}
@@ -350,6 +369,52 @@ function ChatMessage({ message, Logo, onToolConfirmation }: { message: Message; 
         )}
       </div>
     </div>
+  );
+}
+
+/** Clickable attachment chips (image thumbnail or file chip) on a user message. */
+function MessageAttachments({ attachments }: { attachments: MessageAttachment[] }) {
+  return (
+    <div className="mt-2 flex flex-wrap gap-2">
+      {attachments.map((a) => (
+        <AttachmentChip key={a.id} attachment={a} />
+      ))}
+    </div>
+  );
+}
+
+function AttachmentChip({ attachment: a }: { attachment: MessageAttachment }) {
+  const [imgFailed, setImgFailed] = React.useState(false);
+  const href = a.url ? (a.url.startsWith("/") ? `${API_BASE}${a.url}` : a.url) : undefined;
+  const isImg = a.mime_type.startsWith("image/");
+
+  // Image with a working URL → thumbnail; on load error fall back to a file chip.
+  if (isImg && href && !imgFailed) {
+    return (
+      <a href={href} target="_blank" rel="noopener noreferrer" title={a.name} className="block">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={href}
+          alt={a.name}
+          className="size-20 rounded-lg border object-cover hover:opacity-90"
+          onError={() => setImgFailed(true)}
+        />
+      </a>
+    );
+  }
+
+  const chip = (
+    <span className="flex items-center gap-1.5 rounded-lg border bg-background/60 px-2.5 py-1.5 text-xs">
+      {isImg ? <FileImage className="size-3.5 shrink-0 text-primary" /> : <FileText className="size-3.5 shrink-0 text-primary" />}
+      <span className="max-w-[160px] truncate">{a.name}</span>
+    </span>
+  );
+  return href ? (
+    <a href={href} target="_blank" rel="noopener noreferrer" title={`Open ${a.name}`} className="hover:opacity-80">
+      {chip}
+    </a>
+  ) : (
+    chip
   );
 }
 

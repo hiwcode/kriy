@@ -17,7 +17,7 @@ import {
 
 /** A structured card streamed from a presentational agent tool (plan/todo/show_card). */
 export type ChatCard =
-  | { type: "plan"; title: string; steps: string[] }
+  | { type: "plan"; title: string; steps: string[]; done?: string[]; current?: string }
   | {
       type: "todo";
       title: string;
@@ -32,6 +32,20 @@ export type ChatCard =
       footer?: string;
       variant?: "info" | "success" | "warning" | "error";
     };
+
+/** Merge a streamed card into the list: a card with the same type+title is an
+ *  update (e.g. a todo checklist reporting progress) so it REPLACES the existing
+ *  one in place; anything new is appended. Without this, repeated progress
+ *  updates stack up as separate snapshot cards instead of one live card. */
+export function upsertCards(cards: ChatCard[] | undefined, card: ChatCard): ChatCard[] {
+  const list = cards ?? [];
+  const key = (c: ChatCard) => `${c.type}:${(c.title ?? "").trim()}`;
+  const idx = list.findIndex((c) => key(c) === key(card));
+  if (idx === -1) return [...list, card];
+  const next = list.slice();
+  next[idx] = card;
+  return next;
+}
 
 export function ChatCards({ cards }: { cards: ChatCard[] }) {
   if (!cards?.length) return null;
@@ -75,18 +89,47 @@ function CardShell({
 }
 
 function PlanCard({ card }: { card: Extract<ChatCard, { type: "plan" }> }) {
+  const done = new Set((card.done ?? []).map((d) => d.trim()));
+  const current = (card.current ?? "").trim();
+  const total = card.steps.length;
+  const completed = card.steps.filter((s) => done.has(s.trim())).length;
+  const hasProgress = done.size > 0 || !!current;
+
   return (
     <CardShell icon={ListOrdered} title={card.title || "Plan"}>
       <ol className="space-y-2">
-        {card.steps.map((step, i) => (
-          <li key={i} className="flex gap-2.5 text-sm">
-            <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">
-              {i + 1}
-            </span>
-            <span className="leading-snug">{step}</span>
-          </li>
-        ))}
+        {card.steps.map((step, i) => {
+          const isDone = done.has(step.trim());
+          const isActive = !isDone && step.trim() === current;
+          return (
+            <li key={i} className="flex gap-2.5 text-sm">
+              {isDone ? (
+                <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              ) : isActive ? (
+                <Loader2 className="mt-0.5 size-5 shrink-0 animate-spin text-primary" />
+              ) : (
+                <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">
+                  {i + 1}
+                </span>
+              )}
+              <span
+                className={cn(
+                  "leading-snug",
+                  isDone && "text-muted-foreground line-through",
+                  isActive && "font-medium"
+                )}
+              >
+                {step}
+              </span>
+            </li>
+          );
+        })}
       </ol>
+      {hasProgress && total > 0 && (
+        <p className="mt-2.5 border-t pt-2 text-xs text-muted-foreground">
+          {completed} of {total} done
+        </p>
+      )}
     </CardShell>
   );
 }

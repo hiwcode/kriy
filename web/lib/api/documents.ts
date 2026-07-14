@@ -15,6 +15,8 @@ export interface DocumentItem {
   user_id: number | null;
   workspace_id: number | null;
   created_at: string;
+  /** Viewable/downloadable URL (presigned or signed-local), set on upload. */
+  download_url?: string | null;
 }
 
 export async function uploadDocuments(files: File[], agentId: number, sessionId?: string): Promise<DocumentItem[]> {
@@ -48,5 +50,14 @@ export async function uploadDocuments(files: File[], agentId: number, sessionId?
 
 export async function listDocuments(limit = 50): Promise<DocumentItem[]> {
   const res = await apiFetch<DocumentItem[]>(`/api/v1/documents?limit=${limit}`, { method: "GET" });
+  return res.data ?? [];
+}
+
+/** Documents uploaded in a specific chat session (for re-rendering attachment chips). */
+export async function listSessionDocuments(agentId: number, sessionId: string): Promise<DocumentItem[]> {
+  const res = await apiFetch<DocumentItem[]>(
+    `/api/v1/documents?agent_id=${agentId}&session_id=${encodeURIComponent(sessionId)}`,
+    { method: "GET" }
+  );
   return res.data ?? [];
 }
