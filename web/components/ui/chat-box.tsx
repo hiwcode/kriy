@@ -43,7 +43,7 @@ export interface ToolConfirmation {
   function_call_id: string;
   hint: string;
   tool_name: string;
-  args: Record<string, any>;
+  args: Record<string, unknown>;
 }
 
 /** A file attached to a user message, shown as a clickable chip. */
@@ -276,7 +276,7 @@ export function ChatBox({
 }
 
 // Individual message component
-function ChatMessage({ message, Logo, onToolConfirmation }: { message: Message; Logo: any; onToolConfirmation?: (functionCallId: string, confirmed: boolean) => void }) {
+function ChatMessage({ message, Logo, onToolConfirmation }: { message: Message; Logo: React.ElementType; onToolConfirmation?: (functionCallId: string, confirmed: boolean) => void }) {
   const isUser = message.role === "user";
   const [responded, setResponded] = React.useState(false);
 

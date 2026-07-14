@@ -76,7 +76,7 @@ export default function InviteAcceptPage() {
         <div className="max-w-md space-y-6">
           <div className="rounded-lg border p-6 text-center">
             <Users className="size-12 mx-auto text-muted-foreground mb-4" />
-            <h2 className="text-xl font-semibold">You're invited to join</h2>
+            <h2 className="text-xl font-semibold">You&apos;re invited to join</h2>
             <p className="text-2xl font-bold mt-2">{info?.workspace_name}</p>
             <p className="text-sm text-muted-foreground mt-2">
               as {info?.role}

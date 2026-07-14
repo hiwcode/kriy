@@ -9,6 +9,7 @@ import {
   FlaskConical,
   GraduationCap,
   LayoutDashboard,
+  Bell,
   LucideIcon,
   MemoryStick,
   Plug,
@@ -54,6 +55,7 @@ export const navigationConfig: NavGroup[] = [
     name: "main",
     items: [
       { id: 1, name: "Dashboard", url: "/", icon: LayoutDashboard },
+      { id: 2, name: "Alerts", url: "/alerts", icon: Bell },
     ],
   },
   {

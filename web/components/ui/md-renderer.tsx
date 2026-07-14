@@ -68,14 +68,14 @@ function slugify(text: string): string {
 
 export function MdRenderer({ content, className, variant = "default" }: MdRendererProps) {
   const isDocs = variant === "docs";
-  const seenIds = React.useRef<Map<string, number>>(new Map());
-  // Reset on every render so IDs stay deterministic across re-renders
-  seenIds.current.clear();
+  // Local (not a ref): a fresh map per render keeps heading IDs deterministic
+  // without reading/writing a ref during render.
+  const seenIds = new Map<string, number>();
 
   const getUniqueId = (text: string) => {
     const base = slugify(text);
-    const count = seenIds.current.get(base) ?? 0;
-    seenIds.current.set(base, count + 1);
+    const count = seenIds.get(base) ?? 0;
+    seenIds.set(base, count + 1);
     return count === 0 ? base : `${base}-${count + 1}`;
   };
 

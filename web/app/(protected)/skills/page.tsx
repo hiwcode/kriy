@@ -262,18 +262,50 @@ function ModeBtn({active,onClick,children}:{active:boolean;onClick:()=>void;chil
   return<Button variant="ghost" size="sm" onClick={onClick} className={`h-6 px-2 text-xs ${active?"bg-background text-foreground font-medium shadow-sm":"text-muted-foreground hover:text-foreground"}`}>{children}</Button>;
 }
 
-function ToolsSidebar({bTools,dbC,mcpC,mcpCache,mcpExp,mcpSel,sT,isBT,togBT,isDB,togDB,isMC,togMC,togMCT,setMcpCache,setMcpExp}:any){
+type McpCacheEntry = { loading: boolean; tools: McpToolInfo[]; error?: string } | undefined;
+type SelectedTool = { type: string; name?: string; mcp_connection_id?: number; tool_names?: string[]; database_connection_id?: number };
+
+interface ToolsSidebarProps {
+  bTools: string[];
+  dbC: { id: number; name: string }[];
+  mcpC: { id: number; name: string }[];
+  mcpCache: Record<number, McpCacheEntry>;
+  mcpExp: number | null;
+  mcpSel: Record<number, Set<string>>;
+  sT: SelectedTool[];
+  isBT: (n: string) => boolean;
+  togBT: (n: string) => void;
+  isDB: (id: number) => boolean;
+  togDB: (id: number) => void;
+  isMC: (c: number) => boolean;
+  togMC: (c: number) => void;
+  togMCT: (c: number, n: string) => void;
+  setMcpCache: React.Dispatch<React.SetStateAction<Record<number, McpCacheEntry>>>;
+  setMcpExp: React.Dispatch<React.SetStateAction<number | null>>;
+}
+
+interface ToolSecProps {
+  title: string;
+  items: string[];
+  isChecked?: (n: string) => boolean;
+  toggle?: (n: string) => void;
+  ids?: number[];
+  isCheckedId?: (id: number) => boolean;
+  toggleId?: (id: number) => void;
+}
+
+function ToolsSidebar({bTools,dbC,mcpC,mcpCache,mcpExp,mcpSel,isBT,togBT,isDB,togDB,isMC,togMC,togMCT,setMcpExp}:ToolsSidebarProps){
   return(<div className="w-60 border-l overflow-auto p-3 space-y-3 shrink-0">
     {bTools.length>0&&<ToolSec title="Builtin" items={bTools} isChecked={isBT} toggle={togBT}/>}
-    {dbC.length>0&&<ToolSec title="Databases" items={dbC.map((c:any)=>c.name)} ids={dbC.map((c:any)=>c.id)} isCheckedId={isDB} toggleId={togDB}/>}
+    {dbC.length>0&&<ToolSec title="Databases" items={dbC.map((c)=>c.name)} ids={dbC.map((c)=>c.id)} isCheckedId={isDB} toggleId={togDB}/>}
     {mcpC.length>0&&(<div><p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 font-medium">MCP</p>
-      {mcpC.map((c:any)=>{const en=isMC(c.id);const exp=mcpExp===c.id;const cache=mcpCache[c.id];return(
+      {mcpC.map((c)=>{const en=isMC(c.id);const exp=mcpExp===c.id;const cache=mcpCache[c.id];return(
         <Collapsible key={c.id} open={exp&&en} onOpenChange={o=>setMcpExp(o?c.id:null)}><div className="rounded border px-2 py-1 mb-1"><div className="flex items-center gap-1.5"><Checkbox checked={en} onCheckedChange={()=>togMC(c.id)} className="size-3.5"/><span className="text-xs flex-1 truncate cursor-pointer" onClick={()=>togMC(c.id)}>{c.name}</span>{en&&<CollapsibleTrigger asChild><Button variant="ghost" size="icon" className="size-5">{exp?<ChevronDown className="size-3"/>:<ChevronRight className="size-3"/>}</Button></CollapsibleTrigger>}</div>
-        <CollapsibleContent className="pt-1 pl-5 space-y-0.5">{cache?.loading&&<p className="text-[10px] text-muted-foreground"><Loader2 className="size-3 animate-spin inline mr-1"/>Loading...</p>}{cache?.tools?.map((t:any)=><label key={t.name} className="flex items-center gap-1.5 text-[11px] cursor-pointer"><Checkbox checked={mcpSel[c.id]?.has(t.name)??false} onCheckedChange={()=>togMCT(c.id,t.name)} className="size-3"/><span className="truncate" title={t.description}>{t.name}</span></label>)}</CollapsibleContent></div></Collapsible>);})}</div>)}
+        <CollapsibleContent className="pt-1 pl-5 space-y-0.5">{cache?.loading&&<p className="text-[10px] text-muted-foreground"><Loader2 className="size-3 animate-spin inline mr-1"/>Loading...</p>}{cache?.tools?.map((t)=><label key={t.name} className="flex items-center gap-1.5 text-[11px] cursor-pointer"><Checkbox checked={mcpSel[c.id]?.has(t.name)??false} onCheckedChange={()=>togMCT(c.id,t.name)} className="size-3"/><span className="truncate" title={t.description}>{t.name}</span></label>)}</CollapsibleContent></div></Collapsible>);})}</div>)}
   </div>);
 }
 
-function ToolSec({title,items,isChecked,toggle,ids,isCheckedId,toggleId}:any){
+function ToolSec({title,items,isChecked,toggle,ids,isCheckedId,toggleId}:ToolSecProps){
   if(!items.length)return null;
   return(<div><p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5 font-medium">{title}</p>{items.map((name:string,i:number)=>(<label key={name} className="flex items-center gap-2 text-xs cursor-pointer hover:bg-accent/50 rounded px-1.5 py-0.5 -mx-1.5"><Checkbox checked={ids?isCheckedId?.(ids[i])??false:isChecked?.(name)??false} onCheckedChange={()=>ids?toggleId?.(ids[i]):toggle?.(name)} className="size-3.5"/><span className="truncate">{name}</span></label>))}</div>);
 }

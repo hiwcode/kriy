@@ -287,7 +287,7 @@ function OrchestratorFlowInner({
       }
       onEdgesChange(changes);
     },
-    [edges, orchestrator, onDisconnect, onEdgesChange]
+    [edges, orchestrator, onDisconnect, onDisconnectA2a, onEdgesChange]
   );
 
   const onDrop = React.useCallback(

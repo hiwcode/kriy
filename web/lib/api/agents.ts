@@ -257,7 +257,7 @@ export interface SessionHistoryExchange {
   user_message: string;
   agent_response: string;
   /** Reconstructed plan/todo/info cards emitted by the agent that turn. */
-  agent_cards?: Record<string, any>[];
+  agent_cards?: Record<string, unknown>[];
   timestamp: number;
 }
 
@@ -332,7 +332,7 @@ export async function stopRun(agentId: number, sessionId: string): Promise<boole
 export async function* reattachRunStream(
   agentId: number,
   sessionId: string
-): AsyncGenerator<{ type: string; text?: string; session_id?: string; error?: string; function_call_id?: string; hint?: string; tool_name?: string; args?: Record<string, any>; card?: Record<string, any> }> {
+): AsyncGenerator<{ type: string; text?: string; session_id?: string; error?: string; function_call_id?: string; hint?: string; tool_name?: string; args?: Record<string, unknown>; card?: Record<string, unknown> }> {
   const API_BASE_URL =
     process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
   const url = `${API_BASE_URL}/api/v1/agents/${agentId}/runs/${sessionId}/stream`;
@@ -567,7 +567,7 @@ export interface AgentRunParams {
 export async function* confirmToolStream(
   agentId: number,
   params: { session_id: string; function_call_id: string; confirmed: boolean }
-): AsyncGenerator<{ type: string; text?: string; error?: string; function_call_id?: string; hint?: string; tool_name?: string; args?: Record<string, any>; card?: Record<string, any> }> {
+): AsyncGenerator<{ type: string; text?: string; error?: string; function_call_id?: string; hint?: string; tool_name?: string; args?: Record<string, unknown>; card?: Record<string, unknown> }> {
   const API_BASE_URL =
     process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 
@@ -611,7 +611,7 @@ export async function* confirmToolStream(
 export async function* runAgentStream(
   agentId: number,
   params: AgentRunParams
-): AsyncGenerator<{ type: string; text?: string; session_id?: string; error?: string; function_call_id?: string; hint?: string; tool_name?: string; args?: Record<string, any>; card?: Record<string, any> }> {
+): AsyncGenerator<{ type: string; text?: string; session_id?: string; error?: string; function_call_id?: string; hint?: string; tool_name?: string; args?: Record<string, unknown>; card?: Record<string, unknown> }> {
   const API_BASE_URL =
     process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
 

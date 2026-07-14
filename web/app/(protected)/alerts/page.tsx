@@ -111,7 +111,7 @@ export default function NotificationsPage() {
   return (
     <AppLayout>
       <PageLayout
-        title="Notifications"
+        title="Alerts"
         subtitle="Everything your agents and workflows have sent you."
         actions={
           <Button variant="outline" size="sm" onClick={onReadAll}>

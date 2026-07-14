@@ -49,7 +49,7 @@ function formatDate(value: string) {
 function toApiFilters(filters: ColumnFilter[]): AgentFilter[] {
   return filters.map((filter) => {
     const isEmptyFilter = filter.type === "empty" || filter.type === "notEmpty";
-    let filterValue: string | number | null = isEmptyFilter
+    const filterValue: string | number | null = isEmptyFilter
       ? null
       : filter.value;
     return {

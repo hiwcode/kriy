@@ -158,7 +158,7 @@ export function NotificationBell() {
         </ScrollArea>
         <div className="border-t p-1.5">
           <Button variant="ghost" size="sm" className="w-full" asChild onClick={() => setOpen(false)}>
-            <Link href="/config/notifications">View all notifications</Link>
+            <Link href="/alerts">View all notifications</Link>
           </Button>
         </div>
       </PopoverContent>

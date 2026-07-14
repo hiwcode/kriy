@@ -544,7 +544,7 @@ export function DataTable<TData, TValue>({
                 <span className="font-medium text-primary">{filter.id}</span>
                 <span className="text-muted-foreground">{filter.type}</span>
                 {filter.value && (
-                  <span className="text-foreground">"{filter.value}"</span>
+                  <span className="text-foreground">&quot;{filter.value}&quot;</span>
                 )}
                 <button
                   onClick={() => removeFilter(filter.id)}

@@ -39,11 +39,11 @@ function MermaidBlock({ code }: { code: string }) {
         if (isActive) {
           setState({ svg })
         }
-      } catch (error: any) {
+      } catch (error) {
         if (isActive) {
           setState({
             svg: "",
-            error: error?.message || "Unable to render mermaid diagram.",
+            error: (error instanceof Error && error.message) || "Unable to render mermaid diagram.",
           })
         }
       }
@@ -194,7 +194,7 @@ export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath, remarkBreaks]}
         rehypePlugins={[rehypeKatex]}
-        components={components as any}
+        components={components as React.ComponentProps<typeof ReactMarkdown>["components"]}
       >
         {content || "Nothing to preview"}
       </ReactMarkdown>

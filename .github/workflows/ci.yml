@@ -67,11 +67,10 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - name: Install dependencies
         run: npm ci
-      # Typecheck is the real gate — catches type/import breakage reliably.
+      # Typecheck catches type/import breakage.
       - name: Typecheck
         run: npm run typecheck
-      # Lint is informational for now: the repo has pre-existing lint debt, so a
-      # blocking gate would always be red. Surfaced but non-blocking until cleaned up.
-      - name: Lint (non-blocking)
+      # Blocking: the tree is lint-clean (0 errors). ESLint still exits 0 on
+      # warnings, so remaining non-error debt is surfaced without failing CI.
+      - name: Lint
         run: npm run lint
-        continue-on-error: true
