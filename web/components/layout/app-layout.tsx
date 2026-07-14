@@ -12,9 +12,17 @@ interface AppLayoutProps {
   className?: string;
 }
 
+/** Read the persisted sidebar state (written by SidebarProvider on toggle) so a
+ *  collapsed sidebar stays collapsed across refresh/navigation. Defaults to open. */
+function readSidebarOpen(): boolean {
+  if (typeof document === "undefined") return true;
+  const match = document.cookie.match(/(?:^|;\s*)sidebar_state=(true|false)/);
+  return match ? match[1] === "true" : true;
+}
+
 export function AppLayout({ children, className }: AppLayoutProps) {
   return (
-    <SidebarProvider defaultOpen={true}>
+    <SidebarProvider defaultOpen={readSidebarOpen()}>
       <AppSidebar />
       <SidebarInset className="flex max-h-svh flex-col overflow-hidden">
         <AppNavbar />
