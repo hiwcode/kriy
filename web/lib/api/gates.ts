@@ -138,6 +138,20 @@ export interface DraftResult {
   reason: string;
 }
 
+export interface CompiledGate {
+  name: string;
+  event_type: string;
+  action: GateAction;
+  reason: string;
+  allow_override: boolean;
+  conditions: GroupCondition;
+}
+
+export interface GateChatResult {
+  reply: string;
+  gate: CompiledGate | null;
+}
+
 // --------------------------------------------------------------------------- //
 // CRUD
 // --------------------------------------------------------------------------- //
@@ -167,6 +181,17 @@ export function deleteGate(id: number): Promise<{ id: number }> {
 /** Recent /events/decide verdicts (the audit log). */
 export function listDecisions(limit = 100): Promise<GateDecision[]> {
   return unwrap<GateDecision[]>(`/api/v1/gates/decisions?limit=${limit}`);
+}
+
+/** Compile a plain-English description into a gate spec (AI builds the rule). */
+export function gateChat(
+  messages: { role: "user" | "assistant"; content: string }[],
+  agentId?: number
+): Promise<GateChatResult> {
+  return unwrap<GateChatResult>("/api/v1/gates/chat", {
+    method: "POST",
+    body: JSON.stringify({ messages, agent_id: agentId ?? null }),
+  });
 }
 
 /** Evaluate a single (unsaved) rule against a sample payload — builder preview. */

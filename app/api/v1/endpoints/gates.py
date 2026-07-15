@@ -13,17 +13,19 @@ returns which rule fired, so a rule set can be verified before it goes live.
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 import asyncpg
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel, Field
 
+from app.core.access import require_resource_access
 from app.core.security import AuthContext, api_key_auth, require_google_auth
 from app.deps import get_current_workspace, get_db
 from app.repositories import gate_repo
 from app.schemas.response import ApiResponse
-from app.services import gate_evaluator
+from app.services import agent_run_service, agent_service, gate_evaluator
 
 router = APIRouter(
     prefix="/gates",
@@ -80,6 +82,30 @@ class EvaluateIn(BaseModel):
     conditions: dict = Field(default_factory=lambda: {"match": "all", "conditions": []})
     action: str = Field("deny", pattern="^(allow|deny)$")
     reason: str = ""
+
+
+class GateChatMessage(BaseModel):
+    role: str
+    content: str = Field(..., min_length=1)
+
+
+class GateChatRequest(BaseModel):
+    messages: list[GateChatMessage] = Field(..., min_length=1)
+    agent_id: int | None = Field(None, description="Agent to compile with; defaults to the workspace's first")
+
+
+class CompiledGate(BaseModel):
+    name: str = ""
+    event_type: str = "*"
+    action: str = "deny"
+    reason: str = ""
+    allow_override: bool = False
+    conditions: dict = Field(default_factory=lambda: {"match": "all", "conditions": []})
+
+
+class GateChatResponse(BaseModel):
+    reply: str
+    gate: CompiledGate | None = None
 
 
 class DecisionOut(BaseModel):
@@ -146,6 +172,116 @@ def _validate(conditions: Any) -> None:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
         ) from exc
+
+
+# --------------------------------------------------------------------------- #
+# Natural-language compiler (like /workflows/chat)
+# --------------------------------------------------------------------------- #
+
+_GATE_COMPILE_INSTRUCTIONS = (
+    "You design 'decision gates' — rules that ALLOW or DENY an action before it runs. "
+    "An app sends an event (e.g. 'refund.requested') with a JSON payload; a gate inspects "
+    "the payload and decides. Based on the conversation, design ONE gate.\n\n"
+    "A gate has: name (short), event_type (the event glob it applies to, e.g. "
+    "'refund.requested' or 'refund.*'), action ('deny' to block or 'allow' to permit when it "
+    "matches), reason (short explanation returned on a match), allow_override (true only if a "
+    "deny should be advisory/soft so the caller may still proceed), and conditions (a tree).\n\n"
+    "conditions tree — a GROUP is "
+    '{"match": "all"|"any"|"none", "conditions": [ ...nodes ]} (all=AND, any=OR, none=NOR). '
+    'A LEAF is {"field": <dot-path>, "op": <operator>, "value": <v>}. Fields are dot paths into '
+    "the event: 'payload.user.role', 'payload.amount', 'payload.items.0.sku', or 'type' for the "
+    "event name. Operators: eq, ne, gt, gte, lt, lte, in, not_in (value is a list), contains, "
+    "not_contains, matches (value is a regex string), exists, not_exists. Groups nest, so "
+    "'role is admin AND (amount > 500 OR currency is USD)' is nested groups.\n\n"
+    "Remember the model is default-deny once an event is gated: to allow-list, write an 'allow' "
+    "gate for what's permitted; to block specific cases, write a 'deny' gate.\n\n"
+    "If the request is ambiguous (which event? what to gate?), ask ONE short clarifying question "
+    "and return no gate yet. Otherwise confirm what you built.\n\n"
+    "Respond with ONLY one JSON object, no prose outside it, no code fences:\n"
+    '{"reply": "<message to the user>", "gate": {"name": "...", "event_type": "...", '
+    '"action": "deny", "reason": "...", "allow_override": false, '
+    '"conditions": {"match": "all", "conditions": [ ... ]}}}\n'
+    'Omit the "gate" key (or set it null) when you are only asking a question.'
+)
+
+
+def _extract_json_object(text: str) -> dict | None:
+    """Best-effort: pull the first balanced {...} object out of the model's text."""
+    if not text:
+        return None
+    cleaned = text.strip()
+    if cleaned.startswith("```"):
+        cleaned = cleaned.split("```", 2)[1] if "```" in cleaned[3:] else cleaned[3:]
+        if cleaned.startswith("json"):
+            cleaned = cleaned[4:]
+    start = cleaned.find("{")
+    if start == -1:
+        return None
+    depth = 0
+    for i in range(start, len(cleaned)):
+        if cleaned[i] == "{":
+            depth += 1
+        elif cleaned[i] == "}":
+            depth -= 1
+            if depth == 0:
+                try:
+                    obj = json.loads(cleaned[start : i + 1])
+                    return obj if isinstance(obj, dict) else None
+                except json.JSONDecodeError:
+                    return None
+    return None
+
+
+async def _run_compiler(pool: asyncpg.Pool, agent_id: int, prompt: str, auth: AuthContext) -> str:
+    full = ""
+    async for chunk in agent_run_service.run_agent_stream(
+        pool,
+        agent_id=agent_id,
+        user_input=prompt,
+        session_id=None,
+        user_id=str(auth.user_id),
+        db_user_id=auth.user_id,
+    ):
+        for line in chunk.strip().split("\n"):
+            if line.startswith("data: "):
+                try:
+                    p = json.loads(line[6:])
+                except json.JSONDecodeError:
+                    continue
+                if p.get("type") == "text":
+                    full += p.get("text", "")
+                elif p.get("type") == "error":
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=p.get("error", "Agent error"),
+                    )
+    return full
+
+
+def _normalize_conditions(c: Any) -> dict:
+    """Coerce a compiled tree into a valid root group the builder can render."""
+    if isinstance(c, dict) and "match" in c and isinstance(c.get("conditions"), list):
+        return c
+    if isinstance(c, dict) and c.get("op"):  # a bare leaf → wrap it
+        return {"match": "all", "conditions": [c]}
+    return {"match": "all", "conditions": []}
+
+
+async def _compiler_agent_id(
+    pool: asyncpg.Pool, auth: AuthContext, workspace: dict | None, requested: int | None
+) -> int | None:
+    """The agent used purely as the compiler LLM: the requested one (access-checked)
+    or the workspace's first agent."""
+    if requested is not None:
+        agent = await agent_service.get_agent(pool, requested)
+        if not agent:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")
+        await require_resource_access(agent, pool, auth)
+        return requested
+    agents, _ = await agent_service.list_agents(
+        pool, limit=1, user_id=auth.user_id, workspace_id=_ws_id(workspace)
+    )
+    return agents[0]["id"] if agents else None
 
 
 # --------------------------------------------------------------------------- #
@@ -269,6 +405,73 @@ async def evaluate_draft(
             "action": data.action,  # what this rule would decide if it fires
             "reason": data.reason if matched else "",
         },
+        "pagination": None,
+    }
+
+
+@router.post("/chat", response_model=ApiResponse)
+async def gate_chat(
+    data: GateChatRequest,
+    pool: asyncpg.Pool = Depends(get_db),
+    auth: AuthContext = Depends(require_google_auth),
+    workspace: dict | None = Depends(get_current_workspace),
+) -> dict:
+    """Compile a plain-English description into a gate spec (name/event/action/
+    conditions). The user reviews it in the editor and saves. Same pattern as
+    /workflows/chat; uses an agent purely as the compiler LLM."""
+    agent_id = await _compiler_agent_id(pool, auth, workspace, data.agent_id)
+    if agent_id is None:
+        return {
+            "success": True,
+            "message": "Gate chat",
+            "data": GateChatResponse(
+                reply="Create an agent first so I can compile rules from your description.",
+                gate=None,
+            ),
+            "pagination": None,
+        }
+
+    convo = "\n".join(f"{m.role.upper()}: {m.content}" for m in data.messages)
+    prompt = _GATE_COMPILE_INSTRUCTIONS + "\n\nCONVERSATION SO FAR:\n" + convo
+    text = await _run_compiler(pool, agent_id, prompt, auth)
+
+    obj = _extract_json_object(text)
+    if not isinstance(obj, dict):
+        return {
+            "success": True,
+            "message": "Gate chat",
+            "data": GateChatResponse(
+                reply=text.strip() or "Which event should this gate apply to, and what should it allow or deny?",
+                gate=None,
+            ),
+            "pagination": None,
+        }
+
+    reply = str(obj.get("reply") or "").strip()
+    raw = obj.get("gate")
+    compiled: CompiledGate | None = None
+    if isinstance(raw, dict):
+        try:
+            compiled = CompiledGate(**raw)
+            if compiled.action not in ("allow", "deny"):
+                compiled.action = "deny"
+            compiled.conditions = _normalize_conditions(compiled.conditions)
+            # If the model produced an unusable tree, hand back an empty one to fix.
+            try:
+                gate_evaluator.validate_conditions(compiled.conditions)
+            except ValueError:
+                compiled.conditions = {"match": "all", "conditions": []}
+        except Exception:  # noqa: BLE001 — malformed spec → treat as a plain reply
+            compiled = None
+
+    if not reply:
+        reply = "Here's the gate I put together — review and save it." if compiled else (
+            "What event should this gate apply to, and what should it allow or deny?"
+        )
+    return {
+        "success": True,
+        "message": "Gate chat",
+        "data": GateChatResponse(reply=reply, gate=compiled),
         "pagination": None,
     }
 

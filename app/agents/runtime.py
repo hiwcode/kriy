@@ -18,6 +18,7 @@ from app.core.config import settings
 from app.agents.database_tool import make_database_tool
 from app.agents.schedule_tool import make_schedule_tools
 from app.agents.workflow_tool import make_workflow_tools
+from app.agents.gate_tool import make_gate_tools
 from app.agents.event_tool import make_event_tools
 from app.agents.notify_tool import make_notify_tools
 from app.agents.email_tool import make_email_tools
@@ -287,6 +288,9 @@ async def _build_tools(
                     )
                 )
                 logger.info("Workflow tools added (via builtin)")
+            elif name == "gate":
+                result.extend(make_gate_tools(pool, created_by, workspace_id))
+                logger.info("Gate tools added (via builtin)")
             elif name == "events":
                 result.extend(make_event_tools(pool, created_by, workspace_id))
                 logger.info("Event tools added (via builtin)")

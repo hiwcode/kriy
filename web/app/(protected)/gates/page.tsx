@@ -22,6 +22,7 @@ import {
   Unlock,
   RefreshCcw,
   AlertTriangle,
+  Sparkles,
 } from "lucide-react";
 
 import { AppLayout } from "@/components/layout/app-layout";
@@ -50,6 +51,7 @@ import {
   deleteGate,
   evaluateDraft,
   listDecisions,
+  gateChat,
   type Gate,
   type GateAction,
   type GateInput,
@@ -346,6 +348,11 @@ function GateEditor({
   const [saving, setSaving] = React.useState(false);
   const [err, setErr] = React.useState<string | null>(null);
 
+  // Plain-English compiler
+  const [nl, setNl] = React.useState("");
+  const [generating, setGenerating] = React.useState(false);
+  const [genReply, setGenReply] = React.useState<string | null>(null);
+
   const [sample, setSample] = React.useState('{\n  "user": { "role": "member" },\n  "amount": 750\n}');
   const [testing, setTesting] = React.useState(false);
   const [result, setResult] = React.useState<DraftResult | null>(null);
@@ -357,10 +364,37 @@ function GateEditor({
       setErr(null);
       setResult(null);
       setTestErr(null);
+      setNl("");
+      setGenReply(null);
     }
   }, [open, initial]);
 
   const set = (patch: Partial<GateInput>) => setDraft((d) => ({ ...d, ...patch }));
+
+  const generate = async () => {
+    if (!nl.trim()) return;
+    setGenerating(true);
+    setGenReply(null);
+    try {
+      const { reply, gate } = await gateChat([{ role: "user", content: nl }]);
+      setGenReply(reply);
+      if (gate) {
+        setDraft((d) => ({
+          ...d,
+          name: gate.name || d.name,
+          event_type: gate.event_type || d.event_type,
+          action: gate.action,
+          reason: gate.reason,
+          allow_override: gate.allow_override,
+          conditions: gate.conditions ?? d.conditions,
+        }));
+      }
+    } catch (e) {
+      setGenReply(e instanceof Error ? e.message : "Could not compile that");
+    } finally {
+      setGenerating(false);
+    }
+  };
 
   const submit = async () => {
     if (!draft.name.trim()) {
@@ -425,6 +459,28 @@ function GateEditor({
         </div>
 
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4">
+          {/* Plain-English compiler */}
+          <div className="space-y-2 rounded-xl border border-primary/30 bg-primary/[0.04] p-3">
+            <Label htmlFor="gate-nl" className="flex items-center gap-1.5 text-primary">
+              <Sparkles className="size-4" /> Describe the rule in plain English
+            </Label>
+            <Textarea
+              id="gate-nl"
+              placeholder="e.g. Block refunds over $500 unless the user is an admin."
+              value={nl}
+              onChange={(e) => setNl(e.target.value)}
+              className="min-h-[60px] bg-background"
+            />
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs text-muted-foreground">Fills in the fields + conditions below.</p>
+              <Button size="sm" onClick={generate} disabled={generating || !nl.trim()}>
+                {generating ? <Loader2 className="size-4 animate-spin" /> : <Sparkles className="size-4" />}
+                Generate
+              </Button>
+            </div>
+            {genReply && <p className="text-xs text-muted-foreground">{genReply}</p>}
+          </div>
+
           <Field label="Name">
             <Input value={draft.name} onChange={(e) => set({ name: e.target.value })} placeholder="High-value refund needs approval" />
           </Field>

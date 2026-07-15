@@ -192,6 +192,7 @@ async def list_builtin_tools() -> dict:
     # Add special tool types that are handled separately in _build_tools
     names.append("schedule")
     names.append("workflow")  # CRUD the user's event-driven workflows
+    names.append("gate")      # CRUD decision gates (allow/deny rules for /events/decide)
     names.append("events")    # CRUD the user's event-type registry
     names.append("notify")    # send the user an in-app notification
     names.append("send_email")  # send email via the user's configured Gmail
