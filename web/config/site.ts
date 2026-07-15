@@ -14,6 +14,7 @@ import {
   MemoryStick,
   Plug,
   Settings,
+  ShieldCheck,
   Workflow,
   Ghost
 } from "lucide-react";
@@ -90,6 +91,7 @@ export const navigationConfig: NavGroup[] = [
     items: [
       { id: 1, name: "Schedules", url: "/schedules", icon: CalendarClock },
       { id: 2, name: "Triggers", url: "/workflows", icon: Workflow },
+      { id: 3, name: "Gates", url: "/gates", icon: ShieldCheck },
     ],
   },
   {

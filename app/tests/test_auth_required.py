@@ -37,6 +37,9 @@ PROTECTED = [
     ("GET", "/api/v1/mcp-connections"),
     ("GET", "/api/v1/database-connections"),
     ("GET", "/api/v1/user-config/"),
+    ("GET", "/api/v1/gates"),
+    ("POST", "/api/v1/gates"),
+    ("POST", "/api/v1/events/decide"),
 ]
 
 

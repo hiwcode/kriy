@@ -21,6 +21,7 @@ from app.api.v1.endpoints import (
     auth,
     activity,
     documents,
+    gates,
 )
 
 router = APIRouter()
@@ -50,3 +51,5 @@ router.include_router(auth.router)
 router.include_router(activity.router)
 router.include_router(documents.router)
 router.include_router(documents.local_files_router)
+router.include_router(gates.router)
+router.include_router(gates.decide_router)
