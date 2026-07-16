@@ -90,7 +90,7 @@ async def upsert_config(
         gkey = google_api_key if google_api_key is not _UNCHANGED else None
         oai_key = openai_api_key if openai_api_key is not _UNCHANGED else None
         ant_key = anthropic_api_key if anthropic_api_key is not _UNCHANGED else None
-        dmodel = default_model if default_model is not _UNCHANGED else "gemini-2.5-flash"
+        dmodel = default_model if default_model is not _UNCHANGED else "gemini-3.1-flash-lite"
         o_key = opik_api_key if opik_api_key is not _UNCHANGED else None
         o_ws = opik_workspace if opik_workspace is not _UNCHANGED else None
         o_proj = opik_project_name if opik_project_name is not _UNCHANGED else "atelier"
@@ -148,7 +148,7 @@ async def upsert_config(
         encrypted_gkey,
         encrypted_oai_key,
         encrypted_ant_key,
-        dmodel or "gemini-2.5-flash",
+        dmodel or "gemini-3.1-flash-lite",
         encrypted_okey,
         o_ws or None,
         o_proj or "atelier",

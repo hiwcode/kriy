@@ -91,7 +91,7 @@ async def _execute_agent(
                                 parts.append(part.text)
                 return "".join(parts), tool_activity
 
-            # gemini-2.5-flash sometimes returns an empty first turn (no text, no
+            # gemini-3.1-flash-lite sometimes returns an empty first turn (no text, no
             # tool call). Retry once; if tools ran but it stayed quiet, that still
             # counts as work done.
             for attempt in range(2):

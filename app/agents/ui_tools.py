@@ -7,7 +7,7 @@ model decides to call the tool — see ``agent_run_service._process_events``,
 which watches for :data:`UI_TOOL_NAMES` and emits ``card`` SSE events.
 
 All arguments are primitives or lists of strings on purpose: nested object
-schemas are unreliable with gemini-2.5-flash function calling.
+schemas are unreliable with gemini-3.1-flash-lite function calling.
 """
 
 from __future__ import annotations

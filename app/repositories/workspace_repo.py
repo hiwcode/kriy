@@ -179,7 +179,7 @@ async def _seed_demo_data(
         """,
         "demo_assistant",
         "Demo Assistant",
-        "gemini-2.5-flash",
+        "gemini-3.1-flash-lite",
         "A friendly demo assistant to help you get started with your AI workspace.",
         _DEMO_SYSTEM_PROMPT,
         sys_prompt_id,

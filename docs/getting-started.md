@@ -145,7 +145,7 @@ When you sign in for the first time, a **personal workspace** is automatically c
 
 1. Go to **Config** in the sidebar
 2. Under **Configuration**, add API keys for the providers you want to use:
-   - **Google API Key** — For Gemini models (`gemini-2.5-flash`, etc.)
+   - **Google API Key** — For Gemini models (`gemini-3.1-flash-lite`, etc.)
    - **OpenAI API Key** — For GPT models (`gpt-4o`, `o3-mini`, etc.)
    - **Anthropic API Key** — For Claude models (`claude-sonnet-4-20250514`, etc.)
 3. Save — agents will use your personal key for the matching provider

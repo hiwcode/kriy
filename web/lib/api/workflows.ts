@@ -96,7 +96,8 @@ export interface EventType {
   name: string;
   description: string;
   payload_schema: Record<string, unknown> | null;
-  subscribers: number;
+  subscribers: number; // matching Triggers
+  gates: number; // matching Gates
 }
 
 /** Standard API envelope: { success, message, data, pagination }. */

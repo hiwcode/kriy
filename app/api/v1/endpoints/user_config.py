@@ -60,7 +60,7 @@ async def get_config(
             "google_api_key": None,
             "openai_api_key": None,
             "anthropic_api_key": None,
-            "default_model": "gemini-2.5-flash",
+            "default_model": "gemini-3.1-flash-lite",
             "opik_api_key": None,
             "opik_workspace": None,
             "opik_project_name": "atelier",

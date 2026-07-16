@@ -21,7 +21,7 @@ from pydantic import BaseModel, Field
 from app.core.access import require_resource_access
 from app.core.security import AuthContext, api_key_auth, require_google_auth
 from app.deps import get_current_workspace, get_db
-from app.repositories import event_type_repo, workflow_repo
+from app.repositories import event_type_repo, gate_repo, workflow_repo
 from app.schemas.response import ApiResponse, Pagination
 from app.services import agent_run_service, agent_service, event_dispatcher, event_worker
 
@@ -112,7 +112,8 @@ class EventTypeIn(BaseModel):
 
 class EventTypeOut(EventTypeIn):
     id: int
-    subscribers: int = 0
+    subscribers: int = 0  # matching Triggers (workflows)
+    gates: int = 0  # matching Gates
 
 
 class RunOut(BaseModel):
@@ -467,7 +468,8 @@ async def list_event_types(
     out: list[dict] = []
     for t in types:
         subs = await workflow_repo.find_matching(pool, workspace_id=ws_id, event_type=t["name"])
-        out.append({**t, "subscribers": len(subs)})
+        gates = await gate_repo.find_matching(pool, workspace_id=ws_id, event_type=t["name"])
+        out.append({**t, "subscribers": len(subs), "gates": len(gates)})
     return {
         "success": True,
         "message": "Event types fetched",
@@ -494,10 +496,11 @@ async def upsert_event_type(
         payload_schema=data.payload_schema,
     )
     subs = await workflow_repo.find_matching(pool, workspace_id=ws_id, event_type=data.name)
+    gates = await gate_repo.find_matching(pool, workspace_id=ws_id, event_type=data.name)
     return {
         "success": True,
         "message": "Event type saved",
-        "data": {**saved, "subscribers": len(subs)},
+        "data": {**saved, "subscribers": len(subs), "gates": len(gates)},
         "pagination": None,
     }
 

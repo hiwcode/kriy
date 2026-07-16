@@ -216,7 +216,7 @@ async def get_tokens_per_agent(
                 input_tokens += usage.get("prompt_token_count") or usage.get("input_tokens") or 0
                 output_tokens += usage.get("candidates_token_count") or usage.get("output_tokens") or 0
         total = input_tokens + output_tokens
-        # gemini-2.5-flash pricing per 1M tokens
+        # gemini-3.1-flash-lite pricing per 1M tokens
         cost = (input_tokens * 0.15 + output_tokens * 0.60) / 1_000_000
         result.append({
             "id": agent_id,

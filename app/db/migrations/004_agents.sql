@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS agents (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL UNIQUE,
     label TEXT NOT NULL,
-    model TEXT NOT NULL DEFAULT 'gemini-2.5-flash',
+    model TEXT NOT NULL DEFAULT 'gemini-3.1-flash-lite',
     description TEXT,
     instruction TEXT,
     instruction_prompt_id INTEGER REFERENCES prompt_library(id),

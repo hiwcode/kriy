@@ -24,3 +24,5 @@ temp/
 /bucket/
 /admin/
 .pytest_cache/
+
+/ops-console

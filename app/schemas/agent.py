@@ -30,7 +30,7 @@ class AgentToolConfig(BaseModel):
 class AgentBase(BaseModel):
     name: str
     label: str
-    model: str = "gemini-2.5-flash"
+    model: str = "gemini-3.1-flash-lite"
     description: str | None = None
     system_prompt: str | None = None
     system_prompt_id: int | None = None

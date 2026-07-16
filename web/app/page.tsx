@@ -183,7 +183,7 @@ const HERO_STATS = [
 ] as const;
 
 const HERO_AGENTS = [
-  { name: "Research Agent", meta: "gemini-2.5-flash", on: true },
+  { name: "Research Agent", meta: "gemini-3.1-flash-lite", on: true },
   { name: "Writer Agent", meta: "gemini-2.5-pro", on: true },
   { name: "Review Agent", meta: "external A2A", on: false },
 ] as const;

@@ -81,7 +81,7 @@ export default function AgentsPage() {
   const [createForm, setCreateForm] = React.useState({
     name: "",
     label: "",
-    model: "gemini-2.5-flash",
+    model: "gemini-3.1-flash-lite",
   });
   const [createError, setCreateError] = React.useState<string | null>(null);
   const [creating, setCreating] = React.useState(false);
@@ -163,7 +163,7 @@ export default function AgentsPage() {
   };
 
   const handleOpenCreate = () => {
-    setCreateForm({ name: "", label: "", model: "gemini-2.5-flash" });
+    setCreateForm({ name: "", label: "", model: "gemini-3.1-flash-lite" });
     setCreateError(null);
     setCreateDialogOpen(true);
   };
@@ -184,7 +184,7 @@ export default function AgentsPage() {
       const created = await createAgent({
         name: name.trim(),
         label: label.trim(),
-        model: model.trim() || "gemini-2.5-flash",
+        model: model.trim() || "gemini-3.1-flash-lite",
       });
       setCreateDialogOpen(false);
       await fetchData();
@@ -363,7 +363,7 @@ export default function AgentsPage() {
                 onChange={(e) =>
                   setCreateForm((prev) => ({ ...prev, model: e.target.value }))
                 }
-                placeholder="gemini-2.5-flash"
+                placeholder="gemini-3.1-flash-lite"
               />
             </div>
             {createError && (

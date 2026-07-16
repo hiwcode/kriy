@@ -34,13 +34,21 @@ async def _download_doc(doc: dict) -> bytes:
         from app.core import storage
         return storage.download_bytes(doc["bucket_key"])
     if doc.get("url"):
-        import httpx
-        assert_public_url(doc["url"])  # SSRF guard: block internal/metadata hosts
-        async with httpx.AsyncClient(timeout=60, follow_redirects=False) as client:
-            resp = await client.get(doc["url"])
-            resp.raise_for_status()
-            return resp.content
+        raw, _ = await _download_url(doc["url"])
+        return raw
     raise ValueError("Document has no bucket_key or URL")
+
+
+async def _download_url(url: str) -> tuple[bytes, str]:
+    """Fetch bytes from an arbitrary URL (SSRF-guarded) and return (content, mime_type).
+    The mime type comes from the response Content-Type header."""
+    import httpx
+    assert_public_url(url)  # SSRF guard: blocks metadata always, private/loopback in prod
+    async with httpx.AsyncClient(timeout=60, follow_redirects=False) as client:
+        resp = await client.get(url)
+        resp.raise_for_status()
+        mime = (resp.headers.get("content-type") or "").split(";")[0].strip() or "application/octet-stream"
+        return resp.content, mime
 
 # Gemini ingests these natively as a document/image part; everything else is
 # decoded to text and inlined into the prompt.
@@ -50,7 +58,7 @@ _MAX_INLINE_TEXT = 100_000
 
 def _vision_model() -> str:
     model = str(settings.DEFAULT_MODEL or "")
-    return model if model.startswith(("gemini", "models/gemini")) else "gemini-2.0-flash"
+    return model if model.startswith(("gemini", "models/gemini")) else "gemini-3.1-flash-lite"
 
 
 async def _resolve_google_key(pool: asyncpg.Pool | None, user_id: int | None) -> str | None:
@@ -96,19 +104,12 @@ def make_analyze_tools(
             "hint": f"Call {hint_tool} again with one of these `document_id`s to analyze it.",
         })
 
-    async def _analyze(doc: dict, instruction: str, default_prompt: str) -> str:
+    async def _run_vision(raw: bytes, mime: str, name: str, instruction: str, default_prompt: str) -> str:
         api_key = await _resolve_google_key(pool, user_id)
         if not api_key:
             return json.dumps({"error": "No Google API key configured for analysis"})
 
-        try:
-            raw = await _download_doc(doc)
-        except Exception as e:  # noqa: BLE001
-            return json.dumps({"error": f"Failed to download document: {e}"})
-
         prompt = instruction.strip() if instruction and instruction.strip() else default_prompt
-        mime = doc["mime_type"]
-
         if mime.startswith(_NATIVE_MIME_PREFIXES):
             contents = [
                 types.Part(inline_data=types.Blob(mime_type=mime, data=raw)),
@@ -116,7 +117,7 @@ def make_analyze_tools(
             ]
         else:
             text = raw.decode("utf-8", errors="replace")[:_MAX_INLINE_TEXT]
-            contents = f"{prompt}\n\n--- Document: {doc['name']} ---\n{text}"
+            contents = f"{prompt}\n\n--- Document: {name} ---\n{text}"
 
         try:
             client = genai.Client(api_key=api_key)
@@ -130,31 +131,44 @@ def make_analyze_tools(
             logger.warning("Document analysis failed: %s", e)
             return json.dumps({"error": f"Analysis failed: {e}"})
 
-        return json.dumps({
-            "document": doc["name"],
-            "mime_type": mime,
-            "analysis": response.text,
-        })
+        return json.dumps({"document": name, "mime_type": mime, "analysis": response.text})
 
-    async def analyze_document(document_id: int = 0, instruction: str = "") -> str:
-        """Work with uploaded/registered documents (PDF, text, etc.) via a vision LLM.
+    async def _analyze(doc: dict, instruction: str, default_prompt: str) -> str:
+        try:
+            raw = await _download_doc(doc)
+        except Exception as e:  # noqa: BLE001
+            return json.dumps({"error": f"Failed to download document: {e}"})
+        return await _run_vision(raw, doc["mime_type"], doc["name"], instruction, default_prompt)
 
-        This is the one tool for everything document-related — both uploaded files
-        and registered URLs.
+    async def _analyze_url(url: str, instruction: str, default_prompt: str) -> str:
+        try:
+            raw, mime = await _download_url(url)
+        except Exception as e:  # noqa: BLE001
+            return json.dumps({"error": f"Failed to fetch URL: {e}"})
+        return await _run_vision(raw, mime, url.rsplit("/", 1)[-1] or url, instruction, default_prompt)
 
-        - Call with no document_id (or 0) to LIST the documents available in this
+    async def analyze_document(document_id: int = 0, url: str = "", instruction: str = "") -> str:
+        """Work with documents (PDF, text, etc.) via a vision LLM.
+
+        Three ways to call it:
+        - No document_id and no url → LIST the documents available in this
           conversation, each with its `id`.
-        - Call with a document_id to ANALYZE that document: summarize it, extract
-          fields, or answer a question about it.
+        - document_id → ANALYZE that registered/uploaded document.
+        - url → FETCH and ANALYZE a document at an http(s) URL directly (e.g. a
+          `file_url` from an event payload). Use this when the file lives in another
+          app rather than in this workspace.
 
         Args:
             document_id: The document's id (from the list call). Omit to list.
+            url: An http(s) URL to fetch and analyze instead of a document_id.
             instruction: What to do with the document — e.g. "Summarize the key
                 points" or "What is the total on this invoice?". Defaults to a
                 general summary.
         """
         if not agent_id:
             return json.dumps({"error": "No agent context"})
+        if url and url.strip():
+            return await _analyze_url(url.strip(), instruction, "Summarize this document and list its key points.")
         if not document_id:
             return await _list(images=False, hint_tool="analyze_document")
         doc, err = await _load_scoped_doc(document_id)
@@ -166,25 +180,27 @@ def make_analyze_tools(
             })
         return await _analyze(doc, instruction, "Summarize this document and list its key points.")
 
-    async def analyze_image(document_id: int = 0, instruction: str = "") -> str:
-        """Work with uploaded/registered images via a vision LLM.
+    async def analyze_image(document_id: int = 0, url: str = "", instruction: str = "") -> str:
+        """Work with images via a vision LLM.
 
-        This is the one tool for everything image-related — both uploaded images
-        and registered image URLs.
-
-        - Call with no document_id (or 0) to LIST the images available in this
-          conversation, each with its `id`.
-        - Call with a document_id to ANALYZE that image: describe it, OCR text,
-          or answer a question about it.
+        Three ways to call it:
+        - No document_id and no url → LIST the images available in this conversation.
+        - document_id → ANALYZE that registered/uploaded image.
+        - url → FETCH and ANALYZE an image at an http(s) URL directly (e.g. a
+          `file_url` from an event payload). Use this when the image lives in
+          another app rather than in this workspace.
 
         Args:
             document_id: The image's id (from the list call). Omit to list.
+            url: An http(s) URL to fetch and analyze instead of a document_id.
             instruction: What to look for — e.g. "Describe this image", "Extract
                 all text", "What objects are visible?". Defaults to a general
                 description.
         """
         if not agent_id:
             return json.dumps({"error": "No agent context"})
+        if url and url.strip():
+            return await _analyze_url(url.strip(), instruction, "Describe this image in detail, including any visible text.")
         if not document_id:
             return await _list(images=True, hint_tool="analyze_image")
         doc, err = await _load_scoped_doc(document_id)

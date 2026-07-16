@@ -584,7 +584,7 @@ function ConfigurationContent({
                   onChange={(e) =>
                     setFormState((prev) => ({ ...prev, model: e.target.value }))
                   }
-                  placeholder="gemini-2.5-flash"
+                  placeholder="gemini-3.1-flash-lite"
                 />
               </div>
               <div className="space-y-2">
@@ -1114,7 +1114,7 @@ const emptyForm: AgentFormState = {
   agent_type: "local",
   name: "",
   label: "",
-  model: "gemini-2.5-flash",
+  model: "gemini-3.1-flash-lite",
   description: "",
   system_prompt: "",
   system_prompt_id: null,

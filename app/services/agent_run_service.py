@@ -173,7 +173,7 @@ async def _process_events(runner, user_id, session_id, message, agent_id, opik_t
                             yield f"data: {json.dumps({'type': 'card', 'card': card})}\n\n"
 
         # After all events: if the model ran tools but returned no closing text
-        # (a known gemini-2.5-flash behaviour), emit a fallback so this turn counts
+        # (a known gemini-3.1-flash-lite behaviour), emit a fallback so this turn counts
         # as successful. Without it the caller would retry the whole turn — re-running
         # the tools and duplicating their side effects (e.g. a second schedule).
         if not emitted_text and not emitted_card and not pending_confirmations and had_tool_activity:

@@ -10,7 +10,7 @@ from app.deps import get_db, get_current_workspace
 from app.repositories import dashboard_repo
 from app.repositories import agent_repo, prompt_library_repo
 
-# Default pricing per 1M tokens (USD) - gemini-2.5-flash
+# Default pricing per 1M tokens (USD) - gemini-3.1-flash-lite
 DEFAULT_INPUT_PRICE = 0.15
 DEFAULT_OUTPUT_PRICE = 0.60
 

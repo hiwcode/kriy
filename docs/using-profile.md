@@ -36,7 +36,7 @@ Atelier supports multiple LLM providers. Set the API key for each provider you w
 
 ### Google API Key (Gemini)
 
-- For models: `gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-2.0-flash`, `gemini-1.5-pro`, etc.
+- For models: `gemini-3.1-flash-lite`, `gemini-2.5-pro`, `gemini-2.0-flash`, `gemini-1.5-pro`, etc.
 - Get a key at [Google AI Studio](https://aistudio.google.com/app/apikey)
 
 ### OpenAI API Key (GPT / o-series)
@@ -70,7 +70,7 @@ Your personal key (Config page) > Server .env key > Error
 
 Choose which model new agents default to. Available options include models from all supported providers:
 
-- **Google:** gemini-2.5-flash, gemini-2.5-pro, gemini-2.0-flash, gemini-1.5-flash, gemini-1.5-pro
+- **Google:** gemini-3.1-flash-lite, gemini-2.5-pro, gemini-2.0-flash, gemini-1.5-flash, gemini-1.5-pro
 - **OpenAI:** gpt-4o, gpt-4o-mini, gpt-4-turbo, o3-mini
 - **Anthropic:** claude-sonnet-4-20250514, claude-haiku-4-20250414
 

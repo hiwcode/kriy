@@ -139,7 +139,7 @@ export function NotificationBell() {
                       <Icon className={cn("mt-0.5 size-4 shrink-0", LEVEL_COLOR[n.level] ?? "")} />
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                          <p className="truncate text-sm font-medium">{n.title}</p>
+                          <p className="wrap-break-word text-sm font-medium">{n.title}</p>
                           {!n.read && <span className="size-1.5 shrink-0 rounded-full bg-primary" />}
                         </div>
                         {n.body && <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{n.body}</p>}

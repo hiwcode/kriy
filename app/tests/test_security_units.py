@@ -5,21 +5,40 @@ document visibility (tenant/session scoping) rule against regressions.
 """
 
 from app.core import net_guard, workspace_signing
+from app.core.config import settings
 from app.repositories import document_repo
 
 
-def test_ssrf_blocks_internal_and_bad_schemes():
-    blocked = [
-        "http://169.254.169.254/latest/meta-data/",  # cloud metadata
-        "http://127.0.0.1:8000/admin",               # loopback
-        "http://localhost/",                          # loopback name
-        "http://10.0.0.5/",                           # private
-        "http://192.168.1.1/",                        # private
-        "file:///etc/passwd",                         # non-http scheme
-        "ftp://example.com/",                         # non-http scheme
-    ]
-    for url in blocked:
-        assert not net_guard.is_public_url(url), f"should block {url}"
+def test_ssrf_always_blocks_metadata_and_bad_schemes(monkeypatch):
+    # Blocked in every environment — including dev.
+    for env in ("production", "development"):
+        monkeypatch.setattr(settings, "ENVIRONMENT", env)
+        for url in [
+            "http://169.254.169.254/latest/meta-data/",  # cloud metadata
+            "file:///etc/passwd",                         # non-http scheme
+            "ftp://example.com/",                         # non-http scheme
+        ]:
+            assert not net_guard.is_public_url(url), f"should block {url} in {env}"
+
+
+def test_ssrf_blocks_private_in_production(monkeypatch):
+    monkeypatch.setattr(settings, "ENVIRONMENT", "production")
+    for url in [
+        "http://127.0.0.1:8000/admin",   # loopback
+        "http://localhost/",              # loopback name
+        "http://10.0.0.5/",               # private
+        "http://192.168.1.1/",            # private
+    ]:
+        assert not net_guard.is_public_url(url), f"should block {url} in prod"
+
+
+def test_ssrf_relaxed_in_development(monkeypatch):
+    # Dev allows localhost/private so local integrations work…
+    monkeypatch.setattr(settings, "ENVIRONMENT", "development")
+    assert net_guard.is_public_url("http://127.0.0.1:8000/admin")
+    assert net_guard.is_public_url("http://10.0.0.5/")
+    # …but the metadata endpoint stays blocked.
+    assert not net_guard.is_public_url("http://169.254.169.254/")
 
 
 def test_ssrf_allows_public_https():

@@ -16,6 +16,7 @@ import {
   Settings,
   ShieldCheck,
   Workflow,
+  Webhook,
   Ghost
 } from "lucide-react";
 
@@ -90,8 +91,9 @@ export const navigationConfig: NavGroup[] = [
     name: "Automation",
     items: [
       { id: 1, name: "Schedules", url: "/schedules", icon: CalendarClock },
-      { id: 2, name: "Triggers", url: "/workflows", icon: Workflow },
-      { id: 3, name: "Gates", url: "/gates", icon: ShieldCheck },
+      { id: 2, name: "Events", url: "/events", icon: Webhook },
+      { id: 3, name: "Triggers", url: "/workflows", icon: Workflow },
+      { id: 4, name: "Gates", url: "/gates", icon: ShieldCheck },
     ],
   },
   {

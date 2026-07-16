@@ -31,7 +31,7 @@ flowchart TB
 3. Fill in:
    - **Name** — Display name
    - **Model** — Choose from any supported provider:
-     - Google: `gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-2.0-flash`
+     - Google: `gemini-3.1-flash-lite`, `gemini-2.5-pro`, `gemini-2.0-flash`
      - OpenAI: `gpt-4o`, `gpt-4o-mini`, `o3-mini`
      - Anthropic: `claude-sonnet-4-20250514`, `claude-haiku-4-20250414`
    - **System prompt** — Base instructions (or choose from Prompt Library)

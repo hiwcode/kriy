@@ -58,7 +58,7 @@ import { AccentPicker } from "@/components/accent-picker";
 import { ContrastToggle } from "@/components/contrast-toggle";
 
 const MODELS = [
-  "gemini-2.5-flash",
+  "gemini-3.1-flash-lite",
   "gemini-2.5-pro",
   "gemini-2.0-flash",
   "gemini-2.0-flash-thinking-exp",
@@ -564,14 +564,14 @@ function ProvidersDialog({
   const [google, setGoogle] = React.useState("");
   const [openai, setOpenai] = React.useState("");
   const [anthropic, setAnthropic] = React.useState("");
-  const [model, setModel] = React.useState("gemini-2.5-flash");
+  const [model, setModel] = React.useState("gemini-3.1-flash-lite");
 
   React.useEffect(() => {
     if (open) {
       setGoogle(config.google_api_key_set ? SECRET_MASK : "");
       setOpenai(config.openai_api_key_set ? SECRET_MASK : "");
       setAnthropic(config.anthropic_api_key_set ? SECRET_MASK : "");
-      setModel(config.default_model ?? "gemini-2.5-flash");
+      setModel(config.default_model ?? "gemini-3.1-flash-lite");
     }
   }, [open, config]);
 
