@@ -40,6 +40,8 @@ PROTECTED = [
     ("GET", "/api/v1/gates"),
     ("POST", "/api/v1/gates"),
     ("POST", "/api/v1/events/decide"),
+    ("GET", "/api/v1/webhooks"),
+    ("POST", "/api/v1/webhooks"),
 ]
 
 

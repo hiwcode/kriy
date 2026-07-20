@@ -45,7 +45,7 @@ export interface Workflow {
   user_id: number | null;
   workspace_id: number | null;
   name: string;
-  event_type: string;
+  event_types: string[];
   agent_id: number;
   instructions: string;
   enabled: boolean;
@@ -56,7 +56,7 @@ export interface Workflow {
 
 export interface WorkflowInput {
   name: string;
-  event_type: string;
+  event_types: string[];
   agent_id: number;
   instructions: string;
   enabled: boolean;
@@ -82,7 +82,7 @@ export interface WorkflowRun {
 
 export interface CompiledWorkflow {
   name: string;
-  event_type: string;
+  event_types: string[];
   instructions: string;
 }
 

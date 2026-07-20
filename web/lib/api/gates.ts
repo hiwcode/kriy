@@ -90,7 +90,7 @@ export interface Gate {
   user_id: number | null;
   workspace_id: number | null;
   name: string;
-  event_type: string;
+  event_types: string[];
   conditions: GroupCondition;
   action: GateAction;
   reason: string;
@@ -101,7 +101,7 @@ export interface Gate {
 
 export interface GateInput {
   name: string;
-  event_type: string;
+  event_types: string[];
   conditions: GroupCondition;
   action: GateAction;
   reason: string;
@@ -140,7 +140,7 @@ export interface DraftResult {
 
 export interface CompiledGate {
   name: string;
-  event_type: string;
+  event_types: string[];
   action: GateAction;
   reason: string;
   allow_override: boolean;

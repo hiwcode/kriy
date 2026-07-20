@@ -48,7 +48,9 @@ decide_router = APIRouter(
 
 class GateIn(BaseModel):
     name: str = Field(..., min_length=1)
-    event_type: str = Field("*", description="Glob matched against the emitted event type")
+    event_types: list[str] = Field(
+        default_factory=list, description="Event types this gate applies to", min_length=1
+    )
     conditions: dict = Field(
         default_factory=lambda: {"match": "all", "conditions": []},
         description="AND/OR/NONE condition tree (see gate_evaluator)",
@@ -96,7 +98,7 @@ class GateChatRequest(BaseModel):
 
 class CompiledGate(BaseModel):
     name: str = ""
-    event_type: str = "*"
+    event_types: list[str] = Field(default_factory=list)
     action: str = "deny"
     reason: str = ""
     allow_override: bool = False
@@ -135,9 +137,9 @@ async def _owned_gate(gate_id: int, pool: asyncpg.Pool, workspace: dict | None) 
 
 
 def _decide(gates: list[dict], *, payload: Any, event_type: str) -> dict:
-    """First matching gate (already in priority order) wins. If the event is gated
-    (>=1 gate matches this event type) but no rule matched, deny by default. An
-    event with no gates at all is ungated and allowed."""
+    """First matching gate (already in priority order) wins. Default is ALLOW —
+    an action is only blocked when a rule explicitly matches and denies it. If no
+    rule matches (or the event is ungated), it is allowed."""
     for g in gates:
         if gate_evaluator.evaluate(g.get("conditions"), payload=payload, event_type=event_type):
             return {
@@ -148,14 +150,6 @@ def _decide(gates: list[dict], *, payload: Any, event_type: str) -> dict:
                 # A deny from an override-flagged gate is advisory: the caller may proceed.
                 "overridable": bool(g.get("allow_override")) and g["action"] == "deny",
             }
-    if gates:
-        return {
-            "decision": "deny",
-            "reason": "No matching rule (default deny)",
-            "matched_gate_id": None,
-            "matched_gate_name": None,
-            "overridable": False,
-        }
     return {
         "decision": "allow",
         "reason": "",
@@ -174,6 +168,15 @@ def _validate(conditions: Any) -> None:
         ) from exc
 
 
+def _clean_events(event_types: list[str]) -> list[str]:
+    cleaned = [e.strip() for e in (event_types or []) if e and e.strip()]
+    if not cleaned:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="at least one event type is required"
+        )
+    return cleaned
+
+
 # --------------------------------------------------------------------------- #
 # Natural-language compiler (like /workflows/chat)
 # --------------------------------------------------------------------------- #
@@ -182,10 +185,11 @@ _GATE_COMPILE_INSTRUCTIONS = (
     "You design 'decision gates' — rules that ALLOW or DENY an action before it runs. "
     "An app sends an event (e.g. 'refund.requested') with a JSON payload; a gate inspects "
     "the payload and decides. Based on the conversation, design ONE gate.\n\n"
-    "A gate has: name (short), event_type (the event glob it applies to, e.g. "
-    "'refund.requested' or 'refund.*'), action ('deny' to block or 'allow' to permit when it "
-    "matches), reason (short explanation returned on a match), allow_override (true only if a "
-    "deny should be advisory/soft so the caller may still proceed), and conditions (a tree).\n\n"
+    "A gate has: name (short), event_types (a JSON array of event types it applies to, e.g. "
+    "['refund.requested'] or ['loan.disburse','loan.topup']), action ('deny' to block or 'allow' "
+    "to permit when it matches), reason (short explanation returned on a match), allow_override "
+    "(true only if a deny should be advisory/soft so the caller may still proceed), and conditions "
+    "(a tree).\n\n"
     "conditions tree — a GROUP is "
     '{"match": "all"|"any"|"none", "conditions": [ ...nodes ]} (all=AND, any=OR, none=NOR). '
     'A LEAF is {"field": <dot-path>, "op": <operator>, "value": <v>}. Fields are dot paths into '
@@ -193,12 +197,14 @@ _GATE_COMPILE_INSTRUCTIONS = (
     "event name. Operators: eq, ne, gt, gte, lt, lte, in, not_in (value is a list), contains, "
     "not_contains, matches (value is a regex string), exists, not_exists. Groups nest, so "
     "'role is admin AND (amount > 500 OR currency is USD)' is nested groups.\n\n"
-    "Remember the model is default-deny once an event is gated: to allow-list, write an 'allow' "
-    "gate for what's permitted; to block specific cases, write a 'deny' gate.\n\n"
+    "Remember the model is default-ALLOW: an action is blocked only when a rule explicitly "
+    "matches and denies it. Write 'deny' gates for the specific cases to block; everything else "
+    "passes. To build a strict allow-list, add a catch-all 'deny' at the lowest priority plus "
+    "'allow' gates above it for what's permitted.\n\n"
     "If the request is ambiguous (which event? what to gate?), ask ONE short clarifying question "
     "and return no gate yet. Otherwise confirm what you built.\n\n"
     "Respond with ONLY one JSON object, no prose outside it, no code fences:\n"
-    '{"reply": "<message to the user>", "gate": {"name": "...", "event_type": "...", '
+    '{"reply": "<message to the user>", "gate": {"name": "...", "event_types": ["..."], '
     '"action": "deny", "reason": "...", "allow_override": false, '
     '"conditions": {"match": "all", "conditions": [ ... ]}}}\n'
     'Omit the "gate" key (or set it null) when you are only asking a question.'
@@ -345,7 +351,7 @@ async def create_gate(
         user_id=auth.user_id,
         workspace_id=_ws_id(workspace),
         name=data.name,
-        event_type=data.event_type or "*",
+        event_types=_clean_events(data.event_types),
         conditions=data.conditions,
         action=data.action,
         reason=data.reason,
@@ -451,6 +457,11 @@ async def gate_chat(
     raw = obj.get("gate")
     compiled: CompiledGate | None = None
     if isinstance(raw, dict):
+        # Tolerate the model emitting a single event_type or a string.
+        if "event_types" not in raw and raw.get("event_type"):
+            raw["event_types"] = [raw["event_type"]]
+        if isinstance(raw.get("event_types"), str):
+            raw["event_types"] = [raw["event_types"]]
         try:
             compiled = CompiledGate(**raw)
             if compiled.action not in ("allow", "deny"):
@@ -513,7 +524,7 @@ async def update_gate(
         pool,
         gate_id,
         name=data.name,
-        event_type=data.event_type or "*",
+        event_types=_clean_events(data.event_types),
         conditions=data.conditions,
         action=data.action,
         reason=data.reason,

@@ -108,6 +108,9 @@ async def run_claimed(pool: asyncpg.Pool, run: dict) -> None:
             pool, workflow["agent_id"], message, workflow.get("user_id")
         )
         await workflow_repo.finish_run(pool, run_id, status="done", response=text)
+        # Outbound: notify webhook subscribers the run finished (never blocks/raises).
+        from app.services import webhook_service
+        await webhook_service.deliver_run_completed(pool, workflow=workflow, run=run, result=text)
     except Exception as exc:  # noqa: BLE001 — record, don't propagate into the worker
         attempts = run.get("attempts", 1)
         max_attempts = run.get("max_attempts", 3)

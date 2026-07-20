@@ -9,7 +9,7 @@ from typing import Any
 import asyncpg
 
 _COLS = (
-    "id, user_id, workspace_id, name, event_type, enabled, agent_id, "
+    "id, user_id, workspace_id, name, event_types, enabled, agent_id, "
     "instructions, priority, execution_mode, max_concurrency, created_at, updated_at"
 )
 
@@ -43,7 +43,7 @@ async def create(
     user_id: int | None,
     workspace_id: int | None,
     name: str,
-    event_type: str,
+    event_types: list[str],
     agent_id: int,
     instructions: str,
     enabled: bool = True,
@@ -53,11 +53,11 @@ async def create(
 ) -> dict:
     row = await pool.fetchrow(
         f"""
-        INSERT INTO workflows (user_id, workspace_id, name, event_type, agent_id, instructions, enabled, priority, execution_mode, max_concurrency)
+        INSERT INTO workflows (user_id, workspace_id, name, event_types, agent_id, instructions, enabled, priority, execution_mode, max_concurrency)
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
         RETURNING {_COLS};
         """,
-        user_id, workspace_id, name, event_type, agent_id, instructions, enabled, priority,
+        user_id, workspace_id, name, event_types, agent_id, instructions, enabled, priority,
         execution_mode, max_concurrency,
     )
     return dict(row)
@@ -68,7 +68,7 @@ async def update(
     workflow_id: int,
     *,
     name: str,
-    event_type: str,
+    event_types: list[str],
     agent_id: int,
     instructions: str,
     enabled: bool,
@@ -80,13 +80,13 @@ async def update(
         await pool.fetchrow(
             f"""
             UPDATE workflows
-               SET name=$2, event_type=$3, agent_id=$4, instructions=$5,
+               SET name=$2, event_types=$3, agent_id=$4, instructions=$5,
                    enabled=$6, priority=$7, execution_mode=$8, max_concurrency=$9,
                    updated_at=NOW()
              WHERE id=$1
             RETURNING {_COLS};
             """,
-            workflow_id, name, event_type, agent_id, instructions, enabled, priority,
+            workflow_id, name, event_types, agent_id, instructions, enabled, priority,
             execution_mode, max_concurrency,
         )
     )
@@ -100,13 +100,16 @@ async def delete(pool: asyncpg.Pool, workflow_id: int) -> bool:
 async def find_matching(
     pool: asyncpg.Pool, *, workspace_id: int | None, event_type: str
 ) -> list[dict]:
-    """Enabled workflows in this workspace whose event_type glob matches ``event_type``."""
+    """Enabled workflows in this workspace where any of ``event_types`` matches."""
     rows = await pool.fetch(
         f"SELECT {_COLS} FROM workflows "
         f"WHERE workspace_id IS NOT DISTINCT FROM $1 AND enabled = TRUE;",
         workspace_id,
     )
-    return [dict(r) for r in rows if fnmatch.fnmatch(event_type, r["event_type"])]
+    return [
+        dict(r) for r in rows
+        if any(fnmatch.fnmatch(event_type, p) for p in (r["event_types"] or []))
+    ]
 
 
 # --------------------------------------------------------------------------- #

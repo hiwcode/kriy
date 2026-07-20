@@ -11,7 +11,7 @@ import {
   Sparkles,
   Power,
   History,
-  Webhook,
+  Radio,
   ArrowUpDown,
   Check,
   Copy,
@@ -33,6 +33,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { ResizableDrawer } from "@/components/ui/resizable-drawer";
 import { SheetTitle } from "@/components/ui/sheet";
+import { EventMultiSelect } from "@/components/event-multiselect";
 import {
   Select,
   SelectContent,
@@ -64,7 +65,7 @@ const emptyWorkflow = (): Workflow => ({
   user_id: null,
   workspace_id: null,
   name: "",
-  event_type: "",
+  event_types: [],
   agent_id: 0,
   instructions: "",
   enabled: true,
@@ -258,7 +259,7 @@ export default function WorkflowsPage() {
     try {
       const input = {
         name: w.name.trim(),
-        event_type: w.event_type.trim() || "*",
+        event_types: w.event_types,
         agent_id: w.agent_id,
         instructions: w.instructions,
         enabled: w.enabled,
@@ -310,7 +311,7 @@ export default function WorkflowsPage() {
         Queue
       </Button>
       <Button variant="outline" size="sm" onClick={() => setEventsOpen(true)}>
-        <Webhook className="size-4" />
+        <Radio className="size-4" />
         Events{eventTypes.length ? ` (${eventTypes.length})` : ""}
       </Button>
       <Button variant="outline" size="sm" onClick={() => setCodeOpen(true)}>
@@ -497,9 +498,11 @@ function WorkflowsList({
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <p className="font-medium">{w.name || "Untitled"}</p>
-                <Badge variant="secondary" className="gap-1 border-0 font-mono text-[10px]">
-                  <Webhook className="size-3" /> {w.event_type}
-                </Badge>
+                {w.event_types.map((ev) => (
+                  <Badge key={ev} variant="secondary" className="gap-1 border-0 font-mono text-[10px]">
+                    <Radio className="size-3" /> {ev}
+                  </Badge>
+                ))}
                 <Badge variant="secondary" className="border-0 text-[10px]">
                   {agentName(w.agent_id)}
                 </Badge>
@@ -600,7 +603,7 @@ function WorkflowEditor({
       }
       set({
         name: draft.name.trim() || workflow.name,
-        event_type: workflow.event_type || draft.event_type,
+        event_types: workflow.event_types?.length ? workflow.event_types : draft.event_types,
         instructions: workflow.instructions ?? draft.instructions,
       });
       toast.success("Workflow drafted — review and save");
@@ -614,7 +617,7 @@ function WorkflowEditor({
   const submit = () => {
     if (!draft.name.trim()) return setErr("Name is required");
     if (!draft.agent_id) return setErr("Pick an agent to run");
-    if (!draft.event_type.trim()) return setErr("Event type is required");
+    if (!draft.event_types.length) return setErr("Pick at least one event");
     onSave(draft);
   };
 
@@ -660,30 +663,19 @@ function WorkflowEditor({
             <Input value={draft.name} onChange={(e) => set({ name: e.target.value })} placeholder="Auto-reset todos" />
           </Field>
 
-          <div className="rounded-lg border border-blue-200 bg-blue-50/50 px-3 py-2.5 text-xs text-blue-700 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-300">
-            <p className="font-medium mb-1">Event type supports glob patterns:</p>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 font-mono">
-              <span>todo.completed</span><span className="text-blue-500">exact match</span>
-              <span>todo.*</span><span className="text-blue-500">all todo events</span>
-              <span>*.created</span><span className="text-blue-500">all created events</span>
-              <span>*</span><span className="text-blue-500">matches everything</span>
-            </div>
-          </div>
-
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Event type">
-              <Input
-                list="wf-event-types"
-                value={draft.event_type}
-                onChange={(e) => set({ event_type: e.target.value })}
-                placeholder="todo.*"
-                className="font-mono"
+            <Field label="Events">
+              <EventMultiSelect
+                options={eventTypes.map((t) => t.name)}
+                selected={new Set(draft.event_types)}
+                onToggle={(ev) =>
+                  set({
+                    event_types: draft.event_types.includes(ev)
+                      ? draft.event_types.filter((x) => x !== ev)
+                      : [...draft.event_types, ev],
+                  })
+                }
               />
-              <datalist id="wf-event-types">
-                {eventTypes.map((t) => (
-                  <option key={t.id} value={t.name} />
-                ))}
-              </datalist>
             </Field>
             <Field label="Priority">
               <Input
@@ -810,7 +802,7 @@ function RunsDrawer({
         <div className="flex items-center justify-between gap-2 border-b px-4 py-3">
           <div className="min-w-0">
             <p className="truncate font-semibold">Runs · {workflow?.name}</p>
-            <p className="truncate text-xs text-muted-foreground font-mono">{workflow?.event_type}</p>
+            <p className="truncate text-xs text-muted-foreground font-mono">{workflow?.event_types?.join(", ")}</p>
           </div>
           <div className="flex items-center gap-1">
             <Button variant="ghost" size="icon-sm" onClick={refresh} title="Refresh">
@@ -988,7 +980,7 @@ function EventsDrawer({
         <div className="flex items-center justify-between gap-2 border-b px-4 py-3">
           <div className="flex items-center gap-2.5">
             <span className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
-              <Webhook className="size-[18px]" />
+              <Radio className="size-[18px]" />
             </span>
             <div>
               <p className="font-semibold">Events</p>
@@ -1120,7 +1112,7 @@ function EventsTab({
         <div className="h-20 animate-pulse rounded-xl border bg-card" />
       ) : eventTypes.length === 0 ? (
         <EmptyState
-          icon={<Webhook className="size-7" />}
+          icon={<Radio className="size-7" />}
           title="No events registered"
           body="Register the events your external app sends (e.g. “todo.completed”) so workflows can react to them and payloads are validated."
         />
@@ -1129,7 +1121,7 @@ function EventsTab({
           {eventTypes.map((t) => (
             <div key={t.id} className="flex items-start gap-3 rounded-xl border bg-card p-3.5">
               <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <Webhook className="size-[18px]" />
+                <Radio className="size-[18px]" />
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">

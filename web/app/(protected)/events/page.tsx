@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { Webhook, Pencil, Trash2, Plus, Check, Loader2 } from "lucide-react";
+import { Radio, Pencil, Trash2, Plus, Check, Loader2 } from "lucide-react";
 
 import { AppLayout } from "@/components/layout/app-layout";
 import { Button } from "@/components/ui/button";
@@ -160,7 +160,7 @@ export default function EventsPage() {
             ) : eventTypes.length === 0 ? (
               <div className="rounded-2xl border border-dashed bg-card p-12 text-center shadow-sm">
                 <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                  <Webhook className="size-7" />
+                  <Radio className="size-7" />
                 </div>
                 <h2 className="mb-1.5 text-lg font-semibold tracking-tight">No events registered</h2>
                 <p className="mx-auto max-w-sm text-sm text-muted-foreground">
@@ -173,7 +173,7 @@ export default function EventsPage() {
                 {eventTypes.map((t) => (
                   <div key={t.id} className="flex items-start gap-3 rounded-xl border bg-card p-3.5 shadow-sm">
                     <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                      <Webhook className="size-[18px]" />
+                      <Radio className="size-[18px]" />
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">

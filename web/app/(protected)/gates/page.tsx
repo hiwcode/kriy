@@ -44,6 +44,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ConditionBuilder } from "@/components/gates/condition-builder";
 import { listEventTypes, type EventType } from "@/lib/api/workflows";
+import { EventMultiSelect } from "@/components/event-multiselect";
 import {
   listGates,
   createGate,
@@ -60,7 +61,7 @@ import {
 } from "@/lib/api/gates";
 
 const DESCRIPTION =
-  "Rules that allow or deny a proposed action before it runs. An app POSTs the action to /events/decide and honors the verdict. Once an event has gates, anything matching no rule is denied by default.";
+  "Rules that allow or deny a proposed action before it runs. An app POSTs the action to /events/decide and honors the verdict. Default is allow — an action is only blocked when a rule explicitly matches and denies it.";
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -74,7 +75,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function toInput(g: Gate): GateInput {
   return {
     name: g.name,
-    event_type: g.event_type,
+    event_types: g.event_types ?? [],
     conditions: g.conditions ?? { match: "all", conditions: [] },
     action: g.action,
     reason: g.reason,
@@ -86,7 +87,7 @@ function toInput(g: Gate): GateInput {
 
 const emptyForm: GateInput = {
   name: "",
-  event_type: "*",
+  event_types: [],
   conditions: { match: "all", conditions: [] },
   action: "deny",
   reason: "",
@@ -291,9 +292,11 @@ function GatesList({
                 <Badge variant={g.action === "deny" ? "destructive" : "secondary"} className="border-0 text-[10px]">
                   {g.action}
                 </Badge>
-                <Badge variant="secondary" className="gap-1 border-0 font-mono text-[10px]">
-                  <Webhook className="size-3" /> {g.event_type}
-                </Badge>
+                {g.event_types.map((ev) => (
+                  <Badge key={ev} variant="secondary" className="gap-1 border-0 font-mono text-[10px]">
+                    <Webhook className="size-3" /> {ev}
+                  </Badge>
+                ))}
                 <Badge variant="secondary" className="gap-1 border-0 text-[10px]">
                   <ArrowUpDown className="size-3" /> p{g.priority}
                 </Badge>
@@ -382,7 +385,7 @@ function GateEditor({
         setDraft((d) => ({
           ...d,
           name: gate.name || d.name,
-          event_type: gate.event_type || d.event_type,
+          event_types: gate.event_types?.length ? gate.event_types : d.event_types,
           action: gate.action,
           reason: gate.reason,
           allow_override: gate.allow_override,
@@ -401,10 +404,14 @@ function GateEditor({
       setErr("Give the gate a name");
       return;
     }
+    if (draft.event_types.length === 0) {
+      setErr("Pick at least one event");
+      return;
+    }
     setSaving(true);
     setErr(null);
     try {
-      await onSave({ ...draft, event_type: draft.event_type || "*" });
+      await onSave(draft);
       onOpenChange(false);
       toast.success(initial ? "Gate saved" : "Gate created");
     } catch (e) {
@@ -428,7 +435,7 @@ function GateEditor({
     try {
       setResult(
         await evaluateDraft({
-          type: draft.event_type && draft.event_type !== "*" ? draft.event_type : "test.event",
+          type: draft.event_types[0] || "test.event",
           payload,
           conditions: draft.conditions,
           action: draft.action,
@@ -485,29 +492,20 @@ function GateEditor({
             <Input value={draft.name} onChange={(e) => set({ name: e.target.value })} placeholder="High-value refund needs approval" />
           </Field>
 
-          <div className="rounded-lg border border-blue-200 bg-blue-50/50 px-3 py-2.5 text-xs text-blue-700 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-300">
-            <p className="mb-1 font-medium">Event type supports glob patterns:</p>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 font-mono">
-              <span>refund.requested</span><span className="text-blue-500">exact match</span>
-              <span>refund.*</span><span className="text-blue-500">all refund events</span>
-              <span>*</span><span className="text-blue-500">matches everything</span>
-            </div>
-          </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Event type">
-              <Input
-                list="gate-event-types"
-                value={draft.event_type}
-                onChange={(e) => set({ event_type: e.target.value })}
-                placeholder="refund.*"
-                className="font-mono"
+            <Field label="Events">
+              <EventMultiSelect
+                options={eventTypes.map((t) => t.name)}
+                selected={new Set(draft.event_types)}
+                onToggle={(ev) =>
+                  set({
+                    event_types: draft.event_types.includes(ev)
+                      ? draft.event_types.filter((x) => x !== ev)
+                      : [...draft.event_types, ev],
+                  })
+                }
               />
-              <datalist id="gate-event-types">
-                {eventTypes.map((t) => (
-                  <option key={t.id} value={t.name} />
-                ))}
-              </datalist>
             </Field>
             <Field label="Priority">
               <Input
@@ -598,8 +596,7 @@ function GateEditor({
                   </>
                 ) : (
                   <span className="text-muted-foreground">
-                    This rule does not fire — the verdict falls to other gates, or the default
-                    (deny once an event has any gates).
+                    This rule does not fire — the verdict falls to other gates, or the default (allow).
                   </span>
                 )}
               </div>
@@ -726,6 +723,7 @@ function ActivityDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (
                   )}
                 </span>
                 {r.reason && <span>· {r.reason}</span>}
+                {r.payload ? <pre> {JSON.stringify(r.payload)}</pre>:""}
               </div>
             </div>
           ))}

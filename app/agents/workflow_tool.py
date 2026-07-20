@@ -45,7 +45,7 @@ def make_workflow_tools(
                     {
                         "id": w["id"],
                         "name": w["name"],
-                        "event_type": w["event_type"],
+                        "event_types": w["event_types"],
                         "agent_id": w["agent_id"],
                         "enabled": w["enabled"],
                         "priority": w["priority"],
@@ -59,16 +59,16 @@ def make_workflow_tools(
 
     async def create_workflow(
         name: str,
-        event_type: str,
+        event_types: list[str],
         instructions: str,
         agent_id: int | None = None,
         priority: int = 0,
     ) -> str:
-        """Create a workflow: when ``event_type`` fires, run an agent with ``instructions``.
+        """Create a workflow: when one of ``event_types`` fires, run an agent with ``instructions``.
 
         Args:
             name: A short name for the workflow.
-            event_type: The event to react to, e.g. 'todo.completed' (glob ok: 'todo.*').
+            event_types: Event types to react to, e.g. ['todo.completed'].
             instructions: What the agent should do when the event fires (it acts via its tools).
             agent_id: Which agent runs it. Defaults to the current agent.
             priority: Higher runs first when several workflows match one event.
@@ -76,13 +76,15 @@ def make_workflow_tools(
         target_agent = agent_id or default_agent_id
         if not target_agent:
             return json.dumps({"error": "agent_id is required"})
+        if not event_types:
+            return json.dumps({"error": "at least one event type is required"})
         try:
             wf = await workflow_repo.create(
                 pool,
                 user_id=user_id,
                 workspace_id=workspace_id,
                 name=name,
-                event_type=event_type or "*",
+                event_types=event_types,
                 agent_id=int(target_agent),
                 instructions=instructions,
                 enabled=True,
@@ -95,7 +97,7 @@ def make_workflow_tools(
     async def update_workflow(
         workflow_id: int,
         name: str | None = None,
-        event_type: str | None = None,
+        event_types: list[str] | None = None,
         instructions: str | None = None,
         agent_id: int | None = None,
         priority: int | None = None,
@@ -110,7 +112,7 @@ def make_workflow_tools(
                 pool,
                 workflow_id,
                 name=name if name is not None else existing["name"],
-                event_type=event_type if event_type is not None else existing["event_type"],
+                event_types=event_types if event_types else existing["event_types"],
                 agent_id=int(agent_id) if agent_id is not None else existing["agent_id"],
                 instructions=instructions if instructions is not None else existing["instructions"],
                 enabled=enabled if enabled is not None else existing["enabled"],

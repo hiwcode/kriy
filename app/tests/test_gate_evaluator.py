@@ -186,14 +186,14 @@ def test_decide_no_gates_allows():
     assert v["matched_gate_id"] is None
 
 
-def test_decide_gated_but_unmatched_denies():
+def test_decide_gated_but_unmatched_allows():
     from app.api.v1.endpoints.gates import _decide
 
+    # Default is ALLOW: a gate exists but nothing matched → allowed, not denied.
     gates = [_gate(1, "deny", {"field": "payload.amount", "op": "gt", "value": 500})]
     v = _decide(gates, payload={"amount": 10}, event_type="x")
-    assert v["decision"] == "deny"
-    assert v["matched_gate_id"] is None  # default deny, not a specific rule
-    assert "default deny" in v["reason"]
+    assert v["decision"] == "allow"
+    assert v["matched_gate_id"] is None
 
 
 def test_decide_matching_rule_wins():

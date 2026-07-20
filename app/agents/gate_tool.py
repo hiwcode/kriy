@@ -70,7 +70,7 @@ def make_gate_tools(
                     {
                         "id": g["id"],
                         "name": g["name"],
-                        "event_type": g["event_type"],
+                        "event_types": g["event_types"],
                         "action": g["action"],
                         "enabled": g["enabled"],
                         "priority": g["priority"],
@@ -86,21 +86,21 @@ def make_gate_tools(
 
     async def create_gate(
         name: str,
-        event_type: str,
+        event_types: list[str],
         conditions_json: str,
         action: str = "deny",
         reason: str = "",
         priority: int = 0,
         allow_override: bool = False,
     ) -> str:
-        """Create a decision gate: when ``event_type`` fires and the conditions match, the verdict is ``action``.
+        """Create a decision gate: when one of ``event_types`` fires and the conditions match, the verdict is ``action``.
 
-        Note: once an event has any gate, a request matching no rule is denied by default
-        (whitelist). Use ``action='allow'`` to permit specific cases, ``action='deny'`` to block.
+        Default is allow — an action is blocked only when a rule explicitly matches and denies it.
+        Write ``action='deny'`` gates for cases to block; ``action='allow'`` for explicit allows.
 
         Args:
             name: A short name for the gate.
-            event_type: The event glob it applies to, e.g. 'refund.requested' or 'refund.*'.
+            event_types: Event types this gate applies to, e.g. ['refund.requested'].
             conditions_json: {help}
             action: 'deny' to block or 'allow' to permit when the conditions match.
             reason: Short explanation returned on a match.
@@ -112,13 +112,15 @@ def make_gate_tools(
             return json.dumps({"error": err})
         if action not in ("allow", "deny"):
             return json.dumps({"error": "action must be 'allow' or 'deny'"})
+        if not event_types:
+            return json.dumps({"error": "at least one event type is required"})
         try:
             g = await gate_repo.create(
                 pool,
                 user_id=user_id,
                 workspace_id=workspace_id,
                 name=name,
-                event_type=event_type or "*",
+                event_types=event_types,
                 conditions=conditions,
                 action=action,
                 reason=reason,
@@ -133,7 +135,7 @@ def make_gate_tools(
     async def update_gate(
         gate_id: int,
         name: str | None = None,
-        event_type: str | None = None,
+        event_types: list[str] | None = None,
         conditions_json: str | None = None,
         action: str | None = None,
         reason: str | None = None,
@@ -159,7 +161,7 @@ def make_gate_tools(
                 pool,
                 gate_id,
                 name=name if name is not None else existing["name"],
-                event_type=event_type if event_type is not None else existing["event_type"],
+                event_types=event_types if event_types else existing["event_types"],
                 conditions=conditions,
                 action=new_action,
                 reason=reason if reason is not None else existing["reason"],

@@ -9,7 +9,7 @@ from typing import Any
 import asyncpg
 
 _COLS = (
-    "id, user_id, workspace_id, name, event_type, enabled, priority, "
+    "id, user_id, workspace_id, name, event_types, enabled, priority, "
     "conditions, action, reason, allow_override, created_at, updated_at"
 )
 
@@ -48,7 +48,7 @@ async def create(
     user_id: int | None,
     workspace_id: int | None,
     name: str,
-    event_type: str,
+    event_types: list[str],
     conditions: Any,
     action: str,
     reason: str,
@@ -59,11 +59,11 @@ async def create(
     row = await pool.fetchrow(
         f"""
         INSERT INTO decision_gates
-            (user_id, workspace_id, name, event_type, enabled, priority, conditions, action, reason, allow_override)
+            (user_id, workspace_id, name, event_types, enabled, priority, conditions, action, reason, allow_override)
         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
         RETURNING {_COLS};
         """,
-        user_id, workspace_id, name, event_type, enabled, priority,
+        user_id, workspace_id, name, event_types, enabled, priority,
         json.dumps(conditions, default=str), action, reason, allow_override,
     )
     return _row(row)  # type: ignore[return-value]
@@ -74,7 +74,7 @@ async def update(
     gate_id: int,
     *,
     name: str,
-    event_type: str,
+    event_types: list[str],
     conditions: Any,
     action: str,
     reason: str,
@@ -86,12 +86,12 @@ async def update(
         await pool.fetchrow(
             f"""
             UPDATE decision_gates
-               SET name=$2, event_type=$3, enabled=$4, priority=$5,
+               SET name=$2, event_types=$3, enabled=$4, priority=$5,
                    conditions=$6, action=$7, reason=$8, allow_override=$9, updated_at=NOW()
              WHERE id=$1
             RETURNING {_COLS};
             """,
-            gate_id, name, event_type, enabled, priority,
+            gate_id, name, event_types, enabled, priority,
             json.dumps(conditions, default=str), action, reason, allow_override,
         )
     )
@@ -105,7 +105,7 @@ async def delete(pool: asyncpg.Pool, gate_id: int) -> bool:
 async def find_matching(
     pool: asyncpg.Pool, *, workspace_id: int | None, event_type: str
 ) -> list[dict]:
-    """Enabled gates in this workspace whose ``event_type`` glob matches, in
+    """Enabled gates in this workspace where any of ``event_types`` matches, in
     evaluation order (priority DESC, then id ASC)."""
     rows = await pool.fetch(
         f"SELECT {_COLS} FROM decision_gates "
@@ -116,7 +116,7 @@ async def find_matching(
     out: list[dict] = []
     for r in rows:
         d = _row(r)
-        if d and fnmatch.fnmatch(event_type, d["event_type"]):
+        if d and any(fnmatch.fnmatch(event_type, p) for p in (d["event_types"] or [])):
             out.append(d)
     return out
 

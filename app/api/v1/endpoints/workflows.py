@@ -56,7 +56,9 @@ event_types_router = APIRouter(
 
 class WorkflowIn(BaseModel):
     name: str = Field(..., min_length=1)
-    event_type: str = Field("*", description="Glob matched against the emitted event type")
+    event_types: list[str] = Field(
+        default_factory=list, description="Event types this trigger reacts to", min_length=1
+    )
     agent_id: int
     instructions: str = ""
     enabled: bool = True
@@ -83,7 +85,7 @@ class WorkflowChatRequest(BaseModel):
 
 class CompiledWorkflow(BaseModel):
     name: str = ""
-    event_type: str = "*"
+    event_types: list[str] = Field(default_factory=list)
     instructions: str = ""
 
 
@@ -185,13 +187,13 @@ _COMPILE_INSTRUCTIONS = (
     "You design event-driven automations ('workflows'). An app emits events (e.g. "
     "'todo.completed', 'order.shipped'); a workflow reacts by running an agent with "
     "your instructions. Based on the conversation, design ONE workflow.\n\n"
-    "Fields: name (short), event_type (the event glob to react to, e.g. 'todo.completed' "
-    "or 'todo.*'), instructions (a concise directive the agent follows when the event "
-    "fires, written so it acts through its own tools).\n\n"
+    "Fields: name (short), event_types (a JSON array of event types to react to, e.g. "
+    "['todo.completed'] or ['order.shipped','order.delivered']), instructions (a concise "
+    "directive the agent follows when the event fires, written so it acts through its own tools).\n\n"
     "If the request is ambiguous (especially which event to react to), ask ONE short "
     "clarifying question and return no workflow yet. Otherwise confirm what you built.\n\n"
     "Respond with ONLY a single JSON object, no prose outside it, no code fences:\n"
-    '{"reply": "<message to the user>", "workflow": {"name": "...", "event_type": "...", '
+    '{"reply": "<message to the user>", "workflow": {"name": "...", "event_types": ["..."], '
     '"instructions": "..."}}\n'
     "Omit the \"workflow\" key (or set it null) when you are only asking a question."
 )
@@ -259,7 +261,7 @@ async def create_workflow(
         user_id=auth.user_id,
         workspace_id=_ws_id(workspace),
         name=data.name,
-        event_type=data.event_type or "*",
+        event_types=data.event_types,
         agent_id=data.agent_id,
         instructions=data.instructions,
         enabled=data.enabled,
@@ -284,7 +286,7 @@ async def update_workflow(
         pool,
         workflow_id,
         name=data.name,
-        event_type=data.event_type or "*",
+        event_types=data.event_types,
         agent_id=data.agent_id,
         instructions=data.instructions,
         enabled=data.enabled,
@@ -370,6 +372,11 @@ async def workflow_chat(
     wf = obj.get("workflow")
     compiled = None
     if isinstance(wf, dict):
+        # Tolerate the model emitting a single event_type or a string.
+        if "event_types" not in wf and wf.get("event_type"):
+            wf["event_types"] = [wf["event_type"]]
+        if isinstance(wf.get("event_types"), str):
+            wf["event_types"] = [wf["event_types"]]
         try:
             compiled = CompiledWorkflow(**wf)
         except Exception:

@@ -22,6 +22,7 @@ from app.api.v1.endpoints import (
     activity,
     documents,
     gates,
+    webhooks,
 )
 
 router = APIRouter()
@@ -53,3 +54,4 @@ router.include_router(documents.router)
 router.include_router(documents.local_files_router)
 router.include_router(gates.router)
 router.include_router(gates.decide_router)
+router.include_router(webhooks.router)
