@@ -10,15 +10,6 @@ from app.deps import get_db, get_current_workspace
 from app.repositories import dashboard_repo
 from app.repositories import agent_repo, prompt_library_repo
 
-# Default pricing per 1M tokens (USD) - gemini-3.1-flash-lite
-DEFAULT_INPUT_PRICE = 0.15
-DEFAULT_OUTPUT_PRICE = 0.60
-
-
-def _compute_cost(input_tokens: int, output_tokens: int) -> float:
-    return (input_tokens * DEFAULT_INPUT_PRICE + output_tokens * DEFAULT_OUTPUT_PRICE) / 1_000_000
-
-
 router = APIRouter(
     prefix="/dashboard",
     tags=["dashboard"],
@@ -53,7 +44,6 @@ async def get_dashboard(
         pool, user_id=session_user_id, workspace_id=workspace_id
     )
     total_tokens = total_input + total_output
-    estimated_cost = _compute_cost(total_input, total_output)
 
     usage_data = await dashboard_repo.get_daily_usage(
         pool, user_id=session_user_id, days=7, workspace_id=workspace_id
@@ -71,6 +61,8 @@ async def get_dashboard(
         agent_user_id=db_user_id,
         workspace_id=workspace_id,
     )
+    # Actual cost = sum of per-agent costs (each priced by its own model).
+    estimated_cost = round(sum(a["estimated_cost"] for a in tokens_per_agent), 6)
     recent_activity = await dashboard_repo.get_recent_activity(
         pool,
         user_id=session_user_id,

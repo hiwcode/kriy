@@ -53,6 +53,7 @@ import {
 } from "@/lib/api/mcp-connections";
 import { listDatabaseConnections } from "@/lib/api/database-connections";
 import { listSkills, SkillItem } from "@/lib/api/skills";
+import { listModels, type ModelPricing } from "@/lib/api/models";
 import {
   Select,
   SelectContent,
@@ -287,6 +288,18 @@ function ConfigurationContent({
   const [a2aNewUrl, setA2aNewUrl] = React.useState("");
   const [a2aNewName, setA2aNewName] = React.useState("");
   const [a2aNewHeaders, setA2aNewHeaders] = React.useState("");
+
+  const [models, setModels] = React.useState<ModelPricing[]>([]);
+  React.useEffect(() => {
+    listModels().then(setModels).catch(() => {});
+  }, []);
+  // Keep the agent's current model selectable even if it isn't in the catalog.
+  const modelOptions = React.useMemo(() => {
+    const names = models.map((m) => m.name);
+    return formState.model && !names.includes(formState.model)
+      ? [formState.model, ...names]
+      : names;
+  }, [models, formState.model]);
 
   const toolsArray = Array.isArray(formState.tools) ? formState.tools : [];
 
@@ -579,13 +592,23 @@ function ConfigurationContent({
                 <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Model</Label>
-                <Input
-                  value={formState.model}
-                  onChange={(e) =>
-                    setFormState((prev) => ({ ...prev, model: e.target.value }))
-                  }
-                  placeholder="gemini-3.1-flash-lite"
-                />
+                <Select
+                  value={formState.model || undefined}
+                  onValueChange={(v) => setFormState((prev) => ({ ...prev, model: v }))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a model" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {modelOptions.map((m) => (
+                      <SelectItem key={m} value={m}>{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Manage models &amp; pricing in{" "}
+                  <Link href="/config" className="text-primary underline underline-offset-2">Config</Link>.
+                </p>
               </div>
               <div className="space-y-2">
                 <Label>Description</Label>

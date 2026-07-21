@@ -11,7 +11,7 @@ from app.core.access import require_resource_access
 from app.core.rate_limit import rate_limit
 from app.core.security import AuthContext, api_key_auth, require_google_auth
 from app.deps import get_db, get_current_workspace
-from app.repositories import memory_repo, session_repo, trace_repo
+from app.repositories import memory_repo, session_repo, trace_repo, model_repo
 from app.schemas.agent import AgentCreate, AgentUpdate, AgentBulkDelete
 from app.schemas.response import ApiResponse, Pagination
 from app.services import agent_service, agent_run_service, memory_service, run_manager
@@ -540,8 +540,9 @@ async def list_agent_traces(
     """List traces (sessions with tool/usage stats) for an agent with pagination and search."""
     agent = await _require_agent_access(agent_id, pool, auth)
     session_user_id = _read_user_id(agent, auth)
+    pricing = await model_repo.pricing_map(pool, agent.get("workspace_id"))
     traces = await trace_repo.list_traces(
-        pool, agent_id, session_user_id, limit, offset, search
+        pool, agent_id, session_user_id, limit, offset, search, pricing=pricing
     )
     total = await trace_repo.count_traces(
         pool, agent_id, session_user_id, search
@@ -564,8 +565,9 @@ async def get_trace_detail(
     """Get full trace detail: events, tool calls, tool responses, token usage."""
     agent = await _require_agent_access(agent_id, pool, auth)
     session_user_id = _read_user_id(agent, auth)
+    pricing = await model_repo.pricing_map(pool, agent.get("workspace_id"))
     trace = await trace_repo.get_trace_detail(
-        pool, agent_id, session_id, session_user_id
+        pool, agent_id, session_id, session_user_id, pricing=pricing
     )
     if not trace:
         raise HTTPException(

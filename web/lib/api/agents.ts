@@ -491,6 +491,8 @@ export interface AgentTraceItem {
   tool_call_count: number;
   input_tokens: number;
   output_tokens: number;
+  model?: string | null; // model that produced the session's tokens
+  estimated_cost?: number; // priced per-event by the recorded model
 }
 
 export interface ListAgentTracesParams {
@@ -536,6 +538,8 @@ export interface TraceStep {
   tool_args?: Record<string, unknown>;
   tool_response?: unknown;
   usage?: Record<string, unknown>;
+  model?: string | null; // model that produced this event
+  cost?: number; // per-event cost priced by its model
 }
 
 export interface TraceDetail {
@@ -545,6 +549,7 @@ export interface TraceDetail {
   total_input_tokens: number;
   total_output_tokens: number;
   total_tokens: number;
+  estimated_cost?: number;
 }
 
 export async function getTraceDetail(

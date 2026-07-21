@@ -8,7 +8,8 @@ from typing import Any
 
 import asyncpg
 
-from app.repositories import agent_repo, prompt_library_repo
+from app.core.model_pricing import cost_for
+from app.repositories import agent_repo, model_repo, prompt_library_repo
 
 
 async def get_session_count(
@@ -172,6 +173,7 @@ async def get_tokens_per_agent(
         user_id=agent_user_id if workspace_id is None else None,
         workspace_id=workspace_id,
     )
+    pmap = await model_repo.pricing_map(pool, workspace_id)
     result = []
     for a in agents:
         agent_id = a["id"]
@@ -207,24 +209,32 @@ async def get_tokens_per_agent(
             )
         input_tokens = 0
         output_tokens = 0
+        cost = 0.0
         for row in rows:
             data = row["session_data"]
             if isinstance(data, str):
                 data = json.loads(data)
             for ev in data.get("events", []):
                 usage = ev.get("usage_metadata") or {}
-                input_tokens += usage.get("prompt_token_count") or usage.get("input_tokens") or 0
-                output_tokens += usage.get("candidates_token_count") or usage.get("output_tokens") or 0
+                in_t = usage.get("prompt_token_count") or usage.get("input_tokens") or 0
+                out_t = usage.get("candidates_token_count") or usage.get("output_tokens") or 0
+                input_tokens += in_t
+                output_tokens += out_t
+                # Price each event by the model that actually produced it
+                # (model_version, recorded per event). Falls back to the agent's
+                # current model, then default — so changing an agent's model later
+                # never re-prices its past sessions.
+                ev_model = ev.get("model_version") or a.get("model")
+                cost += cost_for(ev_model, in_t, out_t, pmap)
         total = input_tokens + output_tokens
-        # gemini-3.1-flash-lite pricing per 1M tokens
-        cost = (input_tokens * 0.15 + output_tokens * 0.60) / 1_000_000
         result.append({
             "id": agent_id,
             "name": name,
+            "model": a.get("model"),
             "input_tokens": input_tokens,
             "output_tokens": output_tokens,
             "tokens": total,
-            "estimated_cost": round(cost, 4),
+            "estimated_cost": round(cost, 6),
         })
     return result
 

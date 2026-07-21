@@ -52,8 +52,16 @@ import {
   SlackIcon,
   Palette,
   Mail,
-  Info
+  Info,
+  Coins,
+  Plus,
 } from "lucide-react";
+import {
+  listModels,
+  upsertModel,
+  deleteModel,
+  type ModelPricing,
+} from "@/lib/api/models";
 import { AccentPicker } from "@/components/accent-picker";
 import { ContrastToggle } from "@/components/contrast-toggle";
 
@@ -230,7 +238,12 @@ export default function ConfigPage() {
   const [error, setError] = React.useState<string | null>(null);
 
   // which dialog is open
-  const [openDialog, setOpenDialog] = React.useState<null | "providers" | "apikey" | "opik" | "slack" | "gmail">(null);
+  const [openDialog, setOpenDialog] = React.useState<null | "providers" | "apikey" | "opik" | "slack" | "gmail" | "models">(null);
+
+  const [models, setModels] = React.useState<ModelPricing[]>([]);
+  const reloadModels = React.useCallback(async () => {
+    setModels(await listModels().catch(() => []));
+  }, []);
 
   // API key flow
   const [newApiKey, setNewApiKey] = React.useState<string | null>(null);
@@ -238,14 +251,16 @@ export default function ConfigPage() {
   const [copied, setCopied] = React.useState(false);
 
   const loadConfig = React.useCallback(async () => {
-    const [c, k, agentsResult] = await Promise.all([
+    const [c, k, agentsResult, m] = await Promise.all([
       getUserConfig(),
       getApiKeyInfo().catch(() => ({ key_prefix: null, created_at: null })),
       listAgents({ limit: 200, offset: 0 }).catch(() => ({ items: [], pagination: {} })),
+      listModels().catch(() => []),
     ]);
     setConfig(c);
     setApiKeyInfo(k);
     setAgents(agentsResult.items ?? []);
+    setModels(m);
   }, []);
 
   React.useEffect(() => {
@@ -419,6 +434,15 @@ export default function ConfigPage() {
               }
               onClick={() => setOpenDialog("providers")}
             />
+
+            <SettingRow
+              icon={Coins}
+              title="Models & pricing"
+              description="Manage models and their per-1M-token input/output cost — used to compute actual spend"
+              status={<StatusBadge active activeLabel={`${models.length} models`} inactiveLabel="—" />}
+              actionLabel="Manage"
+              onClick={() => setOpenDialog("models")}
+            />
           </section>
 
           {/* Integrations */}
@@ -489,6 +513,13 @@ export default function ConfigPage() {
               config={config}
               saving={saving}
               onSave={saveConfig}
+              models={models}
+            />
+            <ModelsDialog
+              open={openDialog === "models"}
+              onOpenChange={(o) => setOpenDialog(o ? "models" : null)}
+              models={models}
+              reload={reloadModels}
             />
             <OpikDialog
               open={openDialog === "opik"}
@@ -554,13 +585,16 @@ function ProvidersDialog({
   config,
   saving,
   onSave,
+  models,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   config: UserConfig;
   saving: boolean;
   onSave: (patch: ConfigPayload) => Promise<boolean>;
+  models: ModelPricing[];
 }) {
+  const modelNames = models.length ? models.map((m) => m.name) : MODELS;
   const [google, setGoogle] = React.useState("");
   const [openai, setOpenai] = React.useState("");
   const [anthropic, setAnthropic] = React.useState("");
@@ -628,7 +662,7 @@ function ProvidersDialog({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {MODELS.map((m) => (
+                {modelNames.map((m) => (
                   <SelectItem key={m} value={m}>{m}</SelectItem>
                 ))}
               </SelectContent>
@@ -641,6 +675,165 @@ function ProvidersDialog({
             {saving ? <RefreshCw className="size-4 animate-spin" /> : <Save className="size-4" />}
             {saving ? "Saving…" : "Save changes"}
           </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Dialog: Models & pricing                                          */
+/* ------------------------------------------------------------------ */
+
+function ModelsDialog({
+  open,
+  onOpenChange,
+  models,
+  reload,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  models: ModelPricing[];
+  reload: () => Promise<void>;
+}) {
+  const [busy, setBusy] = React.useState<string | null>(null);
+  const [err, setErr] = React.useState<string | null>(null);
+  // editable input/output values keyed by model name
+  const [edits, setEdits] = React.useState<Record<string, { input: string; output: string }>>({});
+  const [nn, setNn] = React.useState({ name: "", label: "", input: "", output: "" });
+
+  React.useEffect(() => {
+    if (open) {
+      const e: Record<string, { input: string; output: string }> = {};
+      for (const m of models) e[m.name] = { input: String(m.input_per_million), output: String(m.output_per_million) };
+      setEdits(e);
+      setNn({ name: "", label: "", input: "", output: "" });
+      setErr(null);
+    }
+  }, [open, models]);
+
+  const saveRow = async (m: ModelPricing) => {
+    const e = edits[m.name];
+    if (!e) return;
+    setBusy(m.name);
+    setErr(null);
+    try {
+      await upsertModel({
+        name: m.name,
+        label: m.label,
+        input_per_million: Number(e.input) || 0,
+        output_per_million: Number(e.output) || 0,
+      });
+      await reload();
+    } catch (x) {
+      setErr(x instanceof Error ? x.message : "Failed to save");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const removeRow = async (name: string) => {
+    setBusy(name);
+    setErr(null);
+    try {
+      await deleteModel(name);
+      await reload();
+    } catch (x) {
+      setErr(x instanceof Error ? x.message : "Failed to remove");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const addNew = async () => {
+    const name = nn.name.trim();
+    if (!name) { setErr("Model name is required"); return; }
+    setBusy("__new__");
+    setErr(null);
+    try {
+      await upsertModel({
+        name,
+        label: nn.label.trim(),
+        input_per_million: Number(nn.input) || 0,
+        output_per_million: Number(nn.output) || 0,
+      });
+      setNn({ name: "", label: "", input: "", output: "" });
+      await reload();
+    } catch (x) {
+      setErr(x instanceof Error ? x.message : "Failed to add model");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Coins className="size-5 text-primary" />
+            Models &amp; pricing
+          </DialogTitle>
+          <DialogDescription>
+            Prices are USD per 1M tokens and drive the actual cost shown on the dashboard and traces. Built-in models can be re-priced; custom ones can be removed.
+          </DialogDescription>
+        </DialogHeader>
+
+        {err && <p className="text-sm text-destructive">{err}</p>}
+
+        <div className="max-h-[50vh] space-y-2 overflow-y-auto py-1">
+          <div className="grid grid-cols-[1fr_5rem_5rem_auto] items-center gap-2 px-1 text-xs font-medium text-muted-foreground">
+            <span>Model</span>
+            <span>Input /1M</span>
+            <span>Output /1M</span>
+            <span />
+          </div>
+          {models.map((m) => (
+            <div key={m.name} className="grid grid-cols-[1fr_5rem_5rem_auto] items-center gap-2">
+              <div className="min-w-0">
+                <p className="truncate font-mono text-sm">{m.name}</p>
+                <p className="text-[11px] text-muted-foreground">{m.custom ? "custom" : "built-in"}</p>
+              </div>
+              <Input
+                type="number" step="0.01" min="0"
+                value={edits[m.name]?.input ?? ""}
+                onChange={(e) => setEdits((p) => ({ ...p, [m.name]: { ...p[m.name], input: e.target.value } }))}
+                className="h-8"
+              />
+              <Input
+                type="number" step="0.01" min="0"
+                value={edits[m.name]?.output ?? ""}
+                onChange={(e) => setEdits((p) => ({ ...p, [m.name]: { ...p[m.name], output: e.target.value } }))}
+                className="h-8"
+              />
+              <div className="flex items-center gap-1">
+                <Button size="sm" variant="outline" disabled={busy === m.name} onClick={() => saveRow(m)}>
+                  {busy === m.name ? <RefreshCw className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+                </Button>
+                {m.custom && (
+                  <Button size="sm" variant="ghost" disabled={busy === m.name} onClick={() => removeRow(m.name)} aria-label="Remove">
+                    <Trash2 className="size-3.5 text-destructive" />
+                  </Button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="space-y-2 rounded-lg border p-3">
+          <p className="text-xs font-medium text-muted-foreground">Add a model</p>
+          <div className="grid grid-cols-[1fr_5rem_5rem_auto] items-center gap-2">
+            <Input placeholder="claude-sonnet-5" value={nn.name} onChange={(e) => setNn({ ...nn, name: e.target.value })} className="h-8 font-mono" />
+            <Input type="number" step="0.01" min="0" placeholder="in" value={nn.input} onChange={(e) => setNn({ ...nn, input: e.target.value })} className="h-8" />
+            <Input type="number" step="0.01" min="0" placeholder="out" value={nn.output} onChange={(e) => setNn({ ...nn, output: e.target.value })} className="h-8" />
+            <Button size="sm" disabled={busy === "__new__"} onClick={addNew}>
+              {busy === "__new__" ? <RefreshCw className="size-3.5 animate-spin" /> : <Plus className="size-3.5" />}
+            </Button>
+          </div>
+        </div>
+
+        <DialogFooter showCloseButton>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Done</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

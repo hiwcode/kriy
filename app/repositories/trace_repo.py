@@ -7,6 +7,18 @@ from typing import Any
 
 import asyncpg
 
+from app.core.model_pricing import DEFAULT_MODEL_PRICING, cost_for
+
+# Pricing map type: model name -> (input_per_million, output_per_million)
+Pricing = dict[str, tuple[float, float]]
+
+
+def _usage_tokens(usage: dict) -> tuple[int, int]:
+    return (
+        usage.get("prompt_token_count") or usage.get("input_tokens") or 0,
+        usage.get("candidates_token_count") or usage.get("output_tokens") or 0,
+    )
+
 
 def _parse_event(event: dict) -> dict[str, Any]:
     """Parse a single event into trace step format."""
@@ -23,6 +35,8 @@ def _parse_event(event: dict) -> dict[str, Any]:
         "author": author,
         "timestamp": timestamp,
         "usage": event.get("usage_metadata") or {},
+        # the model that actually produced this event (for accurate, stable cost)
+        "model": event.get("model_version"),
     }
 
     # Text content
@@ -61,10 +75,12 @@ async def list_traces(
     limit: int = 50,
     offset: int = 0,
     search: str | None = None,
+    pricing: Pricing | None = None,
 ) -> list[dict[str, Any]]:
     """List traces (sessions) for an agent with summary stats, pagination, search.
     When user_id is None, returns traces from ALL users (workspace mode).
     """
+    pricing = pricing or DEFAULT_MODEL_PRICING
     params: list[Any] = [agent_id]
     where = "WHERE agent_id = $1"
     idx = 2
@@ -96,10 +112,18 @@ async def list_traces(
         tool_calls = 0
         total_input_tokens = 0
         total_output_tokens = 0
+        est_cost = 0.0
+        last_model: str | None = None
         for ev in events:
-            usage = ev.get("usage_metadata") or {}
-            total_input_tokens += usage.get("prompt_token_count") or usage.get("input_tokens") or 0
-            total_output_tokens += usage.get("candidates_token_count") or usage.get("output_tokens") or 0
+            in_t, out_t = _usage_tokens(ev.get("usage_metadata") or {})
+            total_input_tokens += in_t
+            total_output_tokens += out_t
+            # Price each event by the model that produced it — stable across later
+            # agent model changes.
+            ev_model = ev.get("model_version")
+            if ev_model:
+                last_model = ev_model
+            est_cost += cost_for(ev_model, in_t, out_t, pricing)
             content = ev.get("content") or {}
             for p in content.get("parts") or []:
                 if p.get("function_call") or p.get("functionCall") or p.get("function_response") or p.get("functionResponse"):
@@ -114,6 +138,8 @@ async def list_traces(
             "tool_call_count": tool_calls,
             "input_tokens": total_input_tokens,
             "output_tokens": total_output_tokens,
+            "model": last_model,
+            "estimated_cost": round(est_cost, 6),
         })
     return traces
 
@@ -145,8 +171,10 @@ async def get_trace_detail(
     agent_id: int,
     session_id: str,
     user_id: str | None = "user",
+    pricing: Pricing | None = None,
 ) -> dict[str, Any] | None:
     """Get full trace detail for a session: all events with tool calls, responses, usage."""
+    pricing = pricing or DEFAULT_MODEL_PRICING
     if user_id is not None:
         row = await pool.fetchrow(
             """
@@ -177,11 +205,15 @@ async def get_trace_detail(
     steps = []
     total_input = 0
     total_output = 0
+    total_cost = 0.0
     for ev in events:
         step = _parse_event(ev)
-        usage = step.get("usage") or {}
-        total_input += usage.get("prompt_token_count") or usage.get("input_tokens") or 0
-        total_output += usage.get("candidates_token_count") or usage.get("output_tokens") or 0
+        in_t, out_t = _usage_tokens(step.get("usage") or {})
+        total_input += in_t
+        total_output += out_t
+        step_cost = cost_for(step.get("model"), in_t, out_t, pricing)
+        step["cost"] = round(step_cost, 6)
+        total_cost += step_cost
         steps.append(step)
 
     return {
@@ -191,4 +223,5 @@ async def get_trace_detail(
         "total_input_tokens": total_input,
         "total_output_tokens": total_output,
         "total_tokens": total_input + total_output,
+        "estimated_cost": round(total_cost, 6),
     }

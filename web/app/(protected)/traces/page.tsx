@@ -42,6 +42,7 @@ import {
 import { ResizableDrawer } from "@/components/ui/resizable-drawer";
 import { cn } from "@/lib/utils";
 import { loadProviderStatus } from "@/lib/config-check";
+import { listModels } from "@/lib/api/models";
 
 
 // Pricing per 1M tokens (USD) - input / output
@@ -207,7 +208,7 @@ function TraceStepRow({
             {step.usage && Object.keys(step.usage).length > 0 && (
               <TokenUsageCard
                 usage={step.usage as Record<string, unknown>}
-                model={model}
+                model={step.model ?? model}
               />
             )}
           </div>
@@ -258,7 +259,7 @@ function TraceStepRow({
             {step.usage && Object.keys(step.usage).length > 0 && (
               <TokenUsageCard
                 usage={step.usage as Record<string, unknown>}
-                model={model}
+                model={step.model ?? model}
               />
             )}
           </div>
@@ -312,7 +313,7 @@ function TraceStepRow({
             {step.usage && Object.keys(step.usage).length > 0 && (
               <TokenUsageCard
                 usage={step.usage as Record<string, unknown>}
-                model={model}
+                model={step.model ?? model}
               />
             )}
           </div>
@@ -359,7 +360,9 @@ function TraceDetailContent({
     );
   }
 
-  const totalCost = computeCost(
+  // Prefer the backend cost (priced per-event by each event's recorded model, so
+  // it never shifts when the agent's current model changes).
+  const totalCost = detail.estimated_cost ?? computeCost(
     detail.total_input_tokens,
     detail.total_output_tokens,
     agent.model
@@ -556,7 +559,8 @@ function AgentTracesContent({ agent }: { agent: AgentItem }) {
           <div className="space-y-2.5">
             {traces.map((t, index) => {
               const isActive = detailTrace?.session_id === t.session_id;
-              const cost = computeCost(t.input_tokens, t.output_tokens, agent.model ?? undefined);
+              // Backend prices per-event by the model that ran (stable across model changes).
+              const cost = t.estimated_cost ?? computeCost(t.input_tokens, t.output_tokens, t.model ?? agent.model ?? undefined);
               return (
                 <div
                   key={index}
@@ -680,12 +684,21 @@ function AgentTracesContent({ agent }: { agent: AgentItem }) {
 export default function TracesPage() {
   const [agents, setAgents] = React.useState<AgentItem[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [, setPricingReady] = React.useState(0);
 
   React.useEffect(() => {
     listAgents({ limit: 100, offset: 0 })
       .then((r) => setAgents(r.items))
       .catch(() => setAgents([]))
       .finally(() => setLoading(false));
+    // Merge the model catalog (built-ins + custom/overridden pricing) into the
+    // pricing map so cost reflects actual per-model rates, then re-render.
+    listModels()
+      .then((ms) => {
+        for (const m of ms) MODEL_PRICING[m.name] = { input: m.input_per_million, output: m.output_per_million };
+        setPricingReady((n) => n + 1);
+      })
+      .catch(() => {});
   }, []);
 
   const config: TabConfig = {

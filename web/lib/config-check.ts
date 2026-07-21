@@ -81,13 +81,13 @@ export function loadProviderStatus(): Promise<ProviderStatus> {
   if (!providerStatusPromise) {
     providerStatusPromise = getUserConfig()
       .then((cfg) => {
-        const has = (v: string | null | undefined) => Boolean(v && v.trim());
-        const hasGoogle = has(cfg.google_api_key);
+        const has = (v: boolean | null | undefined) => Boolean(v);
+        const hasGoogle = has(cfg.google_api_key_set);
         return {
           hasGoogle,
           hasAnyProvider:
-            hasGoogle || has(cfg.openai_api_key) || has(cfg.anthropic_api_key),
-          hasOpik: cfg.opik_enabled ? has(cfg.opik_api_key) : false
+            hasGoogle || has(cfg.openai_api_key_set) || has(cfg.anthropic_api_key_set),
+          hasOpik: cfg.opik_enabled ? has(cfg.opik_api_key_set) : false
         };
       })
       .catch(() => {

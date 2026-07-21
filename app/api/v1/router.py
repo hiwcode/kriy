@@ -23,6 +23,7 @@ from app.api.v1.endpoints import (
     documents,
     gates,
     webhooks,
+    models,
 )
 
 router = APIRouter()
@@ -55,3 +56,4 @@ router.include_router(documents.local_files_router)
 router.include_router(gates.router)
 router.include_router(gates.decide_router)
 router.include_router(webhooks.router)
+router.include_router(models.router)
