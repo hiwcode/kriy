@@ -1,7 +1,7 @@
-"""Model catalog — list available models with per-1M pricing, add/override, delete.
+"""Model catalog — list available models with per-1M pricing, add, edit, delete.
 
-Built-in defaults (app/core/model_pricing.py) are always present; rows added here
-override a built-in's price or introduce a new model, scoped to the workspace.
+There are no built-in models: the catalog is entirely user-managed, scoped to the
+workspace. Prices here drive the actual cost shown on the dashboard and traces.
 """
 
 from __future__ import annotations

@@ -708,7 +708,13 @@ async def build_agent_from_config(
     else:
         # Prevent infinite hangs when a backend (e.g. Ollama) stalls.
         # Without this, the SSE stream can sit "in progress" forever.
-        resolved_model = LiteLlm(model=raw_model, timeout=120)
+        litellm_kwargs: dict[str, Any] = {"timeout": 600}
+        # Ollama reasoning models (e.g. qwen3) emit a `<think>…</think>` trace by
+        # default, which otherwise streams into the chat as answer text. Disable it
+        # so responses are clean and faster. (LiteLLM forwards `think` to Ollama.)
+        if raw_model.startswith(("ollama/", "ollama_chat/")):
+            litellm_kwargs["think"] = False
+        resolved_model = LiteLlm(model=raw_model, **litellm_kwargs)
 
     # Auto-inject UI-card usage guidance when those tools are enabled (main
     # config or via a skill), so they're actually used without prompt edits.

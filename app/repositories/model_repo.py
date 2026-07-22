@@ -1,14 +1,13 @@
-"""Model catalog repository — workspace-scoped price overrides/additions.
+"""Model catalog repository — the full, user-managed model catalog.
 
-Rows here layer on top of ``app.core.model_pricing.DEFAULT_MODEL_PRICING``: a row
-with a name matching a built-in overrides its price; a new name adds a model.
+There are no built-in models. Every model and its per-1M-token price is a row here,
+scoped to a workspace (``workspace_id`` NULL = personal). Cost is computed entirely
+from these rows.
 """
 
 from __future__ import annotations
 
 import asyncpg
-
-from app.core.model_pricing import DEFAULT_MODEL_PRICING
 
 _COLS = "id, workspace_id, user_id, name, label, input_per_million, output_per_million, created_at, updated_at"
 
@@ -66,37 +65,23 @@ async def delete(pool: asyncpg.Pool, *, workspace_id: int | None, name: str) -> 
 
 
 async def pricing_map(pool: asyncpg.Pool, workspace_id: int | None) -> dict[str, tuple[float, float]]:
-    """Built-in defaults merged with this workspace's overrides (overrides win)."""
-    merged: dict[str, tuple[float, float]] = dict(DEFAULT_MODEL_PRICING)
-    for r in await list_overrides(pool, workspace_id):
-        merged[r["name"]] = (r["input_per_million"], r["output_per_million"])
-    return merged
+    """This workspace's configured model prices: name -> (input, output) per 1M."""
+    return {
+        r["name"]: (r["input_per_million"], r["output_per_million"])
+        for r in await list_overrides(pool, workspace_id)
+    }
 
 
 async def list_catalog(pool: asyncpg.Pool, workspace_id: int | None) -> list[dict]:
-    """Full merged catalog for the UI: built-ins + overrides, flagged by source."""
-    overrides = {r["name"]: r for r in await list_overrides(pool, workspace_id)}
-    names = set(DEFAULT_MODEL_PRICING) | set(overrides)
-    out: list[dict] = []
-    for name in sorted(names):
-        ov = overrides.get(name)
-        if ov:
-            out.append({
-                "name": name,
-                "label": ov["label"] or name,
-                "input_per_million": ov["input_per_million"],
-                "output_per_million": ov["output_per_million"],
-                "builtin": name in DEFAULT_MODEL_PRICING,
-                "custom": True,  # has a stored override/addition row
-            })
-        else:
-            inp, outp = DEFAULT_MODEL_PRICING[name]
-            out.append({
-                "name": name,
-                "label": name,
-                "input_per_million": inp,
-                "output_per_million": outp,
-                "builtin": True,
-                "custom": False,
-            })
-    return out
+    """Full catalog for the UI — every configured model (all user-managed)."""
+    return [
+        {
+            "name": r["name"],
+            "label": r["label"] or r["name"],
+            "input_per_million": r["input_per_million"],
+            "output_per_million": r["output_per_million"],
+            "builtin": False,
+            "custom": True,
+        }
+        for r in await list_overrides(pool, workspace_id)
+    ]

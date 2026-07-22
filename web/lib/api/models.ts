@@ -2,8 +2,8 @@
  * Model catalog API client.
  *
  * Models available for agents, each with per-1M-token pricing used to compute
- * actual cost. Built-in defaults are always present; workspace rows override a
- * built-in's price or add a new model.
+ * actual cost. The catalog is entirely user-managed (no built-in models) and
+ * scoped to the workspace.
  */
 
 import { getAuthHeaders } from "@/lib/auth";
@@ -44,8 +44,8 @@ export interface ModelPricing {
   label: string;
   input_per_million: number;
   output_per_million: number;
-  builtin: boolean; // shipped as a default
-  custom: boolean; // has a stored override/addition row
+  builtin?: boolean; // deprecated — no built-in models; always false
+  custom?: boolean; // always true (every model is user-managed)
 }
 
 export interface ModelInput {

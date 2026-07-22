@@ -7,7 +7,8 @@ from typing import Any
 
 import asyncpg
 
-from app.core.model_pricing import DEFAULT_MODEL_PRICING, cost_for
+from app.core.model_pricing import cost_for
+from app.repositories import pricing_snapshot_repo
 
 # Pricing map type: model name -> (input_per_million, output_per_million)
 Pricing = dict[str, tuple[float, float]]
@@ -80,7 +81,7 @@ async def list_traces(
     """List traces (sessions) for an agent with summary stats, pagination, search.
     When user_id is None, returns traces from ALL users (workspace mode).
     """
-    pricing = pricing or DEFAULT_MODEL_PRICING
+    pricing = pricing or {}
     params: list[Any] = [agent_id]
     where = "WHERE agent_id = $1"
     idx = 2
@@ -101,13 +102,23 @@ async def list_traces(
     """
     params.extend([limit, offset])
     rows = await pool.fetch(query, *params)
-    traces = []
+
+    # Parse once, then resolve each session's frozen pricing in a single lookup so
+    # editing a price later never re-prices a session that already ran.
+    parsed: list[tuple[str, dict, list]] = []
     for row in rows:
         data = row["session_data"]
         if isinstance(data, str):
             data = json.loads(data)
+        parsed.append((row["session_id"], data, data.get("events", [])))
+    eff_by_session = await pricing_snapshot_repo.effective_pricing_bulk(
+        pool, agent_id, [(sid, events) for sid, _, events in parsed], pricing
+    )
+
+    traces = []
+    for (session_id, data, events), row in zip(parsed, rows):
         state = data.get("state", {})
-        events = data.get("events", [])
+        eff = eff_by_session.get(session_id, {})
 
         tool_calls = 0
         total_input_tokens = 0
@@ -118,12 +129,12 @@ async def list_traces(
             in_t, out_t = _usage_tokens(ev.get("usage_metadata") or {})
             total_input_tokens += in_t
             total_output_tokens += out_t
-            # Price each event by the model that produced it — stable across later
-            # agent model changes.
+            # Price each event by the model that produced it, at its snapshotted
+            # rate — stable across later agent model or price changes.
             ev_model = ev.get("model_version")
             if ev_model:
                 last_model = ev_model
-            est_cost += cost_for(ev_model, in_t, out_t, pricing)
+            est_cost += cost_for(ev_model, in_t, out_t, eff)
             content = ev.get("content") or {}
             for p in content.get("parts") or []:
                 if p.get("function_call") or p.get("functionCall") or p.get("function_response") or p.get("functionResponse"):
@@ -174,7 +185,7 @@ async def get_trace_detail(
     pricing: Pricing | None = None,
 ) -> dict[str, Any] | None:
     """Get full trace detail for a session: all events with tool calls, responses, usage."""
-    pricing = pricing or DEFAULT_MODEL_PRICING
+    pricing = pricing or {}
     if user_id is not None:
         row = await pool.fetchrow(
             """
@@ -202,6 +213,11 @@ async def get_trace_detail(
     events = data.get("events", [])
     state = data.get("state", {})
 
+    # Frozen per-model rates for this session (falls back to live for new models).
+    eff = await pricing_snapshot_repo.effective_pricing_for_session(
+        pool, agent_id, session_id, events, pricing
+    )
+
     steps = []
     total_input = 0
     total_output = 0
@@ -211,7 +227,7 @@ async def get_trace_detail(
         in_t, out_t = _usage_tokens(step.get("usage") or {})
         total_input += in_t
         total_output += out_t
-        step_cost = cost_for(step.get("model"), in_t, out_t, pricing)
+        step_cost = cost_for(step.get("model"), in_t, out_t, eff)
         step["cost"] = round(step_cost, 6)
         total_cost += step_cost
         steps.append(step)

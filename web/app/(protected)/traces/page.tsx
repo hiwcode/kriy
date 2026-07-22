@@ -45,22 +45,18 @@ import { loadProviderStatus } from "@/lib/config-check";
 import { listModels } from "@/lib/api/models";
 
 
-// Pricing per 1M tokens (USD) - input / output
-const MODEL_PRICING: Record<string, { input: number; output: number }> = {
-  "gemini-3.1-flash-lite": { input: 0.15, output: 0.6 },
-  "gemini-2.5-pro": { input: 1.25, output: 10 },
-  "gemini-2.0-flash": { input: 0.1, output: 0.4 },
-  "gemini-1.5-flash": { input: 0.075, output: 0.3 },
-  "gemini-1.5-pro": { input: 1.25, output: 5 },
-  "gemini-1.0-pro": { input: 0.5, output: 1.5 },
-};
+// Pricing per 1M tokens (USD) - input / output. No built-in prices: this map is
+// populated from the user's configured catalog (listModels) at load. The backend
+// already returns a snapshot-aware `estimated_cost`; this is only a fallback for
+// per-message estimates, and an unpriced model resolves to zero.
+const MODEL_PRICING: Record<string, { input: number; output: number }> = {};
 
 function getModelPricing(model: string | undefined): { input: number; output: number } {
-  if (!model) return { input: 0.15, output: 0.6 }; // default to 2.5-flash
+  if (!model) return { input: 0, output: 0 };
   const key = Object.keys(MODEL_PRICING).find((k) =>
     model.toLowerCase().includes(k)
   );
-  return key ? MODEL_PRICING[key] : { input: 0.15, output: 0.6 };
+  return key ? MODEL_PRICING[key] : { input: 0, output: 0 };
 }
 
 function computeCost(

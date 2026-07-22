@@ -9,7 +9,7 @@ from typing import Any
 import asyncpg
 
 from app.core.model_pricing import cost_for
-from app.repositories import agent_repo, model_repo, prompt_library_repo
+from app.repositories import agent_repo, model_repo, pricing_snapshot_repo, prompt_library_repo
 
 
 async def get_session_count(
@@ -181,7 +181,7 @@ async def get_tokens_per_agent(
         if workspace_id is not None:
             rows = await pool.fetch(
                 """
-                SELECT session_data FROM agent_sessions
+                SELECT session_id, session_data FROM agent_sessions
                 WHERE agent_id = $1
                 ORDER BY last_update_time DESC
                 LIMIT $2
@@ -192,7 +192,7 @@ async def get_tokens_per_agent(
         elif user_id:
             rows = await pool.fetch(
                 """
-                SELECT session_data FROM agent_sessions
+                SELECT session_id, session_data FROM agent_sessions
                 WHERE agent_id = $1 AND user_id = $2
                 ORDER BY last_update_time DESC
                 LIMIT $3
@@ -203,29 +203,35 @@ async def get_tokens_per_agent(
             )
         else:
             rows = await pool.fetch(
-                "SELECT session_data FROM agent_sessions WHERE agent_id = $1 ORDER BY last_update_time DESC LIMIT $2",
+                "SELECT session_id, session_data FROM agent_sessions WHERE agent_id = $1 ORDER BY last_update_time DESC LIMIT $2",
                 agent_id,
                 limit_sessions_per_agent,
             )
-        input_tokens = 0
-        output_tokens = 0
-        cost = 0.0
+        # Parse, then price each session by its snapshotted per-model rates so a
+        # later price/model change never re-prices sessions that already ran.
+        parsed: list[tuple[str, list]] = []
         for row in rows:
             data = row["session_data"]
             if isinstance(data, str):
                 data = json.loads(data)
-            for ev in data.get("events", []):
+            parsed.append((row["session_id"], data.get("events", [])))
+        eff_by_session = await pricing_snapshot_repo.effective_pricing_bulk(
+            pool, agent_id, parsed, pmap
+        )
+        input_tokens = 0
+        output_tokens = 0
+        cost = 0.0
+        for session_id, events in parsed:
+            eff = eff_by_session.get(session_id, {})
+            for ev in events:
                 usage = ev.get("usage_metadata") or {}
                 in_t = usage.get("prompt_token_count") or usage.get("input_tokens") or 0
                 out_t = usage.get("candidates_token_count") or usage.get("output_tokens") or 0
                 input_tokens += in_t
                 output_tokens += out_t
-                # Price each event by the model that actually produced it
-                # (model_version, recorded per event). Falls back to the agent's
-                # current model, then default — so changing an agent's model later
-                # never re-prices its past sessions.
-                ev_model = ev.get("model_version") or a.get("model")
-                cost += cost_for(ev_model, in_t, out_t, pmap)
+                # Price each event by the model that produced it (model_version),
+                # at the rate frozen for this session.
+                cost += cost_for(ev.get("model_version"), in_t, out_t, eff)
         total = input_tokens + output_tokens
         result.append({
             "id": agent_id,

@@ -65,22 +65,6 @@ import {
 import { AccentPicker } from "@/components/accent-picker";
 import { ContrastToggle } from "@/components/contrast-toggle";
 
-const MODELS = [
-  "ollama_chat/qwen3:8b",
-  "gemini-3.1-flash-lite",
-  "gemini-2.5-pro",
-  "gemini-2.0-flash",
-  "gemini-2.0-flash-thinking-exp",
-  "gemini-1.5-flash",
-  "gemini-1.5-pro",
-  "gpt-4o",
-  "gpt-4o-mini",
-  "gpt-4-turbo",
-  "o3-mini",
-  "claude-sonnet-4-20250514",
-  "claude-haiku-4-20250414",
-];
-
 /* ------------------------------------------------------------------ */
 /*  Shared payload type                                                */
 /* ------------------------------------------------------------------ */
@@ -595,18 +579,18 @@ function ProvidersDialog({
   onSave: (patch: ConfigPayload) => Promise<boolean>;
   models: ModelPricing[];
 }) {
-  const modelNames = models.length ? models.map((m) => m.name) : MODELS;
+  const modelNames = models.map((m) => m.name);
   const [google, setGoogle] = React.useState("");
   const [openai, setOpenai] = React.useState("");
   const [anthropic, setAnthropic] = React.useState("");
-  const [model, setModel] = React.useState("gemini-3.1-flash-lite");
+  const [model, setModel] = React.useState("");
 
   React.useEffect(() => {
     if (open) {
       setGoogle(config.google_api_key_set ? SECRET_MASK : "");
       setOpenai(config.openai_api_key_set ? SECRET_MASK : "");
       setAnthropic(config.anthropic_api_key_set ? SECRET_MASK : "");
-      setModel(config.default_model ?? "gemini-3.1-flash-lite");
+      setModel(config.default_model ?? "");
     }
   }, [open, config]);
 
@@ -658,9 +642,9 @@ function ProvidersDialog({
           </div>
           <div className="space-y-2">
             <Label htmlFor="default-model">Default Model</Label>
-            <Select value={model} onValueChange={setModel}>
+            <Select value={model} onValueChange={setModel} disabled={modelNames.length === 0}>
               <SelectTrigger id="default-model" className="w-full">
-                <SelectValue />
+                <SelectValue placeholder="No models yet — add one in Models & pricing" />
               </SelectTrigger>
               <SelectContent>
                 {modelNames.map((m) => (
@@ -668,6 +652,11 @@ function ProvidersDialog({
                 ))}
               </SelectContent>
             </Select>
+            {modelNames.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                Add the models you use (and their pricing) in <span className="font-medium">Models &amp; pricing</span> to pick a default.
+              </p>
+            )}
           </div>
         </div>
 
@@ -776,7 +765,7 @@ function ModelsDialog({
             Models &amp; pricing
           </DialogTitle>
           <DialogDescription>
-            Prices are USD per 1M tokens and drive the actual cost shown on the dashboard and traces. Built-in models can be re-priced; custom ones can be removed.
+            Add every model you use and set its price (USD per 1M tokens). These drive the actual cost shown on the dashboard and traces. Sessions keep the price they ran at, so editing a price here only affects future runs.
           </DialogDescription>
         </DialogHeader>
 
@@ -789,11 +778,18 @@ function ModelsDialog({
             <span>Output /1M</span>
             <span />
           </div>
+          {models.length === 0 && (
+            <p className="px-1 py-4 text-center text-sm text-muted-foreground">
+              No models yet. Add the models you use below to start tracking cost.
+            </p>
+          )}
           {models.map((m) => (
             <div key={m.name} className="grid grid-cols-[1fr_5rem_5rem_auto] items-center gap-2">
               <div className="min-w-0">
                 <p className="truncate font-mono text-sm">{m.name}</p>
-                <p className="text-[11px] text-muted-foreground">{m.custom ? "custom" : "built-in"}</p>
+                {m.label && m.label !== m.name && (
+                  <p className="truncate text-[11px] text-muted-foreground">{m.label}</p>
+                )}
               </div>
               <Input
                 type="number" step="0.01" min="0"
@@ -811,11 +807,9 @@ function ModelsDialog({
                 <Button size="sm" variant="outline" disabled={busy === m.name} onClick={() => saveRow(m)}>
                   {busy === m.name ? <RefreshCw className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
                 </Button>
-                {m.custom && (
-                  <Button size="sm" variant="ghost" disabled={busy === m.name} onClick={() => removeRow(m.name)} aria-label="Remove">
-                    <Trash2 className="size-3.5 text-destructive" />
-                  </Button>
-                )}
+                <Button size="sm" variant="ghost" disabled={busy === m.name} onClick={() => removeRow(m.name)} aria-label="Remove">
+                  <Trash2 className="size-3.5 text-destructive" />
+                </Button>
               </div>
             </div>
           ))}
