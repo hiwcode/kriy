@@ -28,7 +28,7 @@ import {
   McpConnectionItem,
   McpToolInfo,
 } from "@/lib/api/mcp-connections";
-import { Puzzle, Play, Loader2, AlertCircle, AlertTriangle, Wrench, CheckCircle2, Search, X } from "lucide-react";
+import { Puzzle, Play, Loader2, AlertCircle, AlertTriangle, Wrench, CheckCircle2, Search, X, Copy, Check } from "lucide-react";
 import { MdRenderer } from "@/components/ui/md-renderer";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -670,6 +670,31 @@ function tryParseJson(text: string): { parsed: unknown; isJson: boolean } {
   }
 }
 
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = React.useState(false);
+  const onCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* clipboard unavailable — ignore */
+    }
+  };
+  return (
+    <button
+      type="button"
+      onClick={onCopy}
+      disabled={!text}
+      className="inline-flex items-center gap-1 rounded-md border bg-muted/40 px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
+      aria-label="Copy output"
+    >
+      {copied ? <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" /> : <Copy className="size-3.5" />}
+      {copied ? "Copied" : "Copy"}
+    </button>
+  );
+}
+
 function ToolResult({
   result,
 }: {
@@ -685,6 +710,20 @@ function ToolResult({
   const allText = (result.content ?? []).map((b) => b.text ?? "").join("");
   const { parsed, isJson } = tryParseJson(allText);
 
+  // Resolve the JSON payload (inline text JSON or structuredContent) and derive
+  // both a pretty (indented) and a raw (minified, single-line) rendering.
+  const jsonValue: unknown = isJson ? parsed : result.structuredContent ?? null;
+  const hasJson = isJson || result.structuredContent != null;
+  const formattedText = hasJson ? JSON.stringify(jsonValue, null, 2) : "";
+  const rawText = hasJson ? JSON.stringify(jsonValue) : "";
+
+  // What the Copy button copies: the currently-shown view for JSON, else the text.
+  const copyText = hasJson
+    ? viewMode === "raw"
+      ? rawText
+      : formattedText
+    : allText || JSON.stringify(result.content, null, 2);
+
   return (
     <div
       className={cn(
@@ -695,7 +734,7 @@ function ToolResult({
       )}
     >
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-inherit px-4 py-2.5">
+      <div className="flex items-center justify-between gap-2 border-b border-inherit px-4 py-2.5">
         <div className="flex items-center gap-1.5 text-sm font-medium">
           {result.isError ? (
             <>
@@ -709,46 +748,45 @@ function ToolResult({
             </>
           )}
         </div>
-        {(isJson || result.structuredContent) && (
-          <div className="inline-flex rounded-lg border bg-muted/40 p-0.5 text-xs font-medium">
-            <button
-              type="button"
-              onClick={() => setViewMode("formatted")}
-              className={cn(
-                "rounded-md px-2.5 py-1 transition-colors",
-                viewMode === "formatted"
-                  ? "bg-card text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              Formatted
-            </button>
-            <button
-              type="button"
-              onClick={() => setViewMode("raw")}
-              className={cn(
-                "rounded-md px-2.5 py-1 transition-colors",
-                viewMode === "raw"
-                  ? "bg-card text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              Raw
-            </button>
-          </div>
-        )}
+        <div className="flex items-center gap-2">
+          {hasJson && (
+            <div className="inline-flex rounded-lg border bg-muted/40 p-0.5 text-xs font-medium">
+              <button
+                type="button"
+                onClick={() => setViewMode("formatted")}
+                className={cn(
+                  "rounded-md px-2.5 py-1 transition-colors",
+                  viewMode === "formatted"
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Formatted
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("raw")}
+                className={cn(
+                  "rounded-md px-2.5 py-1 transition-colors",
+                  viewMode === "raw"
+                    ? "bg-card text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Raw
+              </button>
+            </div>
+          )}
+          <CopyButton text={copyText} />
+        </div>
       </div>
 
       {/* Body */}
       <div className="max-h-[60vh] overflow-auto p-4">
-        {viewMode === "raw" ? (
-          <pre className="whitespace-pre-wrap break-all font-mono text-xs text-foreground/90">
-            {allText || JSON.stringify(result.structuredContent, null, 2) || "(empty)"}
+        {hasJson ? (
+          <pre className="whitespace-pre-wrap break-all font-mono text-xs leading-relaxed text-foreground/90">
+            {viewMode === "raw" ? rawText : formattedText}
           </pre>
-        ) : isJson ? (
-          <JsonTree data={parsed} />
-        ) : result.structuredContent ? (
-          <JsonTree data={result.structuredContent} />
         ) : result.content?.length ? (
           <div className="space-y-2 text-sm">
             {result.content.map((block, i) => (
@@ -768,77 +806,5 @@ function ToolResult({
         )}
       </div>
     </div>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/*  JSON tree viewer                                                   */
-/* ------------------------------------------------------------------ */
-
-function JsonTree({ data }: { data: unknown }) {
-  if (data === null || data === undefined) {
-    return <span className="font-mono text-xs text-muted-foreground">null</span>;
-  }
-
-  if (typeof data === "string") {
-    return (
-      <span className="whitespace-pre-wrap break-all font-mono text-xs text-emerald-700 dark:text-emerald-400">
-        &quot;{data}&quot;
-      </span>
-    );
-  }
-
-  if (typeof data === "number" || typeof data === "boolean") {
-    return (
-      <span className="font-mono text-xs text-blue-600 dark:text-blue-400">
-        {String(data)}
-      </span>
-    );
-  }
-
-  if (Array.isArray(data)) {
-    if (data.length === 0) {
-      return <span className="font-mono text-xs text-muted-foreground">[]</span>;
-    }
-    return (
-      <div className="space-y-1">
-        {data.map((item, i) => (
-          <div key={i} className="flex gap-2">
-            <span className="shrink-0 font-mono text-xs text-muted-foreground">{i}.</span>
-            <div className="min-w-0 flex-1">
-              <JsonTree data={item} />
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (typeof data === "object") {
-    const entries = Object.entries(data as Record<string, unknown>);
-    if (entries.length === 0) {
-      return <span className="font-mono text-xs text-muted-foreground">{"{}"}</span>;
-    }
-    return (
-      <div className="space-y-1.5">
-        {entries.map(([key, val]) => {
-          const isSimple = val === null || typeof val !== "object";
-          return (
-            <div key={key} className={isSimple ? "flex items-baseline gap-2" : ""}>
-              <span className="shrink-0 font-mono text-xs font-medium text-foreground/80">
-                {key}:
-              </span>
-              <div className={cn("min-w-0", !isSimple && "ml-4 mt-0.5")}>
-                <JsonTree data={val} />
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  }
-
-  return (
-    <span className="font-mono text-xs text-muted-foreground">{String(data)}</span>
   );
 }
