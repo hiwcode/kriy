@@ -62,17 +62,27 @@ class WorkspaceInviteAccept(BaseModel):
 class WorkspaceTransferRequest(BaseModel):
     source_workspace_id: int = Field(..., description="ID of the workspace to transfer from")
     target_workspace_id: int = Field(..., description="ID of the workspace to transfer to")
-    resource_type: str = Field(..., pattern="^(agents|prompts|skills|mcp_connections|database_connections|schedules|workflows|events|all)$")
+    resource_type: str = Field(..., pattern="^(agents|prompts|skills|mcp_connections|database_connections|schedules|workflows|events|webhooks|gates|documents|all)$")
     resource_ids: list[int] | None = Field(None, description="Specific resource IDs to transfer. If None, all resources will be transferred")
 
 
 class WorkspaceTransferResponse(BaseModel):
-    transferred_agents: int
-    transferred_prompts: int
+    # Primary resources (counted in total_transferred)
+    transferred_agents: int = 0
+    transferred_prompts: int = 0
     transferred_skills: int = 0
-    transferred_mcp_connections: int
-    transferred_database_connections: int
+    transferred_mcp_connections: int = 0
+    transferred_database_connections: int = 0
     transferred_schedules: int = 0
     transferred_workflows: int = 0
     transferred_events: int = 0
-    total_transferred: int
+    transferred_webhooks: int = 0
+    transferred_gates: int = 0
+    transferred_documents: int = 0
+    # Dependents (moved automatically with their parent, not counted in total)
+    transferred_sessions: int = 0
+    transferred_memories: int = 0
+    transferred_gate_decisions: int = 0
+    transferred_skill_files: int = 0
+    transferred_skill_folders: int = 0
+    total_transferred: int = 0

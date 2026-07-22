@@ -434,6 +434,61 @@ async def delete_workspace(pool: asyncpg.Pool, workspace_id: int) -> bool:
     return r.split()[-1] != "0"
 
 
+# Primary, user-facing resource types (counted toward the transfer total).
+TRANSFERABLE_RESOURCE_TYPES = (
+    "agents",
+    "prompts",
+    "skills",
+    "mcp_connections",
+    "database_connections",
+    "schedules",
+    "workflows",
+    "events",
+    "webhooks",
+    "gates",
+    "documents",
+)
+
+
+async def _move_scoped(
+    conn: asyncpg.Connection,
+    table: str,
+    target_workspace_id: int,
+    source_workspace_id: int,
+    resource_ids: list[int] | None,
+) -> list[int]:
+    """Move rows of ``table`` from source→target workspace, returning moved ids.
+
+    Always scoped to the source workspace so a caller can never move another
+    workspace's rows by passing foreign ids.
+    """
+    if resource_ids:
+        rows = await conn.fetch(
+            f"UPDATE {table} SET workspace_id = $1 "
+            f"WHERE workspace_id = $2 AND id = ANY($3::int[]) RETURNING id",
+            target_workspace_id, source_workspace_id, resource_ids,
+        )
+    else:
+        rows = await conn.fetch(
+            f"UPDATE {table} SET workspace_id = $1 WHERE workspace_id = $2 RETURNING id",
+            target_workspace_id, source_workspace_id,
+        )
+    return [r["id"] for r in rows]
+
+
+async def _move_by_agent(
+    conn: asyncpg.Connection, table: str, target_workspace_id: int, agent_ids: list[int]
+) -> int:
+    """Re-scope a dependent table (keyed by agent_id) to the target workspace."""
+    if not agent_ids:
+        return 0
+    res = await conn.execute(
+        f"UPDATE {table} SET workspace_id = $1 WHERE agent_id = ANY($2::int[])",
+        target_workspace_id, agent_ids,
+    )
+    return int(res.split()[-1])
+
+
 async def transfer_resources(
     pool: asyncpg.Pool,
     source_workspace_id: int,
@@ -441,252 +496,125 @@ async def transfer_resources(
     resource_type: str,
     resource_ids: list[int] | None = None,
 ) -> dict[str, int]:
-    """
-    Transfer resources from one workspace to another.
-    
+    """Transfer resources from one workspace to another.
+
+    Each primary resource is re-scoped by updating its ``workspace_id``. Dependent
+    rows that carry their own ``workspace_id`` are moved alongside their parent so
+    workspace-scoped views stay consistent:
+
+    - agents → agent_sessions, agent_memories, documents (by agent_id)
+    - skills → skill_files, skill_folders (by skill_id)
+    - gates  → gate_decisions (decision history)
+
+    Everything runs in a single transaction, so a partial failure rolls back.
+
     Args:
-        pool: Database connection pool
-        source_workspace_id: Source workspace ID
-        target_workspace_id: Target workspace ID
-        resource_type: Type of resources to transfer (agents, prompts, mcp_connections, database_connections, all)
-        resource_ids: Specific resource IDs to transfer. If None, all resources will be transferred.
-        
+        resource_type: one of TRANSFERABLE_RESOURCE_TYPES, or "all".
+        resource_ids: restrict to these ids (only meaningful for a single type;
+            ignored semantics for "all" where every resource is moved).
+
     Returns:
-        Dictionary with counts of transferred resources
+        Counts keyed by resource type, including dependents (sessions, memories,
+        documents, gate_decisions, skill_files, skill_folders).
     """
-    counts = {
-        "agents": 0,
-        "prompts": 0,
-        "skills": 0,
-        "mcp_connections": 0,
-        "database_connections": 0,
-        "schedules": 0,
-        "workflows": 0,
-        "events": 0,
-        "sessions": 0,
-        "memories": 0,
-    }
-    
+    counts = {k: 0 for k in TRANSFERABLE_RESOURCE_TYPES}
+    counts.update({"sessions": 0, "memories": 0, "gate_decisions": 0,
+                   "skill_files": 0, "skill_folders": 0})
+
+    def want(kind: str) -> bool:
+        return resource_type in (kind, "all")
+
     async with pool.acquire() as conn:
         async with conn.transaction():
-            # Transfer agents (and their sessions, traces, fact memory via workspace_id)
-            if resource_type in ("agents", "all"):
-                if resource_ids:
-                    result = await conn.execute(
-                        """
-                        UPDATE agents
-                        SET workspace_id = $1
-                        WHERE workspace_id = $2 AND id = ANY($3::int[])
-                        """,
-                        target_workspace_id,
-                        source_workspace_id,
-                        resource_ids,
-                    )
-                    n_agents = int(result.split()[-1])
-                    # Move sessions and memories for transferred agents to target workspace
-                    if n_agents > 0:
-                        sess_result = await conn.execute(
-                            """
-                            UPDATE agent_sessions
-                            SET workspace_id = $1
-                            WHERE agent_id = ANY($2::int[]) AND (workspace_id = $3 OR workspace_id IS NULL)
-                            """,
-                            target_workspace_id,
-                            resource_ids,
-                            source_workspace_id,
-                        )
-                        counts["sessions"] = int(sess_result.split()[-1])
-                        mem_result = await conn.execute(
-                            """
-                            UPDATE agent_memories
-                            SET workspace_id = $1
-                            WHERE agent_id = ANY($2::int[]) AND (workspace_id = $3 OR workspace_id IS NULL)
-                            """,
-                            target_workspace_id,
-                            resource_ids,
-                            source_workspace_id,
-                        )
-                        counts["memories"] = int(mem_result.split()[-1])
-                else:
-                    # Update sessions/memories first (while agents still have source workspace_id)
-                    sess_result = await conn.execute(
-                        """
-                        UPDATE agent_sessions
-                        SET workspace_id = $1
-                        WHERE agent_id IN (SELECT id FROM agents WHERE workspace_id = $2)
-                          AND (workspace_id = $2 OR workspace_id IS NULL)
-                        """,
-                        target_workspace_id,
-                        source_workspace_id,
-                    )
-                    counts["sessions"] = int(sess_result.split()[-1])
-                    mem_result = await conn.execute(
-                        """
-                        UPDATE agent_memories
-                        SET workspace_id = $1
-                        WHERE agent_id IN (SELECT id FROM agents WHERE workspace_id = $2)
-                          AND (workspace_id = $2 OR workspace_id IS NULL)
-                        """,
-                        target_workspace_id,
-                        source_workspace_id,
-                    )
-                    counts["memories"] = int(mem_result.split()[-1])
-                    result = await conn.execute(
-                        """
-                        UPDATE agents
-                        SET workspace_id = $1
-                        WHERE workspace_id = $2
-                        """,
-                        target_workspace_id,
-                        source_workspace_id,
-                    )
-                    n_agents = int(result.split()[-1])
-                counts["agents"] = n_agents
-            
-            # Transfer prompts
-            if resource_type in ("prompts", "all"):
-                if resource_ids:
-                    result = await conn.execute(
-                        """
-                        UPDATE prompt_library
-                        SET workspace_id = $1
-                        WHERE workspace_id = $2 AND id = ANY($3::int[])
-                        """,
-                        target_workspace_id,
-                        source_workspace_id,
-                        resource_ids,
-                    )
-                else:
-                    result = await conn.execute(
-                        """
-                        UPDATE prompt_library
-                        SET workspace_id = $1
-                        WHERE workspace_id = $2
-                        """,
-                        target_workspace_id,
-                        source_workspace_id,
-                    )
-                counts["prompts"] = int(result.split()[-1])
+            # Agents (+ sessions, memories, documents keyed by agent_id)
+            if want("agents"):
+                agent_ids = await _move_scoped(
+                    conn, "agents", target_workspace_id, source_workspace_id, resource_ids
+                )
+                counts["agents"] = len(agent_ids)
+                if agent_ids:
+                    counts["sessions"] = await _move_by_agent(
+                        conn, "agent_sessions", target_workspace_id, agent_ids)
+                    counts["memories"] = await _move_by_agent(
+                        conn, "agent_memories", target_workspace_id, agent_ids)
+                    counts["documents"] += await _move_by_agent(
+                        conn, "documents", target_workspace_id, agent_ids)
 
-            # Transfer skills
-            if resource_type in ("skills", "all"):
-                if resource_ids:
-                    result = await conn.execute(
-                        """
-                        UPDATE skills
-                        SET workspace_id = $1
-                        WHERE workspace_id = $2 AND id = ANY($3::int[])
-                        """,
-                        target_workspace_id,
-                        source_workspace_id,
-                        resource_ids,
-                    )
-                else:
-                    result = await conn.execute(
-                        """
-                        UPDATE skills
-                        SET workspace_id = $1
-                        WHERE workspace_id = $2
-                        """,
-                        target_workspace_id,
-                        source_workspace_id,
-                    )
-                counts["skills"] = int(result.split()[-1])
+            # Prompts
+            if want("prompts"):
+                counts["prompts"] = len(await _move_scoped(
+                    conn, "prompt_library", target_workspace_id, source_workspace_id, resource_ids))
 
-            # Transfer MCP connections
-            if resource_type in ("mcp_connections", "all"):
-                if resource_ids:
-                    result = await conn.execute(
-                        """
-                        UPDATE mcp_connections
-                        SET workspace_id = $1
-                        WHERE workspace_id = $2 AND id = ANY($3::int[])
-                        """,
-                        target_workspace_id,
-                        source_workspace_id,
-                        resource_ids,
-                    )
-                else:
-                    result = await conn.execute(
-                        """
-                        UPDATE mcp_connections
-                        SET workspace_id = $1
-                        WHERE workspace_id = $2
-                        """,
-                        target_workspace_id,
-                        source_workspace_id,
-                    )
-                counts["mcp_connections"] = int(result.split()[-1])
-            
-            # Transfer database connections
-            if resource_type in ("database_connections", "all"):
-                if resource_ids:
-                    result = await conn.execute(
-                        """
-                        UPDATE database_connections
-                        SET workspace_id = $1
-                        WHERE workspace_id = $2 AND id = ANY($3::int[])
-                        """,
-                        target_workspace_id,
-                        source_workspace_id,
-                        resource_ids,
-                    )
-                else:
-                    result = await conn.execute(
-                        """
-                        UPDATE database_connections
-                        SET workspace_id = $1
-                        WHERE workspace_id = $2
-                        """,
-                        target_workspace_id,
-                        source_workspace_id,
-                    )
-                counts["database_connections"] = int(result.split()[-1])
+            # Skills (+ skill_files, skill_folders keyed by skill_id)
+            if want("skills"):
+                skill_ids = await _move_scoped(
+                    conn, "skills", target_workspace_id, source_workspace_id, resource_ids)
+                counts["skills"] = len(skill_ids)
+                if skill_ids:
+                    fr = await conn.execute(
+                        "UPDATE skill_files SET workspace_id = $1 WHERE skill_id = ANY($2::int[])",
+                        target_workspace_id, skill_ids)
+                    counts["skill_files"] = int(fr.split()[-1])
+                    dr = await conn.execute(
+                        "UPDATE skill_folders SET workspace_id = $1 WHERE skill_id = ANY($2::int[])",
+                        target_workspace_id, skill_ids)
+                    counts["skill_folders"] = int(dr.split()[-1])
 
-            # Transfer schedules
-            if resource_type in ("schedules", "all"):
-                if resource_ids:
-                    result = await conn.execute(
-                        "UPDATE schedules SET workspace_id = $1 "
-                        "WHERE workspace_id = $2 AND id = ANY($3::int[])",
-                        target_workspace_id, source_workspace_id, resource_ids,
-                    )
-                else:
-                    result = await conn.execute(
-                        "UPDATE schedules SET workspace_id = $1 WHERE workspace_id = $2",
-                        target_workspace_id, source_workspace_id,
-                    )
-                counts["schedules"] = int(result.split()[-1])
+            # MCP connections
+            if want("mcp_connections"):
+                counts["mcp_connections"] = len(await _move_scoped(
+                    conn, "mcp_connections", target_workspace_id, source_workspace_id, resource_ids))
 
-            # Transfer workflows
-            if resource_type in ("workflows", "all"):
-                if resource_ids:
-                    result = await conn.execute(
-                        "UPDATE workflows SET workspace_id = $1 "
-                        "WHERE workspace_id = $2 AND id = ANY($3::int[])",
-                        target_workspace_id, source_workspace_id, resource_ids,
-                    )
-                else:
-                    result = await conn.execute(
-                        "UPDATE workflows SET workspace_id = $1 WHERE workspace_id = $2",
-                        target_workspace_id, source_workspace_id,
-                    )
-                counts["workflows"] = int(result.split()[-1])
+            # Database connections
+            if want("database_connections"):
+                counts["database_connections"] = len(await _move_scoped(
+                    conn, "database_connections", target_workspace_id, source_workspace_id, resource_ids))
 
-            # Transfer event types (the workspace's event registry)
-            if resource_type in ("events", "all"):
+            # Schedules
+            if want("schedules"):
+                counts["schedules"] = len(await _move_scoped(
+                    conn, "schedules", target_workspace_id, source_workspace_id, resource_ids))
+
+            # Workflows
+            if want("workflows"):
+                counts["workflows"] = len(await _move_scoped(
+                    conn, "workflows", target_workspace_id, source_workspace_id, resource_ids))
+
+            # Event types (the workspace's event registry)
+            if want("events"):
+                counts["events"] = len(await _move_scoped(
+                    conn, "event_types", target_workspace_id, source_workspace_id, resource_ids))
+
+            # Webhook subscriptions (deliveries follow via subscription_id)
+            if want("webhooks"):
+                counts["webhooks"] = len(await _move_scoped(
+                    conn, "webhook_subscriptions", target_workspace_id, source_workspace_id, resource_ids))
+
+            # Decision gates (+ gate_decisions history)
+            if want("gates"):
+                gate_ids = await _move_scoped(
+                    conn, "decision_gates", target_workspace_id, source_workspace_id, resource_ids)
+                counts["gates"] = len(gate_ids)
                 if resource_ids:
-                    result = await conn.execute(
-                        "UPDATE event_types SET workspace_id = $1 "
-                        "WHERE workspace_id = $2 AND id = ANY($3::int[])",
-                        target_workspace_id, source_workspace_id, resource_ids,
-                    )
+                    if gate_ids:
+                        gd = await conn.execute(
+                            "UPDATE gate_decisions SET workspace_id = $1 "
+                            "WHERE matched_gate_id = ANY($2::int[])",
+                            target_workspace_id, gate_ids)
+                        counts["gate_decisions"] = int(gd.split()[-1])
                 else:
-                    result = await conn.execute(
-                        "UPDATE event_types SET workspace_id = $1 WHERE workspace_id = $2",
-                        target_workspace_id, source_workspace_id,
-                    )
-                counts["events"] = int(result.split()[-1])
+                    # Move the whole workspace's decision history (incl. default
+                    # allow/deny rows with no matched_gate_id).
+                    gd = await conn.execute(
+                        "UPDATE gate_decisions SET workspace_id = $1 WHERE workspace_id = $2",
+                        target_workspace_id, source_workspace_id)
+                    counts["gate_decisions"] = int(gd.split()[-1])
+
+            # Standalone documents (agent-attached docs already moved above; in
+            # "all" this catches the rest, which now excludes the moved ones).
+            if want("documents"):
+                counts["documents"] += len(await _move_scoped(
+                    conn, "documents", target_workspace_id, source_workspace_id, resource_ids))
 
     return counts
 

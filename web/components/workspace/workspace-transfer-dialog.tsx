@@ -44,6 +44,9 @@ const RESOURCE_TYPES = [
   { value: "schedules", label: "Schedules Only" },
   { value: "workflows", label: "Workflows Only" },
   { value: "events", label: "Event Types Only" },
+  { value: "webhooks", label: "Webhooks Only" },
+  { value: "gates", label: "Decision Gates Only" },
+  { value: "documents", label: "Documents Only" },
 ] as const;
 
 export function WorkspaceTransferDialog({
@@ -126,8 +129,10 @@ export function WorkspaceTransferDialog({
         <DialogHeader>
           <DialogTitle>Transfer Resources</DialogTitle>
           <DialogDescription>
-            Move resources between workspaces. You must be a member of both workspaces.
-            When transferring agents, their sessions and memories are included automatically.
+            Move resources between workspaces. You must be the owner of the source
+            workspace and a member of the target. Dependent data moves automatically —
+            an agent&apos;s sessions, memories and documents; a skill&apos;s files; a gate&apos;s
+            decision history.
           </DialogDescription>
         </DialogHeader>
 
@@ -173,6 +178,15 @@ export function WorkspaceTransferDialog({
                     )}
                     {(success.transferred_events ?? 0) > 0 && (
                       <li>• {success.transferred_events} event type(s)</li>
+                    )}
+                    {(success.transferred_webhooks ?? 0) > 0 && (
+                      <li>• {success.transferred_webhooks} webhook(s)</li>
+                    )}
+                    {(success.transferred_gates ?? 0) > 0 && (
+                      <li>• {success.transferred_gates} decision gate(s)</li>
+                    )}
+                    {(success.transferred_documents ?? 0) > 0 && (
+                      <li>• {success.transferred_documents} document(s)</li>
                     )}
                     {success.transferred_sessions > 0 && (
                       <li>• {success.transferred_sessions} session(s)</li>

@@ -206,6 +206,9 @@ export interface WorkspaceTransferRequest {
     | "schedules"
     | "workflows"
     | "events"
+    | "webhooks"
+    | "gates"
+    | "documents"
     | "all";
   resource_ids?: number[];
 }
@@ -219,8 +222,14 @@ export interface WorkspaceTransferResponse {
   transferred_schedules?: number;
   transferred_workflows?: number;
   transferred_events?: number;
+  transferred_webhooks?: number;
+  transferred_gates?: number;
+  transferred_documents?: number;
   transferred_sessions: number;
   transferred_memories: number;
+  transferred_gate_decisions?: number;
+  transferred_skill_files?: number;
+  transferred_skill_folders?: number;
   total_transferred: number;
 }
 

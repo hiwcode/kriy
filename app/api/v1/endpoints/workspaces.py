@@ -467,18 +467,17 @@ async def transfer_workspace_resources(
 ) -> dict:
     """
     Transfer resources from one workspace to another.
-    Both workspaces must belong to the same user.
-    User must be a member of both workspaces.
-    
-    Supported resource types:
-    - agents: Transfer agents
-    - prompts: Transfer prompts from prompt library
-    - mcp_connections: Transfer MCP connections
-    - database_connections: Transfer database connections
-    - all: Transfer all of the above
-    
-    If resource_ids is provided, only those specific resources will be transferred.
-    Otherwise, all resources of the specified type will be transferred.
+
+    The caller must be the OWNER of the source workspace (transfer can move other
+    members' credentialed resources) and a MEMBER of the target workspace.
+
+    Supported resource types: agents, prompts, skills, mcp_connections,
+    database_connections, schedules, workflows, events, webhooks, gates,
+    documents, or "all". Dependent rows (an agent's sessions/memories/documents,
+    a skill's files/folders, a gate's decision history) move with their parent.
+
+    If resource_ids is provided, only those specific resources of the given type
+    are transferred; otherwise all resources of that type are moved.
     """
     # Verify user is a member of both workspaces
     source_ws = await workspace_repo.get_workspace(pool, data.source_workspace_id)
@@ -504,17 +503,29 @@ async def transfer_workspace_resources(
             detail="You must be a member of the target workspace"
         )
     
-    # Perform the transfer
-    counts = await workspace_repo.transfer_resources(
-        pool,
-        data.source_workspace_id,
-        data.target_workspace_id,
-        data.resource_type,
-        data.resource_ids,
-    )
-    
-    total = sum(counts.values())
-    
+    # Perform the transfer. A name collision with an existing resource in the
+    # target (agents/skills/event_types are unique per workspace by name) aborts
+    # the whole transaction — surface it as a clean 409 rather than a 500.
+    try:
+        counts = await workspace_repo.transfer_resources(
+            pool,
+            data.source_workspace_id,
+            data.target_workspace_id,
+            data.resource_type,
+            data.resource_ids,
+        )
+    except asyncpg.exceptions.UniqueViolationError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="A resource with the same name already exists in the target workspace. "
+                   "Rename or remove the conflicting resource, then try again.",
+        )
+
+    # Total counts primary resources only — dependents (sessions, memories,
+    # documents-via-agent, gate_decisions, skill files/folders) ride along and
+    # would otherwise inflate the number.
+    total = sum(counts[k] for k in workspace_repo.TRANSFERABLE_RESOURCE_TYPES)
+
     return {
         "success": True,
         "message": f"Successfully transferred {total} resource(s)",
@@ -527,8 +538,14 @@ async def transfer_workspace_resources(
             "transferred_schedules": counts["schedules"],
             "transferred_workflows": counts["workflows"],
             "transferred_events": counts["events"],
+            "transferred_webhooks": counts["webhooks"],
+            "transferred_gates": counts["gates"],
+            "transferred_documents": counts["documents"],
             "transferred_sessions": counts["sessions"],
             "transferred_memories": counts["memories"],
+            "transferred_gate_decisions": counts["gate_decisions"],
+            "transferred_skill_files": counts["skill_files"],
+            "transferred_skill_folders": counts["skill_folders"],
             "total_transferred": total,
         },
         "pagination": None,
