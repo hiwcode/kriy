@@ -66,6 +66,7 @@ import { AccentPicker } from "@/components/accent-picker";
 import { ContrastToggle } from "@/components/contrast-toggle";
 
 const MODELS = [
+  "ollama_chat/qwen3:8b",
   "gemini-3.1-flash-lite",
   "gemini-2.5-pro",
   "gemini-2.0-flash",

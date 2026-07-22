@@ -49,6 +49,40 @@ def _agent_card_url(url: str) -> str:
         return u
     return u + AGENT_CARD_SUFFIX
 
+
+def _coerce_metadata(value: Any) -> dict[str, Any]:
+    """Normalize a configured A2A metadata value into a plain dict.
+
+    Accepts a dict or a JSON string; anything else (or invalid JSON) → {}.
+    """
+    if isinstance(value, dict):
+        return value
+    if isinstance(value, str) and value.strip():
+        try:
+            parsed = json.loads(value)
+            return parsed if isinstance(parsed, dict) else {}
+        except (json.JSONDecodeError, TypeError):
+            return {}
+    return {}
+
+
+def _make_a2a_meta_provider(meta: Any):
+    """Build an ADK `a2a_request_meta_provider` from configured metadata.
+
+    The returned callable is invoked per outbound request by RemoteA2aAgent;
+    its dict is attached as JSON-RPC ``params.metadata`` on ``message/send``.
+    External executors read identity (user_id, carrier_id, session_id, …) from
+    there, not from auth headers. Returns None when no metadata is configured.
+    """
+    static_meta = _coerce_metadata(meta)
+    if not static_meta:
+        return None
+
+    def _provider(_ctx: Any, _msg: Any) -> dict[str, Any]:
+        return dict(static_meta)
+
+    return _provider
+
 try:
     from google.adk.tools import load_memory, preload_memory
 except ImportError:
@@ -501,16 +535,21 @@ async def build_agent_from_config(
                     except (json.JSONDecodeError, TypeError):
                         headers = {}
                 headers_str = {str(k): str(v) for k, v in headers.items()}
+                meta_provider = _make_a2a_meta_provider(extra.get("a2a_metadata"))
                 try:
                     httpx_client = httpx.AsyncClient(
                         timeout=httpx.Timeout(timeout=60),
                         headers=headers_str,
                     )
+                    remote_kwargs: dict[str, Any] = {}
+                    if meta_provider is not None:
+                        remote_kwargs["a2a_request_meta_provider"] = meta_provider
                     remote = RemoteA2aAgent(
                         name=agent_config.get("name", "a2a_agent"),
                         agent_card=_agent_card_url(url),
                         description=agent_config.get("description") or "",
                         httpx_client=httpx_client,
+                        **remote_kwargs,
                     )
                     logger.info("Built A2A agent: %s at %s", agent_config.get("name"), url)
                     return remote
@@ -604,6 +643,9 @@ async def build_agent_from_config(
                                     timeout=httpx.Timeout(timeout=60),
                                     headers={str(k): str(v) for k, v in conn_headers.items()},
                                 )
+                            conn_meta_provider = _make_a2a_meta_provider(conn.get("metadata"))
+                            if conn_meta_provider is not None:
+                                kwargs["a2a_request_meta_provider"] = conn_meta_provider
                             remote = RemoteA2aAgent(
                                 name=str(name).strip(),
                                 agent_card=_agent_card_url(url),

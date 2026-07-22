@@ -288,6 +288,7 @@ function ConfigurationContent({
   const [a2aNewUrl, setA2aNewUrl] = React.useState("");
   const [a2aNewName, setA2aNewName] = React.useState("");
   const [a2aNewHeaders, setA2aNewHeaders] = React.useState("");
+  const [a2aNewMetadata, setA2aNewMetadata] = React.useState("");
 
   const [models, setModels] = React.useState<ModelPricing[]>([]);
   React.useEffect(() => {
@@ -587,6 +588,23 @@ function ConfigurationContent({
                       HTTP headers for auth (e.g. Bearer token). JSON object.
                     </p>
                   </div>
+                  <div className="space-y-2">
+                    <Label>Metadata (optional JSON)</Label>
+                    <Textarea
+                      value={formState.a2a_metadata}
+                      onChange={(e) =>
+                        setFormState((prev) => ({ ...prev, a2a_metadata: e.target.value }))
+                      }
+                      placeholder='{"key": "value"}'
+                      rows={3}
+                      className="font-mono text-sm"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Arbitrary key/values sent as JSON-RPC <code>params.metadata</code> on every
+                      request — whatever fields the remote agent expects. Auth goes in Headers,
+                      not here.
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -809,16 +827,32 @@ function ConfigurationContent({
                               return;
                             }
                           }
+                          let metadata: Record<string, unknown> | undefined;
+                          const rawMeta = a2aNewMetadata.trim();
+                          if (rawMeta) {
+                            try {
+                              const parsed = JSON.parse(rawMeta);
+                              if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+                                metadata = parsed as Record<string, unknown>;
+                              } else {
+                                throw new Error("not an object");
+                              }
+                            } catch {
+                              toast.error("Metadata must be a valid JSON object, e.g. {\"userId\":\"…\"}");
+                              return;
+                            }
+                          }
                           setFormState((prev) => ({
                             ...prev,
                             a2a_connections: [
                               ...prev.a2a_connections,
-                              { url, name: a2aNewName.trim() || "external_agent", headers },
+                              { url, name: a2aNewName.trim() || "external_agent", headers, metadata },
                             ],
                           }));
                           setA2aNewUrl("");
                           setA2aNewName("");
                           setA2aNewHeaders("");
+                          setA2aNewMetadata("");
                         }}
                       >
                         <Plus className="size-4 mr-1" />
@@ -829,6 +863,12 @@ function ConfigurationContent({
                       placeholder='Optional auth headers as JSON, e.g. {"Authorization":"Bearer …"}'
                       value={a2aNewHeaders}
                       onChange={(e) => setA2aNewHeaders(e.target.value)}
+                      className="font-mono text-xs"
+                    />
+                    <Input
+                      placeholder='Optional params.metadata as JSON, e.g. {"key":"value"}'
+                      value={a2aNewMetadata}
+                      onChange={(e) => setA2aNewMetadata(e.target.value)}
                       className="font-mono text-xs"
                     />
                     {formState.a2a_connections.length > 0 && (
@@ -1104,6 +1144,8 @@ interface A2aConnection {
   name: string;
   /** Optional auth headers sent when calling this external agent (stored encrypted). */
   headers?: Record<string, string>;
+  /** Optional arbitrary JSON-RPC params.metadata sent to the remote agent. */
+  metadata?: Record<string, unknown>;
 }
 
 type AgentType = "local" | "a2a";
@@ -1131,6 +1173,7 @@ interface AgentFormState {
   a2a_connections: A2aConnection[];
   a2a_url: string;
   a2a_headers: string;
+  a2a_metadata: string;
 }
 
 const emptyForm: AgentFormState = {
@@ -1150,6 +1193,7 @@ const emptyForm: AgentFormState = {
   a2a_connections: [],
   a2a_url: "",
   a2a_headers: "",
+  a2a_metadata: "",
 };
 
 function ChatTab({
@@ -2413,13 +2457,17 @@ export default function AgentDetailPage() {
           const a2aRaw = extra.a2a_connections;
           const a2a_connections: A2aConnection[] = Array.isArray(a2aRaw)
             ? a2aRaw
-                .filter((c): c is { url?: string; name?: string; headers?: unknown } => c != null && typeof c === "object")
+                .filter((c): c is { url?: string; name?: string; headers?: unknown; metadata?: unknown } => c != null && typeof c === "object")
                 .map((c) => ({
                   url: String(c.url ?? "").trim(),
                   name: String(c.name ?? "external_agent").trim() || "external_agent",
                   headers:
                     c.headers && typeof c.headers === "object" && !("__enc__" in (c.headers as object))
                       ? (c.headers as Record<string, string>)
+                      : undefined,
+                  metadata:
+                    c.metadata && typeof c.metadata === "object" && !Array.isArray(c.metadata)
+                      ? (c.metadata as Record<string, unknown>)
                       : undefined,
                 }))
                 .filter((c) => c.url)
@@ -2433,6 +2481,13 @@ export default function AgentDetailPage() {
               ? a2aHeadersVal
               : a2aHeadersVal != null
                 ? JSON.stringify(a2aHeadersVal, null, 2)
+                : "";
+          const a2aMetadataVal = extra.a2a_metadata;
+          const a2a_metadata_str =
+            typeof a2aMetadataVal === "string"
+              ? a2aMetadataVal
+              : a2aMetadataVal != null
+                ? JSON.stringify(a2aMetadataVal, null, 2)
                 : "";
           setFormState({
             agent_type: agentType,
@@ -2451,6 +2506,7 @@ export default function AgentDetailPage() {
             a2a_connections,
             a2a_url: String(extra.a2a_url ?? ""),
             a2a_headers: a2a_headers_str,
+            a2a_metadata: a2a_metadata_str,
           });
         })
         .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"))
@@ -2511,6 +2567,7 @@ export default function AgentDetailPage() {
             url: c.url.trim(),
             name: c.name || "external_agent",
             ...(c.headers && Object.keys(c.headers).length ? { headers: c.headers } : {}),
+            ...(c.metadata && Object.keys(c.metadata).length ? { metadata: c.metadata } : {}),
           })),
       };
       if (formState.agent_type === "a2a") {
@@ -2528,10 +2585,23 @@ export default function AgentDetailPage() {
           }
         }
         extraFields.a2a_headers = headersObj;
+        let metadataObj: Record<string, unknown> = {};
+        if (formState.a2a_metadata.trim()) {
+          try {
+            const parsed = JSON.parse(formState.a2a_metadata);
+            if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+              metadataObj = parsed as Record<string, unknown>;
+            }
+          } catch {
+            // ignore invalid JSON
+          }
+        }
+        extraFields.a2a_metadata = metadataObj;
       } else {
         delete extraFields.type;
         delete extraFields.a2a_url;
         delete extraFields.a2a_headers;
+        delete extraFields.a2a_metadata;
       }
       const payload: AgentPayload = {
         name: formState.name,

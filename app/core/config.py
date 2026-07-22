@@ -45,7 +45,10 @@ class Settings(BaseSettings):
         description="Google AI (Gemini) API key. Get one at https://aistudio.google.com/app/apikey",
         env="GOOGLE_API_KEY",
     )
-    DEFAULT_MODEL: str = Field(default="gemini-2.0-flash", description="Default LLM model")
+    DEFAULT_MODEL: str = Field(
+        default="ollama_chat/qwen3:8b",
+        description="Default LLM model. Local Ollama (ollama_chat/qwen3:8b) needs no API key.",
+    )
 
     # Tokenizer
     TOKENIZER_MODEL: str = Field(
