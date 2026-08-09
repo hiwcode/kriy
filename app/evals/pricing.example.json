@@ -1,0 +1,6 @@
+{
+  "gemini-2.0-flash": [0.10, 0.40],
+  "gemini-2.5-flash": [0.30, 2.50],
+  "gpt-4o-mini": [0.15, 0.60],
+  "ollama_chat/qwen3:8b": [0.0, 0.0]
+}

@@ -1,0 +1,7 @@
+# Smoke suite — quick sanity checks any capable model should pass.
+# One JSON object per line. Lines starting with # are ignored.
+{"id": "greeting", "prompt": "Reply with exactly the single word: hello", "assert": {"type": "contains", "value": "hello"}}
+{"id": "arithmetic", "prompt": "What is 2 + 2? Reply with just the number, nothing else.", "assert": {"type": "regex", "value": "\\b4\\b"}}
+{"id": "capital", "prompt": "What is the capital of France? Answer with one word.", "assert": {"type": "contains", "value": "paris"}}
+{"id": "instruction_following", "prompt": "Output only the word OK in uppercase.", "assert": {"type": "regex", "value": "OK"}}
+{"id": "json_shape", "prompt": "Return a JSON object with keys name and age for a person named Ada aged 36. Output only JSON.", "assert": {"type": "judge", "rubric": "The answer is valid JSON containing a name of 'Ada' and an age of 36."}}

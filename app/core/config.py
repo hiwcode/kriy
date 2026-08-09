@@ -46,8 +46,22 @@ class Settings(BaseSettings):
         env="GOOGLE_API_KEY",
     )
     DEFAULT_MODEL: str = Field(
-        default="ollama_chat/qwen3:8b",
-        description="Default LLM model. Local Ollama (ollama_chat/qwen3:8b) needs no API key.",
+        default="gemini-3.1-flash-lite", description="Default LLM model"
+    )
+
+    # Run harness robustness
+    LLM_MAX_RETRIES: int = Field(
+        default=2,
+        description="Extra attempts on a transient LLM error (429/quota/5xx/timeout) that "
+        "fails before any output is produced. 0 disables retrying.",
+    )
+    LLM_RETRY_BASE_DELAY: float = Field(
+        default=1.0, description="Base seconds for exponential backoff between LLM retries."
+    )
+    LLM_MAX_CALLS_PER_RUN: int = Field(
+        default=500,
+        description="Safety cap on model calls per agent run (ADK RunConfig.max_llm_calls). "
+        "Guards against runaway tool loops. <=0 leaves ADK's default.",
     )
 
     # Tokenizer
