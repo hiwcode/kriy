@@ -145,7 +145,7 @@ export function AppNavbar({ className }: { className?: string }) {
           </a>
         </Button>
         <NotificationBell />
-        <ThemeToggle />
+        <ThemeToggle isHeader={true}/>
         {/* Auth: Sign in button or User dropdown */}
         {auth?.isLoading ? (
           <div className="size-9 animate-pulse rounded-full bg-muted" />
