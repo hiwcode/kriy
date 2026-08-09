@@ -13,6 +13,12 @@ import {
   Bot,
   ArrowRight,
   Send,
+  ShieldCheck,
+  ShieldAlert,
+  Webhook,
+  Lock,
+  RotateCcw,
+  XCircle,
 } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
@@ -213,6 +219,178 @@ function WorkflowMock() {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Mockup 3 — Decision gates                                          */
+/* ------------------------------------------------------------------ */
+
+function GateMock() {
+  return (
+    <MockFrame url="atelier.app / gates">
+      <div className="flex h-[380px] flex-col gap-3 overflow-hidden text-left">
+        {/* ask */}
+        <div className="rounded-xl border bg-background/60 p-3">
+          <p className="mb-2 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Your app — before it commits the action
+          </p>
+          <div className="rounded-lg bg-zinc-950 p-2.5 font-mono text-[10px] leading-relaxed text-zinc-100">
+            <span className="text-emerald-400">POST</span> /events/decide
+            <br />
+            {"{ "}
+            <span className="text-sky-300">&quot;type&quot;</span>:{" "}
+            <span className="text-amber-300">&quot;refund.requested&quot;</span>,{" "}
+            <span className="text-sky-300">&quot;payload&quot;</span>: {"{ amount: 900 } }"}
+          </div>
+        </div>
+
+        <div className="flex justify-center">
+          <ArrowRight className="size-4 rotate-90 text-muted-foreground/50" />
+        </div>
+
+        {/* rules */}
+        <div className="rounded-xl border bg-background/60 p-3">
+          <div className="mb-2 flex items-center justify-between">
+            <p className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Rules — priority order, first match wins
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            {[
+              { name: "Auto-approve under $100", cond: "amount lte 100", verdict: "allow", hit: false },
+              { name: "Large refund needs a human", cond: "amount gt 500", verdict: "deny", hit: true },
+            ].map((r) => (
+              <div
+                key={r.name}
+                className={cn(
+                  "flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-[10px]",
+                  r.hit ? "border-primary/40 bg-primary/5" : "border-border/60 bg-card"
+                )}
+              >
+                {r.verdict === "allow" ? (
+                  <ShieldCheck className="size-3.5 shrink-0 text-emerald-500" />
+                ) : (
+                  <ShieldAlert className="size-3.5 shrink-0 text-amber-500" />
+                )}
+                <span className="min-w-0 truncate font-medium">{r.name}</span>
+                <code className="ml-auto shrink-0 font-mono text-[9px] text-muted-foreground">
+                  {r.cond}
+                </code>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex justify-center">
+          <ArrowRight className="size-4 rotate-90 text-muted-foreground/50" />
+        </div>
+
+        {/* verdict */}
+        <div className="rounded-xl border border-amber-500/25 bg-amber-500/[0.06] p-3">
+          <div className="mb-1.5 flex items-center gap-2">
+            <XCircle className="size-4 shrink-0 text-amber-500" />
+            <span className="text-[11px] font-semibold">deny</span>
+            <span className="ml-auto rounded-full border border-border/60 px-1.5 py-0.5 text-[9px] text-muted-foreground">
+              overridable
+            </span>
+          </div>
+          <p className="text-[10px] leading-relaxed text-muted-foreground">
+            &quot;Refunds over $500 need a supervisor.&quot; — returned inline, logged to the
+            decision audit trail.
+          </p>
+        </div>
+      </div>
+    </MockFrame>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  Mockup 4 — Outbound webhooks                                       */
+/* ------------------------------------------------------------------ */
+
+function WebhookMock() {
+  return (
+    <MockFrame url="atelier.app / webhooks">
+      <div className="flex h-[380px] flex-col gap-3 overflow-hidden text-left">
+        {/* subscription */}
+        <div className="rounded-xl border bg-background/60 p-3">
+          <div className="mb-2 flex items-center gap-2">
+            <Webhook className="size-3.5 text-primary" />
+            <code className="min-w-0 truncate font-mono text-[10px]">
+              https://api.acme.com/atelier
+            </code>
+            <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-medium text-emerald-600 dark:text-emerald-400">
+              enabled
+            </span>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {["run.completed", "gate.*"].map((e) => (
+              <code
+                key={e}
+                className="rounded-md border border-border/60 bg-card px-1.5 py-0.5 font-mono text-[9px] text-muted-foreground"
+              >
+                {e}
+              </code>
+            ))}
+            <span className="ml-auto inline-flex items-center gap-1 text-[9px] text-muted-foreground">
+              <Lock className="size-2.5" /> whsec_…4f9c
+            </span>
+          </div>
+        </div>
+
+        {/* signed payload */}
+        <div className="rounded-lg bg-zinc-950 p-2.5 font-mono text-[10px] leading-relaxed text-zinc-100">
+          <span className="text-zinc-500">X-Atelier-Signature:</span>{" "}
+          <span className="text-emerald-400">t=</span>1750…,
+          <span className="text-emerald-400">v1=</span>9ab3…
+          <br />
+          {"{ "}
+          <span className="text-sky-300">&quot;type&quot;</span>:{" "}
+          <span className="text-amber-300">&quot;run.completed&quot;</span>,{" "}
+          <span className="text-sky-300">&quot;data&quot;</span>: {"{ result: … } }"}
+        </div>
+
+        {/* deliveries */}
+        <div className="flex min-h-0 flex-1 flex-col rounded-xl border bg-background/60 p-3">
+          <p className="mb-2 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Deliveries
+          </p>
+          <div className="space-y-1.5">
+            {[
+              { type: "run.completed", code: "200", ok: true },
+              { type: "run.completed", code: "200", ok: true },
+              { type: "gate.decided", code: "503", ok: false },
+            ].map((d, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-2 rounded-lg border border-border/60 bg-card px-2.5 py-1.5 text-[10px]"
+              >
+                {d.ok ? (
+                  <CheckCircle2 className="size-3.5 shrink-0 text-emerald-500" />
+                ) : (
+                  <XCircle className="size-3.5 shrink-0 text-red-500" />
+                )}
+                <code className="min-w-0 truncate font-mono">{d.type}</code>
+                <span
+                  className={cn(
+                    "ml-auto shrink-0 font-mono text-[9px]",
+                    d.ok ? "text-muted-foreground" : "text-red-500"
+                  )}
+                >
+                  {d.code}
+                </span>
+                {!d.ok && (
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-md border border-border/60 px-1.5 py-0.5 text-[9px] text-muted-foreground">
+                    <RotateCcw className="size-2.5" /> replay
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </MockFrame>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Showcase section                                                   */
 /* ------------------------------------------------------------------ */
 
@@ -241,6 +419,30 @@ const ROWS: Row[] = [
     points: ["One-line emit()", "Priority queue + retries", "Per-user routing"],
     mock: <WorkflowMock />,
   },
+  {
+    eyebrow: "Decision gates",
+    title: "Ask before you act — get a verdict in the same call",
+    description:
+      "Post a proposed action to /events/decide and Atelier answers allow or deny inline, from rules you build in the UI. Your policy stops living in scattered if-statements, and every verdict lands in an audit trail.",
+    points: [
+      "Synchronous allow / deny",
+      "Nested AND / OR / NONE rules",
+      "Soft denies a human can override",
+    ],
+    mock: <GateMock />,
+  },
+  {
+    eyebrow: "Outbound webhooks",
+    title: "Results come back to you — signed, retried, replayable",
+    description:
+      "Subscribe an endpoint to run.completed and Atelier posts the agent's result to your app, HMAC-signed and correlated to the request that started it. Every attempt is logged, and a failed one is one click from a replay.",
+    points: [
+      "HMAC-signed envelopes",
+      "Per-event-type subscriptions",
+      "Delivery log + manual replay",
+    ],
+    mock: <WebhookMock />,
+  },
 ];
 
 export function FeatureShowcase() {
@@ -255,7 +457,8 @@ export function FeatureShowcase() {
             See what it actually looks like
           </h2>
           <p className="mt-4 text-muted-foreground">
-            Real screens from the product — the agentic chat and event-driven workflows.
+            Real screens from the product — agentic chat, event-driven triggers, decision
+            gates, and the webhooks that carry results back.
           </p>
         </div>
 

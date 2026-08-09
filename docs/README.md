@@ -2,7 +2,7 @@
 
 An open-source workspace for building, managing, and orchestrating AI agents. Atelier gives teams a unified platform to create agents powered by **Google Gemini**, **OpenAI GPT**, and **Anthropic Claude** — with collaborative workspaces, scheduling, memory, and extensible tooling.
 
-Build agents and give them the tools to *do* work — MCP tools, skills, orchestration, and schedules — then let your app's events trigger the right agent automatically.
+Build agents and give them the tools to *do* work — MCP tools, skills, orchestration, and schedules — then let your app's events trigger the right agent automatically, check a decision gate before it acts, and get the result posted back over a signed webhook.
 
 ---
 
@@ -17,6 +17,8 @@ Build agents and give them the tools to *do* work — MCP tools, skills, orchest
 | **Schedules** | Run agents on cron schedules or one-time triggers |
 | **Memory** | Short-term session context plus auto-extracted long-term facts |
 | **Triggers** | Your app emits an event; the matching workflow runs the right agent |
+| **Gates** | Ask before you act — rules return an allow/deny verdict inline |
+| **Webhooks** | Atelier posts results back to your app, HMAC-signed and replayable |
 | **Workspaces** | Personal and team workspaces with role-based access |
 
 ---
@@ -45,6 +47,8 @@ Build agents and give them the tools to *do* work — MCP tools, skills, orchest
 | [Orchestrator](using-orchestrator.md) | Build multi-agent flows with visual coordination |
 | [Schedules](using-schedules.md) | One-time and recurring automated agent runs |
 | [Triggers](using-event-workflows.md) | React to events from your app — emit an event, an agent handles it |
+| [Gates](using-gates.md) | Synchronous allow/deny rules your app checks before it acts |
+| [Webhooks](using-webhooks.md) | Signed outbound events — run results delivered back to your app |
 | [Notifications](using-notifications.md) | Live in-app notifications + the `notify` agent tool |
 | [Workspaces](using-workspaces.md) | Personal and team workspaces, roles, invitations, resource scoping |
 | [Workspace Transfer](workspace-transfer.md) | Move agents and resources between workspaces via API |
@@ -91,8 +95,11 @@ flowchart TB
         MCP["MCP Servers"]
         DB["PostgreSQL DBs"]
         Slack["Slack"]
+        YourApp["Your app"]
     end
     UI --> API
+    YourApp -->|"emit / decide"| API
+    API -->|"signed webhooks"| YourApp
     API --> ADK
     ADK --> Gemini
     ADK -->|"via LiteLLM"| GPT

@@ -21,6 +21,10 @@ const DOC_FILES: Record<string, string> = {
   "using-workspaces": "using-workspaces",
   "workspace-transfer": "workspace-transfer",
   "using-event-workflows":"using-event-workflows",
+  "using-gates": "using-gates",
+  "using-webhooks": "using-webhooks",
+  // Not in the sidebar — reachable from the Webhooks guide's "Related" link.
+  "outbound-webhooks-design": "outbound-webhooks-design",
   "using-notifications": "using-notifications"
 };
 

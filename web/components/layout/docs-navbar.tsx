@@ -62,7 +62,7 @@ export function DocsNavbar({ className }: { className?: string }) {
       </div>
 
       <div className="flex items-center gap-3">
-        <ThemeToggle />
+        <ThemeToggle isHeader={true}/>
       </div>
     </header>
   );

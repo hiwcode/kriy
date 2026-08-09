@@ -31,6 +31,8 @@ import {
   ArrowRightLeft,
   Settings,
   GraduationCap,
+  ShieldCheck,
+  Webhook,
   Wrench,
 } from "lucide-react";
 
@@ -62,6 +64,8 @@ const DOC_SECTIONS: DocSection[] = [
       { slug: "using-orchestrator", name: "Orchestrator", href: "/docs/using-orchestrator", icon: BrainCircuit },
       { slug: "using-schedules", name: "Schedules", href: "/docs/using-schedules", icon: CalendarClock },
       { slug: "using-event-workflows", name: "Triggers", href: "/docs/using-event-workflows", icon: Workflow },
+      { slug: "using-gates", name: "Gates", href: "/docs/using-gates", icon: ShieldCheck },
+      { slug: "using-webhooks", name: "Webhooks", href: "/docs/using-webhooks", icon: Webhook },
       { slug: "using-notifications", name: "Notifications", href: "/docs/using-notifications", icon: Bell },
       { slug: "using-workspaces", name: "Workspaces", href: "/docs/using-workspaces", icon: Building2 },
       { slug: "workspace-transfer", name: "Workspace Transfer", href: "/docs/workspace-transfer", icon: ArrowRightLeft },

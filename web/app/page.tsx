@@ -28,6 +28,7 @@ import {
   Zap,
   DollarSign,
   Workflow,
+  Webhook,
   Bell,
   Heart,
   ShieldCheck,
@@ -83,6 +84,18 @@ const FEATURES = [
     title: "Triggers",
     description:
       "Connect your app: emit an event and the right agent handles it automatically — a priority queue with retries, no glue code.",
+  },
+  {
+    icon: ShieldCheck,
+    title: "Decision Gates",
+    description:
+      "Ask before you act: POST a proposed action and get an allow/deny verdict back inline, from rules you build without shipping code.",
+  },
+  {
+    icon: Webhook,
+    title: "Outbound Webhooks",
+    description:
+      "Atelier posts results back to your app — signed with HMAC, retried, logged, and replayable from the deliveries view.",
   },
   {
     icon: Bell,
@@ -451,7 +464,7 @@ export default function LandingPage() {
 
           {/* Right: actions */}
           <div className="flex items-center gap-2">
-            <ThemeToggle />
+            <ThemeToggle isHeader={true}/>
             <Button variant="ghost" size="icon" asChild>
               <a href={siteConfig.github} target="_blank" rel="noopener noreferrer" aria-label="GitHub">
                 <Github className="size-4" />

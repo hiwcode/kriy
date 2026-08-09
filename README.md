@@ -13,7 +13,7 @@
 
 An **AI Workspace** for creating and managing AI agents across multiple LLM providers (Google Gemini, OpenAI GPT, Anthropic Claude). Configure agents, connect external tools, schedule automated runs, orchestrate multi-agent workflows, and keep conversation history with semantic memory — all organized into collaborative workspaces for teams and individuals.
 
-**Highlights:** multi-LLM support · team workspaces with RBAC · agent + skill builder · streaming chat · visual multi-agent orchestrator · MCP / database / file / Claude Code tools · cron scheduling · session & facts memory · Slack integration · Opik observability.
+**Highlights:** multi-LLM support · team workspaces with RBAC · agent + skill builder · streaming chat · visual multi-agent orchestrator · MCP / database / file / Claude Code tools · cron scheduling · event triggers · decision gates · signed outbound webhooks · session & facts memory · Slack integration · Opik observability.
 
 Full architecture, tech stack, feature reference, and project layout are in the **[docs](https://ai.gethowitworks.com/docs)**.
 
