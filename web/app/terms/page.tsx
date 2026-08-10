@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { LegalShell, LegalSection } from "@/components/legal/legal-shell";
 
 export const metadata: Metadata = {
-  title: "Terms of Service — Atelier",
-  description: "The terms for using this Atelier demo instance.",
+  title: "Terms of Service — KRIY",
+  description: "The terms for using this KRIY demo instance.",
 };
 
 const CONTACT = "contract@gethowitworks.com";
@@ -12,7 +12,7 @@ export default function TermsPage() {
   return (
     <LegalShell eyebrow="Legal" title="Terms of Service" updated="July 3, 2026">
       <p className="text-sm leading-relaxed text-muted-foreground">
-        These terms govern your use of this Atelier instance, operated by{" "}
+        These terms govern your use of this KRIY instance, operated by{" "}
         <strong>hiwcode</strong> (&quot;we&quot;, &quot;us&quot;). By signing in
         or using the service, you agree to them. If you don&apos;t agree, please don&apos;t use
         it.
@@ -24,9 +24,9 @@ export default function TermsPage() {
         offline at any time, with no guarantee of availability or data retention.
       </div>
 
-      <LegalSection title="What Atelier is">
+      <LegalSection title="What KRIY is">
         <p>
-          Atelier is an open-source, source-available platform for building and running
+          KRIY is an open-source, source-available platform for building and running
           AI agents. This instance is provided for demonstration and evaluation.
         </p>
       </LegalSection>
@@ -60,7 +60,7 @@ export default function TermsPage() {
 
       <LegalSection title="Third-party services & costs">
         <p>
-          Atelier connects to services you configure (AI providers, MCP servers, email,
+          KRIY connects to services you configure (AI providers, MCP servers, email,
           etc.). You supply your own keys and are responsible for their usage, costs,
           and terms. We&apos;re not responsible for third-party services or their output.
         </p>
@@ -100,7 +100,7 @@ export default function TermsPage() {
 
       <LegalSection title="The software license">
         <p>
-          The Atelier source code is licensed under the Functional Source License
+          The KRIY source code is licensed under the Functional Source License
           (FSL-1.1-MIT). These Terms cover your use of <em>this hosted instance</em>;
           the code license covers using the software itself.
         </p>

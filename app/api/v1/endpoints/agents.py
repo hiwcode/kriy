@@ -708,7 +708,7 @@ async def confirm_tool(
 
 
 # Serve artifacts from the SAME dir the tools write to (bash, run_python, file
-# tools). Override with ATELIER_WORKSPACE_DIR. Previously hardcoded to a Desktop
+# tools). Override with KRIY_WORKSPACE_DIR. Previously hardcoded to a Desktop
 # path, which never matched where generated files actually landed.
 from app.agents.tool_registry import WORKSPACE_DIR as _WORKSPACE_DIR
 _ALLOWED_EXTENSIONS = {

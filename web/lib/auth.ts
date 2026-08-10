@@ -8,10 +8,10 @@ import { jwtDecode } from "jwt-decode";
 let authToken: string | null = null;
 let authUser: { email: string; name: string; picture?: string } | null = null;
 
-const TOKEN_KEY = "atelier_auth_token";
-const USER_KEY = "atelier_auth_user";
-const REFRESH_KEY = "atelier_refresh_token";
-const AUTH_MODE_KEY = "atelier_auth_mode"; // "google" = only Bearer, no API key; "anonymous" = use API key
+const TOKEN_KEY = "kriy_auth_token";
+const USER_KEY = "kriy_auth_user";
+const REFRESH_KEY = "kriy_refresh_token";
+const AUTH_MODE_KEY = "kriy_auth_mode"; // "google" = only Bearer, no API key; "anonymous" = use API key
 
 /** Check if JWT is expired (with 5 min buffer). */
 function isTokenExpired(token: string): boolean {

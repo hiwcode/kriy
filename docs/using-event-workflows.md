@@ -1,7 +1,7 @@
 # Triggers
 
 Triggers connect an **external app** to your agents. When your app emits an event
-(e.g. `todo.completed`), Atelier runs the matching agent automatically to handle it — no
+(e.g. `todo.completed`), KRIY runs the matching agent automatically to handle it — no
 code in your app beyond a one-line `emit`.
 
 > Not to be confused with the **Orchestrator** (visual multi-agent flows) or **Schedules**
@@ -64,7 +64,7 @@ import requests
 
 requests.post(
     "http://localhost:8000/api/v1/events",
-    headers={"X-API-Key": "ate-..."},   # per-user key; no agent_id needed
+    headers={"X-API-Key": "kriy-..."},   # per-user key; no agent_id needed
     json={"type": "todo.completed", "payload": {"todos": todos}},
 )
 ```
@@ -74,7 +74,7 @@ requests.post(
 ```ts
 await fetch("http://localhost:8000/api/v1/events", {
   method: "POST",
-  headers: { "X-API-Key": "ate-...", "Content-Type": "application/json" },
+  headers: { "X-API-Key": "kriy-...", "Content-Type": "application/json" },
   body: JSON.stringify({ type: "todo.completed", payload: { todos } }),
 });
 ```
@@ -83,12 +83,12 @@ await fetch("http://localhost:8000/api/v1/events", {
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/events \
-  -H "X-API-Key: ate-..." -H "Content-Type: application/json" \
+  -H "X-API-Key: kriy-..." -H "Content-Type: application/json" \
   -d '{"type":"todo.completed","payload":{"todos":[]}}'
 # -> { "event": "todo.completed", "matched": 2, "run_ids": [...], "registered": true }
 ```
 
-> Use a **per-user API key** (starts with `ate-`, from **Config → API key**), not the global
+> Use a **per-user API key** (starts with `kriy-`, from **Config → API key**), not the global
 > `API_KEYS` value. The workspace is taken from the `X-Workspace-Id` header, or your
 > personal workspace by default.
 

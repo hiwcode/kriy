@@ -110,9 +110,9 @@ function CodeDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o: b
       : process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"
   ).replace(/\/$/, "");
 
-  const envExample = `ATELIER_URL=${base}
-ATELIER_API_KEY=ate-...          # Config → API key (per-user key)
-ATELIER_WORKSPACE_ID=1           # optional — omit for your personal workspace`;
+  const envExample = `KRIY_URL=${base}
+KRIY_API_KEY=kriy-...          # Config → API key (per-user key)
+KRIY_WORKSPACE_ID=1           # optional — omit for your personal workspace`;
 
   const integrationPy = `import httpx
 import os
@@ -121,22 +121,22 @@ import logging
 
 dotenv.load_dotenv()
 
-ATELIER_URL = os.getenv("ATELIER_URL", "")
-ATELIER_API_KEY = os.getenv("ATELIER_API_KEY", "")
-ATELIER_WORKSPACE_ID = os.getenv("ATELIER_WORKSPACE_ID", "")
+KRIY_URL = os.getenv("KRIY_URL", "")
+KRIY_API_KEY = os.getenv("KRIY_API_KEY", "")
+KRIY_WORKSPACE_ID = os.getenv("KRIY_WORKSPACE_ID", "")
 
 http = httpx.AsyncClient(
     timeout=10,
-    base_url=ATELIER_URL,
+    base_url=KRIY_URL,
     headers={
-        "X-API-Key": ATELIER_API_KEY,
-        "X-Workspace-Id": ATELIER_WORKSPACE_ID,
+        "X-API-Key": KRIY_API_KEY,
+        "X-Workspace-Id": KRIY_WORKSPACE_ID,
     },
 )
 
 
 async def emit_event(event_type: str, payload: dict) -> None:
-    """Fire-and-forget an event to Atelier. Never blocks your operation."""
+    """Fire-and-forget an event to KRIY. Never blocks your operation."""
     try:
         await http.post("/api/v1/events", json={"type": event_type, "payload": payload})
         logging.info("Emitted %s", event_type)

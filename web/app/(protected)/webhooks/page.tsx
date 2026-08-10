@@ -28,8 +28,8 @@ function fmt(ts: string | null): string {
   return isNaN(d.getTime()) ? "" : d.toLocaleString();
 }
 
-// Platform lifecycle events Atelier delivers OUTBOUND. App events (application.*,
-// document.*) flow INTO Atelier to fire Triggers/Gates — they are never delivered
+// Platform lifecycle events KRIY delivers OUTBOUND. App events (application.*,
+// document.*) flow INTO KRIY to fire Triggers/Gates — they are never delivered
 // back out via webhooks, so only these are subscribable. (run.completed fires today;
 // run.failed + gate.decided are wired next.)
 const PLATFORM_EVENTS = ["run.completed", "run.failed", "gate.decided"];
@@ -143,7 +143,7 @@ export default function WebhooksPage() {
             <div className="min-w-0">
               <h1 className="text-2xl font-semibold tracking-tight text-foreground">Webhooks</h1>
               <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-                Atelier POSTs platform events (e.g. <code className="font-mono">run.completed</code>) to your
+                KRIY POSTs platform events (e.g. <code className="font-mono">run.completed</code>) to your
                 endpoints — signed and retried — so external systems get async results back. The outbound
                 counterpart to Events.
               </p>
@@ -167,7 +167,7 @@ export default function WebhooksPage() {
                   <Button size="icon-sm" variant="ghost" onClick={() => setRevealed(null)} aria-label="Dismiss"><X className="size-4" /></Button>
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">
-                  Verify deliveries with <code className="font-mono">X-Atelier-Signature: t=…,v1=HMAC_SHA256(secret, &quot;t.body&quot;)</code>.
+                  Verify deliveries with <code className="font-mono">X-KRIY-Signature: t=…,v1=HMAC_SHA256(secret, &quot;t.body&quot;)</code>.
                 </p>
               </div>
             )}
@@ -237,8 +237,8 @@ export default function WebhooksPage() {
           <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4">
             <div className="space-y-1.5">
               <Label>Endpoint URL</Label>
-              <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://your-app.com/atelier/webhook" className="font-mono" />
-              <p className="text-xs text-muted-foreground">Must be a public https URL in production. Atelier POSTs the signed event here.</p>
+              <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://your-app.com/kriy/webhook" className="font-mono" />
+              <p className="text-xs text-muted-foreground">Must be a public https URL in production. KRIY POSTs the signed event here.</p>
             </div>
             <div className="space-y-1.5">
               <Label>Events</Label>

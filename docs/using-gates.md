@@ -1,8 +1,8 @@
 # Gates
 
-Gates let your app **ask before it acts**. Your app posts a proposed action to Atelier,
-Atelier evaluates the workspace's rules, and answers `allow` or `deny` **in the same
-HTTP call** — so the policy lives in Atelier instead of scattered `if` statements across
+Gates let your app **ask before it acts**. Your app posts a proposed action to KRIY,
+KRIY evaluates the workspace's rules, and answers `allow` or `deny` **in the same
+HTTP call** — so the policy lives in KRIY instead of scattered `if` statements across
 your codebase.
 
 > Not to be confused with [Triggers](using-event-workflows.md), which are **asynchronous**
@@ -117,7 +117,7 @@ import requests
 
 verdict = requests.post(
     "http://localhost:8000/api/v1/events/decide",
-    headers={"X-API-Key": "ate-..."},
+    headers={"X-API-Key": "kriy-..."},
     json={"type": "refund.requested", "payload": {"amount": 900, "user": {"role": "agent"}}},
 ).json()
 
@@ -130,7 +130,7 @@ if verdict["decision"] == "deny" and not verdict["overridable"]:
 ```ts
 const res = await fetch("http://localhost:8000/api/v1/events/decide", {
   method: "POST",
-  headers: { "X-API-Key": "ate-...", "Content-Type": "application/json" },
+  headers: { "X-API-Key": "kriy-...", "Content-Type": "application/json" },
   body: JSON.stringify({ type: "refund.requested", payload: { amount: 900 } }),
 });
 const verdict = await res.json();
@@ -140,7 +140,7 @@ const verdict = await res.json();
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/events/decide \
-  -H "X-API-Key: ate-..." -H "Content-Type: application/json" \
+  -H "X-API-Key: kriy-..." -H "Content-Type: application/json" \
   -d '{"type":"refund.requested","payload":{"amount":900}}'
 ```
 
@@ -166,7 +166,7 @@ curl -X POST http://localhost:8000/api/v1/events/decide \
 | `overridable` | A soft deny — the caller may offer a human override |
 | `evaluated` | How many gates were considered for this event type |
 
-> Use a **per-user API key** (starts with `ate-`, from **Config → API key**), not the
+> Use a **per-user API key** (starts with `kriy-`, from **Config → API key**), not the
 > global `API_KEYS` value. The workspace comes from the `X-Workspace-Id` header, or your
 > personal workspace by default.
 

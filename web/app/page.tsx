@@ -95,7 +95,7 @@ const FEATURES = [
     icon: Webhook,
     title: "Outbound Webhooks",
     description:
-      "Atelier posts results back to your app — signed with HMAC, retried, logged, and replayable from the deliveries view.",
+      "KRIY posts results back to your app — signed with HMAC, retried, logged, and replayable from the deliveries view.",
   },
   {
     icon: Bell,
@@ -149,7 +149,7 @@ const SECURITY = [
     icon: Server,
     title: "Self-hostable — your data stays yours",
     description:
-      "Run Atelier on your own infrastructure with your own keys. Nothing leaves your servers unless you send it.",
+      "Run KRIY on your own infrastructure with your own keys. Nothing leaves your servers unless you send it.",
   },
 ];
 
@@ -229,7 +229,7 @@ function HeroVisual() {
           </div>
           <div className="ml-4 flex-1 rounded-md bg-background/60 px-3 py-1 text-center">
             <span className="text-[10px] font-medium text-muted-foreground/50">
-              atelier.app / dashboard
+              kriy.app / dashboard
             </span>
           </div>
         </div>
@@ -245,7 +245,7 @@ function HeroVisual() {
               </div>
               <div className="flex min-w-0 flex-col">
                 <span className="truncate text-[15px] font-semibold leading-tight tracking-tight text-sidebar-foreground">
-                  Atelier
+                  KRIY
                 </span>
                 <span className="truncate text-[9px] font-medium uppercase tracking-[0.18em] text-sidebar-foreground/45">
                   AI Workspace
@@ -586,7 +586,7 @@ export default function LandingPage() {
               Everything you need to build with AI agents
             </h2>
             <p className="mt-4 text-muted-foreground">
-              From agent creation to multi-agent orchestration, Atelier provides the complete toolkit.
+              From agent creation to multi-agent orchestration, KRIY provides the complete toolkit.
             </p>
           </div>
 
@@ -701,7 +701,7 @@ export default function LandingPage() {
               Your keys and data stay protected
             </h2>
             <p className="mt-4 text-muted-foreground">
-              Atelier is built to hold sensitive credentials safely — encrypted at rest,
+              KRIY is built to hold sensitive credentials safely — encrypted at rest,
               hashed where it counts, and scoped to you.
             </p>
           </div>
@@ -795,13 +795,13 @@ export default function LandingPage() {
               Support the project
             </h2>
             <p className="mt-4 text-muted-foreground">
-              Atelier is free and source-available, built and maintained in the open.
+              KRIY is free and source-available, built and maintained in the open.
               If it helps you, consider supporting it — donations, feature sponsorships,
               and commercial-licensing enquiries are all welcome.
             </p>
             <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
               <Button size="lg" asChild>
-                <a href="mailto:contract@gethowitworks.com?subject=Atelier%20%E2%80%94%20Support%20%2F%20Donate">
+                <a href="mailto:contract@gethowitworks.com?subject=KRIY%20%E2%80%94%20Support%20%2F%20Donate">
                   <Heart className="size-4" />
                   Donate / Get in touch
                 </a>

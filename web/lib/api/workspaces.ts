@@ -34,7 +34,7 @@ export interface WorkspaceInvite {
   token?: string;
 }
 
-const WORKSPACE_STORAGE_KEY = "atelier_active_workspace_id";
+const WORKSPACE_STORAGE_KEY = "kriy_active_workspace_id";
 
 export function getStoredWorkspaceId(): number | null {
   if (typeof window === "undefined") return null;

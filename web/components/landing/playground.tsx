@@ -212,7 +212,7 @@ export function Playground() {
               </div>
 
               <code className="block truncate rounded-md bg-muted px-2 py-1 font-mono text-[11px] text-muted-foreground">
-                atelier.emit(&quot;{emitScenario.event}&quot;, payload)
+                kriy.emit(&quot;{emitScenario.event}&quot;, payload)
               </code>
             </div>
 

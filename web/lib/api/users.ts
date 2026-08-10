@@ -9,7 +9,7 @@ export interface UserInfo {
   updated_at: string;
 }
 
-const USER_INFO_KEY = "atelier_user_info";
+const USER_INFO_KEY = "kriy_user_info";
 
 /**
  * Fetch the currently authenticated user's info from GET /api/v1/users/me.

@@ -101,7 +101,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Atelier API",
+    title="KRIY API",
     version="0.1.0",
     lifespan=lifespan,
     docs_url=None,

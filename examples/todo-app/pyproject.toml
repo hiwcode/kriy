@@ -10,9 +10,9 @@ dependencies = [
     "jinja2>=3.1.6",
     "python-multipart>=0.0.22",
     "uvicorn[standard]>=0.40.0",
-    "atelier-agentic",
+    "kriy-agentic",
 ]
 
 # Use the local SDK from this monorepo (zero-dependency, stdlib-only).
 [tool.uv.sources]
-atelier-agentic = { path = "../../sdk/python", editable = true }
+kriy-agentic = { path = "../../sdk/python", editable = true }

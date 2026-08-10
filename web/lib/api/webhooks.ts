@@ -1,5 +1,5 @@
 /**
- * Outbound Webhooks API client. Atelier delivers platform events (e.g.
+ * Outbound Webhooks API client. KRIY delivers platform events (e.g.
  * run.completed) to subscribed URLs, signed and retried.
  */
 

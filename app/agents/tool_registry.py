@@ -87,8 +87,8 @@ import pathlib
 _PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[2]
 # Canonical workspace/artifacts dir — shared by bash, run_python, the file tools,
 # AND the file server that serves generated artifacts (charts, CSVs) back as URLs.
-# Override with ATELIER_WORKSPACE_DIR when deploying.
-WORKSPACE_DIR = pathlib.Path(os.getenv("ATELIER_WORKSPACE_DIR") or (_PROJECT_ROOT / "temp"))
+# Override with KRIY_WORKSPACE_DIR when deploying.
+WORKSPACE_DIR = pathlib.Path(os.getenv("KRIY_WORKSPACE_DIR") or (_PROJECT_ROOT / "temp"))
 WORKSPACE_DIR.mkdir(parents=True, exist_ok=True)
 _BASH_WORKSPACE = WORKSPACE_DIR
 

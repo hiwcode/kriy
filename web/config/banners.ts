@@ -53,7 +53,7 @@ export const BANNERS: BannerDef[] = [
     type: "info",
     title: "Add an AI provider to get started",
     description:
-      "We suggest Google Gemini — it has a free tier, so you can try Atelier without a credit card.",
+      "We suggest Google Gemini — it has a free tier, so you can try KRIY without a credit card.",
     link: { label: "Add provider", href: "/config" },
     condition: "no-ai-provider",
     dismissible: false,

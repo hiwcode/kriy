@@ -1,15 +1,15 @@
-# Atelier — AI Workspace Platform
+# KRIY — AI Workspace Platform
 
 [License: FSL-1.1-MIT](LICENSE.md)
-[GitHub stars](https://github.com/hiwcode/atelier/stargazers)
+[GitHub stars](https://github.com/hiwcode/kriy/stargazers)
 
-> **Atelier** is a full-stack AI agent orchestration platform for building, configuring, and managing AI agents with streaming chat, tool integrations, persistent memory, and collaborative workspaces.
+> **KRIY** is a full-stack AI agent orchestration platform for building, configuring, and managing AI agents with streaming chat, tool integrations, persistent memory, and collaborative workspaces.
 
 **📖 [Read the Docs →](https://ai.gethowitworks.com/docs)** — setup, usage, and everything else lives here.
 
 ---
 
-## What is Atelier?
+## What is KRIY?
 
 An **AI Workspace** for creating and managing AI agents across multiple LLM providers (Google Gemini, OpenAI GPT, Anthropic Claude). Configure agents, connect external tools, schedule automated runs, orchestrate multi-agent workflows, and keep conversation history with semantic memory — all organized into collaborative workspaces for teams and individuals.
 
@@ -35,7 +35,7 @@ cd web && npm install && npm run dev
 
 ## ⭐ Support the Project
 
-If Atelier is useful to you, please **[star it on GitHub](https://github.com/hiwcode/atelier)** — it helps others find the project and keeps development going.
+If KRIY is useful to you, please **[star it on GitHub](https://github.com/hiwcode/kriy)** — it helps others find the project and keeps development going.
 
 Want to **donate**, sponsor a feature, discuss commercial use, or reach out for anything else? Get in touch:
 
@@ -45,13 +45,12 @@ Want to **donate**, sponsor a feature, discuss commercial use, or reach out for 
 
 ## License
 
-Atelier is **source-available** under the **Functional Source License (FSL-1.1-MIT)** — see [LICENSE.md](LICENSE.md) for full terms.
+KRIY is **source-available** under the **Functional Source License (FSL-1.1-MIT)** — see [LICENSE.md](LICENSE.md) for full terms.
 
 - ✅ Use, self-host, modify, contribute, and use internally (including at a company) — free of charge.
-- ❌ Do **not** sell it or offer it as a competing commercial product/service (e.g. a hosted version of Atelier).
+- ❌ Do **not** sell it or offer it as a competing commercial product/service (e.g. a hosted version of KRIY).
 - 🕓 Two years after each release, that version converts to the **MIT License**.
 
 It's *source-available*, not OSI "open source," because it restricts competing commercial use. For commercial licensing, email **[contract@gethowitworks.com](mailto:contract@gethowitworks.com)**.
 
 ---
-

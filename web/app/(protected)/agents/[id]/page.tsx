@@ -1232,7 +1232,7 @@ function ChatTab({
 
   // Track sessions where THIS browser left a run going, so the "finished while
   // away" toast only fires when you actually left one behind (not on every open).
-  const pendingKey = (aid: number, sid: string) => `atelier:pendingRun:${aid}:${sid}`;
+  const pendingKey = (aid: number, sid: string) => `kriy:pendingRun:${aid}:${sid}`;
   const markPending = (aid: number, sid: string) => {
     try { sessionStorage.setItem(pendingKey(aid, sid), "1"); } catch {}
   };

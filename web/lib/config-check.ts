@@ -15,7 +15,7 @@ import {
     type LucideIcon
 } from "lucide-react";
 
-const DISMISS_STORAGE_KEY = "atelier:dismissed-banners";
+const DISMISS_STORAGE_KEY = "kriy:dismissed-banners";
 
 /* ------------------------------------------------------------------ */
 /*  Per-type styling                                                   */

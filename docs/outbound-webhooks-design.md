@@ -1,6 +1,6 @@
 # Outbound Webhooks — design note
 
-Status: proposed · Scope: the outbound half of Atelier's integration surface.
+Status: proposed · Scope: the outbound half of KRIY's integration surface.
 
 ## Problem
 
@@ -8,19 +8,19 @@ Integration is inbound-only today:
 
 | Direction | Sync | Async |
 |---|---|---|
-| Inbound (app → Atelier) | `POST /events/decide` (gate verdict) | `POST /events` (event → triggers) |
-| Outbound (Atelier → app) | REST API (pull) | **— missing —** |
+| Inbound (app → KRIY) | `POST /events/decide` (gate verdict) | `POST /events` (event → triggers) |
+| Outbound (KRIY → app) | REST API (pull) | **— missing —** |
 
-`decide` returns inline, so gates are covered. But an async trigger's **result never gets back** to the caller (e.g. an agent analyzes an uploaded doc; the outcome stays in Atelier). We need a platform-owned outbound channel.
+`decide` returns inline, so gates are covered. But an async trigger's **result never gets back** to the caller (e.g. an agent analyzes an uploaded doc; the outcome stays in KRIY). We need a platform-owned outbound channel.
 
 ## Two kinds of "outbound" (don't conflate)
 
 1. **Agent actions** (agent → the world): create a ticket, post to Slack, call an API mid-run. **Already solved** by tools / MCP / `call_api`. No new architecture.
-2. **Platform events** (Atelier → subscribers): "run completed", "gate denied". **This spec.** Standard answer: webhooks.
+2. **Platform events** (KRIY → subscribers): "run completed", "gate denied". **This spec.** Standard answer: webhooks.
 
 ## Model: symmetric event hub
 
-Apps emit events *in*; Atelier emits events *out*, over the **same event bus**. The dispatch that fans an event to internal triggers also fans lifecycle events to external webhook subscribers. `emit` (in) ↔ webhook (out). Future events are just new `type`s.
+Apps emit events *in*; KRIY emits events *out*, over the **same event bus**. The dispatch that fans an event to internal triggers also fans lifecycle events to external webhook subscribers. `emit` (in) ↔ webhook (out). Future events are just new `type`s.
 
 ## Event envelope (stable public contract)
 
@@ -37,7 +37,7 @@ Apps emit events *in*; Atelier emits events *out*, over the **same event bus**. 
 
 ## Signing
 
-- Header `X-Atelier-Signature: t=<unix>,v1=<hex>` where `v1 = HMAC_SHA256(secret, "<t>.<raw_body>")`.
+- Header `X-KRIY-Signature: t=<unix>,v1=<hex>` where `v1 = HMAC_SHA256(secret, "<t>.<raw_body>")`.
 - Consumers reject if `t` is older than ~5 min (replay protection). Reuse `workspace_signing`'s HMAC.
 
 ## Delivery semantics

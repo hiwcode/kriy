@@ -6,7 +6,7 @@ Workspaces organize your resources (agents, prompts, MCP connections, database c
 
 ## Personal Workspace
 
-When you first sign in, Atelier automatically creates a **personal workspace** for you. All resources you create are associated with this workspace by default.
+When you first sign in, KRIY automatically creates a **personal workspace** for you. All resources you create are associated with this workspace by default.
 
 - Every user gets exactly one personal workspace
 - The personal workspace cannot be deleted
@@ -121,7 +121,7 @@ See [Workspace Transfer](workspace-transfer.md) for full details and API example
 
 ## Demo Data
 
-When a new personal workspace is created, Atelier seeds it with:
+When a new personal workspace is created, KRIY seeds it with:
 
 - A demo **system prompt** and **instruction prompt** in the Prompt Library
 - A demo **agent** configured with those prompts

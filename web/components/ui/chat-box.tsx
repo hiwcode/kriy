@@ -9,7 +9,7 @@ import { MdRenderer } from "./md-renderer";
 import { ChatCards, type ChatCard } from "@/components/chat/chat-cards";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-const WORKSPACE_DIR = "/Users/hiwcode/Desktop/Playground/Atelier/temp/";
+const WORKSPACE_DIR = "/Users/hiwcode/Desktop/Playground/KRIY/temp/";
 const IMAGE_EXTS = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp"];
 
 function extractWorkspaceFiles(text: string): { images: string[]; files: string[] } {

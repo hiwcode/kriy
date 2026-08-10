@@ -12,7 +12,7 @@ from pydantic import Field
 
 class Settings(BaseSettings):
     # Application
-    APP_NAME: str = Field(default="Atelier", description="Application name")
+    APP_NAME: str = Field(default="KRIY", description="Application name")
     APP_VERSION: str = Field(default="0.1.0", description="Application version")
     DEBUG: bool = Field(default=False, description="Debug mode")
     ENVIRONMENT: str = Field(

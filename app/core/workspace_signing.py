@@ -21,7 +21,7 @@ def _secret() -> bytes:
     if not secret:
         if settings.is_production:
             raise RuntimeError("JWT_SECRET or ENCRYPTION_KEY required to sign workspace URLs")
-        secret = "atelier-workspace-dev"
+        secret = "kriy-workspace-dev"
     return secret.encode()
 
 

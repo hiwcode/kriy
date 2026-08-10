@@ -44,11 +44,11 @@ export interface AgentConfig {
 
 // Site configuration
 export const siteConfig = {
-  name: "Atelier",
+  name: "KRIY",
   description: "AI Workspace",
   version: "0.1.0",
   logo: Ghost,
-  github: "https://github.com/hiwcode/atelier",
+  github: "https://github.com/hiwcode/kriy",
 };
 
 // Navigation configuration

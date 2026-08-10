@@ -1,5 +1,5 @@
 -- Outbound webhooks (Phase 1): subscriptions + a delivery log.
--- Atelier POSTs platform events (e.g. run.completed) to subscribed URLs, signed
+-- KRIY POSTs platform events (e.g. run.completed) to subscribed URLs, signed
 -- and retried, so external systems get async results back. See
 -- docs/outbound-webhooks-design.md.
 CREATE TABLE IF NOT EXISTS webhook_subscriptions (

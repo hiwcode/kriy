@@ -22,16 +22,16 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
 
 # ---------------------------------------------------------------------------
-# Event-based Atelier integration (SDK)
+# Event-based KRIY integration (SDK)
 #
-# When a todo is completed we EMIT an event to Atelier — that's all the app does.
+# When a todo is completed we EMIT an event to KRIY — that's all the app does.
 # It doesn't know what (if anything) should happen: each user defines their own
-# "todo.completed" workflow in Atelier (via the UI / chat), and Atelier runs the
+# "todo.completed" workflow in KRIY (via the UI / chat), and KRIY runs the
 # matching ones in the background. Same event, different behaviour per user.
 #
 # Configure via env (the app runs fine without these — emit just no-ops):
-#   ATELIER_API_KEY    a per-user API key (starts with "ate-") — identifies the user
-#   ATELIER_BASE_URL   defaults to http://localhost:8000
+#   KRIY_API_KEY    a per-user API key (starts with "kriy-") — identifies the user
+#   KRIY_BASE_URL   defaults to http://localhost:8000
 # ---------------------------------------------------------------------------
 
 def _load_dotenv() -> None:
@@ -50,20 +50,20 @@ def _load_dotenv() -> None:
 _load_dotenv()
 
 try:
-    from atelier_agentic import AtelierClient, AtelierDenied
+    from kriy_agentic import KriyClient, KriyDenied
 except ImportError:  # SDK not installed — app still works, events disabled
-    AtelierClient = None  # type: ignore[assignment]
-    AtelierDenied = Exception  # type: ignore[assignment,misc]
+    KriyClient = None  # type: ignore[assignment]
+    KriyDenied = Exception  # type: ignore[assignment,misc]
 
 # One client for both patterns:
 #   - emit(...)  → fire-and-forget Triggers (react AFTER)
 #   - guard(...) → synchronous, blocking policy check (decide BEFORE). Needs an
 #     agent id so its deterministic policies (e.g. "deny todo.complete if name
-#     contains 'Standup'") are enforced. Set ATELIER_AGENT_ID to enable guards.
-_AGENT_ID = os.getenv("ATELIER_AGENT_ID")
-atelier = (
-    AtelierClient(agent_id=int(_AGENT_ID) if _AGENT_ID else None, fail_open=True)
-    if AtelierClient and os.getenv("ATELIER_API_KEY")
+#     contains 'Standup'") are enforced. Set KRIY_AGENT_ID to enable guards.
+_AGENT_ID = os.getenv("KRIY_AGENT_ID")
+kriy = (
+    KriyClient(agent_id=int(_AGENT_ID) if _AGENT_ID else None, fail_open=True)
+    if KriyClient and os.getenv("KRIY_API_KEY")
     else None
 )
 
@@ -71,30 +71,30 @@ atelier = (
 def _guard_complete(name: str) -> str | None:
     """Deterministic pre-check before completing a todo. Returns a block reason,
     or None to allow. Fast (no LLM) when the agent's policy is rule-based."""
-    if atelier is None or atelier.agent_id is None:
+    if kriy is None or kriy.agent_id is None:
         return None
     try:
-        atelier.guard("todo.complete", {"name": name})
+        kriy.guard("todo.complete", {"name": name})
         return None
-    except AtelierDenied as e:  # blocked by a policy
+    except KriyDenied as e:  # blocked by a policy
         return str(e) or "Blocked by policy"
 
 
 def _on_todo_completed() -> None:
-    """Fire-and-forget: tell Atelier a todo was completed; it runs the user's workflows."""
-    if atelier is None:
+    """Fire-and-forget: tell KRIY a todo was completed; it runs the user's workflows."""
+    if kriy is None:
         return
     try:
-        atelier.emit("todo.completed", {"todos": store.list_todos()})
+        kriy.emit("todo.completed", {"todos": store.list_todos()})
     except Exception:  # never let an integration hiccup break the app
         pass
 
 def _on_todo_create(title: str="") -> None:
-    """Fire-and-forget: tell Atelier a todo was added; it runs the user's workflows."""
-    if atelier is None:
+    """Fire-and-forget: tell KRIY a todo was added; it runs the user's workflows."""
+    if kriy is None:
         return
     try:
-        atelier.emit("todo.create", {"todo": f"New toto added: {title}"})
+        kriy.emit("todo.create", {"todo": f"New toto added: {title}"})
     except Exception:  # never let an integration hiccup break the app
         pass
 

@@ -13,12 +13,12 @@ def _hash_key(key: str) -> str:
 async def generate_key(pool: asyncpg.Pool, user_id: int) -> tuple[str, str]:
     """
     Generate a new API key for the user. Replaces any existing key.
-    Format: ate-{random}. Returns (raw_key, key_prefix). Raw key is shown once; prefix is for display.
+    Format: kriy-{random}. Returns (raw_key, key_prefix). Raw key is shown once; prefix is for display.
     """
     suffix = secrets.token_urlsafe(32)
-    raw_key = f"ate-{suffix}"
+    raw_key = f"kriy-{suffix}"
     key_hash = _hash_key(raw_key)
-    key_prefix = "ate-***"
+    key_prefix = "kriy-***"
 
     await pool.execute(
         """

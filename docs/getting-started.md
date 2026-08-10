@@ -29,7 +29,7 @@ flowchart TB
 ```bash
 # Clone the repository
 git clone <repo-url>
-cd Atelier
+cd KRIY
 
 # Install Python dependencies (backend)
 uv sync
@@ -48,7 +48,7 @@ Create a `.env` file in the project root:
 
 ```env
 # Required: PostgreSQL connection
-DATABASE_URL=postgresql://user:password@localhost:5432/atelier
+DATABASE_URL=postgresql://user:password@localhost:5432/kriy
 
 # LLM API keys (set for providers you want to use)
 GOOGLE_API_KEY=your-google-api-key       # Gemini models

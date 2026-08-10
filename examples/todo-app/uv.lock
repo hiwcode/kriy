@@ -52,7 +52,7 @@ wheels = [
 ]
 
 [[package]]
-name = "atelier-agentic"
+name = "kriy-agentic"
 version = "0.1.0"
 source = { editable = "../../sdk/python" }
 
@@ -1262,7 +1262,7 @@ name = "todo-app"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
-    { name = "atelier-agentic" },
+    { name = "kriy-agentic" },
     { name = "fastapi" },
     { name = "fastmcp" },
     { name = "jinja2" },
@@ -1272,7 +1272,7 @@ dependencies = [
 
 [package.metadata]
 requires-dist = [
-    { name = "atelier-agentic", editable = "../../sdk/python" },
+    { name = "kriy-agentic", editable = "../../sdk/python" },
     { name = "fastapi", specifier = ">=0.128.3" },
     { name = "fastmcp", specifier = ">=2.14.5" },
     { name = "jinja2", specifier = ">=3.1.6" },

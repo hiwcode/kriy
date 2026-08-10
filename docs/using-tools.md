@@ -1,6 +1,6 @@
 # Tools & Prompts
 
-Atelier provides a rich set of tools that agents can use during conversations — from basic math to file system access, external MCP servers, and database queries. All tools and prompts are **workspace-scoped** and shared with all workspace members. See [Workspaces](using-workspaces.md) for details.
+KRIY provides a rich set of tools that agents can use during conversations — from basic math to file system access, external MCP servers, and database queries. All tools and prompts are **workspace-scoped** and shared with all workspace members. See [Workspaces](using-workspaces.md) for details.
 
 ## Prompt Library
 

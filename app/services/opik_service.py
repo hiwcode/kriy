@@ -69,7 +69,7 @@ def setup_opik_tracing(
                 "agent_name": agent_name,
                 "session_id": session_id,
                 "workspace_id": workspace_id,
-                "source": "atelier",
+                "source": "kriy",
             },
         )
 

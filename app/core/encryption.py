@@ -70,7 +70,7 @@ def verify_encryption_key() -> None:
     key would silently corrupt how secrets round-trip — this surfaces it at boot.
     Raises EncryptionError on any problem.
     """
-    sentinel = "atelier-encryption-self-test"
+    sentinel = "kriy-encryption-self-test"
     f = _get_fernet()  # raises EncryptionError if key missing/invalid
     token = f.encrypt(sentinel.encode("utf-8"))
     if f.decrypt(token).decode("utf-8") != sentinel:

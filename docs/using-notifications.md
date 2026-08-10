@@ -37,7 +37,7 @@ with [Triggers](using-event-workflows.md) so a workflow notifies you when it run
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/notifications \
-  -H "X-API-Key: ate-..." -H "Content-Type: application/json" \
+  -H "X-API-Key: kriy-..." -H "Content-Type: application/json" \
   -d '{"title":"Build finished","body":"All green","level":"success"}'
 ```
 

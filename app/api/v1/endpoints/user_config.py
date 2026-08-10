@@ -63,7 +63,7 @@ async def get_config(
             "default_model": "gemini-3.1-flash-lite",
             "opik_api_key": None,
             "opik_workspace": None,
-            "opik_project_name": "atelier",
+            "opik_project_name": "kriy",
             "opik_url_override": None,
             "opik_enabled": False,
             "slack_bot_token": None,

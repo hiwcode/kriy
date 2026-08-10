@@ -1,6 +1,6 @@
 """FastMCP server exposing the todo store as agent tools.
 
-Run (streamable HTTP — connect Atelier to http://127.0.0.1:8005/mcp/):
+Run (streamable HTTP — connect KRIY to http://127.0.0.1:8005/mcp/):
     python mcp_server.py
 
 Or over stdio (e.g. for local MCP clients):

@@ -945,7 +945,7 @@ function OpikDialog({
   const [enabled, setEnabled] = React.useState(false);
   const [apiKey, setApiKey] = React.useState("");
   const [workspace, setWorkspace] = React.useState("");
-  const [project, setProject] = React.useState("atelier");
+  const [project, setProject] = React.useState("kriy");
   const [urlOverride, setUrlOverride] = React.useState("");
 
   React.useEffect(() => {
@@ -953,7 +953,7 @@ function OpikDialog({
       setEnabled(config.opik_enabled ?? false);
       setApiKey(config.opik_api_key_set ? SECRET_MASK : "");
       setWorkspace(config.opik_workspace ?? "");
-      setProject(config.opik_project_name ?? "atelier");
+      setProject(config.opik_project_name ?? "kriy");
       setUrlOverride(config.opik_url_override ?? "");
     }
   }, [open, config]);
@@ -962,7 +962,7 @@ function OpikDialog({
     const patch: ConfigPayload = {
       opik_enabled: enabled,
       opik_workspace: workspace.trim() || null,
-      opik_project_name: project.trim() || "atelier",
+      opik_project_name: project.trim() || "kriy",
       opik_url_override: urlOverride.trim() || null,
     };
     if (apiKey.trim() && apiKey !== SECRET_MASK) patch.opik_api_key = apiKey.trim();  // write-only secret
@@ -999,7 +999,7 @@ function OpikDialog({
             </div>
             <div className="space-y-2">
               <Label htmlFor="opik-project-name">Project Name</Label>
-              <Input id="opik-project-name" placeholder="atelier" value={project} onChange={(e) => setProject(e.target.value)} disabled={!enabled} />
+              <Input id="opik-project-name" placeholder="kriy" value={project} onChange={(e) => setProject(e.target.value)} disabled={!enabled} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="opik-url-override">API URL Override</Label>

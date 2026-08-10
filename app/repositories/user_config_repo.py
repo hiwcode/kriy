@@ -93,7 +93,7 @@ async def upsert_config(
         dmodel = default_model if default_model is not _UNCHANGED else "gemini-3.1-flash-lite"
         o_key = opik_api_key if opik_api_key is not _UNCHANGED else None
         o_ws = opik_workspace if opik_workspace is not _UNCHANGED else None
-        o_proj = opik_project_name if opik_project_name is not _UNCHANGED else "atelier"
+        o_proj = opik_project_name if opik_project_name is not _UNCHANGED else "kriy"
         o_url = opik_url_override if opik_url_override is not _UNCHANGED else None
         o_en = opik_enabled if opik_enabled is not _UNCHANGED else False
         s_bot_token = slack_bot_token if slack_bot_token is not _UNCHANGED else None
@@ -151,7 +151,7 @@ async def upsert_config(
         dmodel or "gemini-3.1-flash-lite",
         encrypted_okey,
         o_ws or None,
-        o_proj or "atelier",
+        o_proj or "kriy",
         o_url or None,
         bool(o_en),
         encrypted_slack_bot_token,

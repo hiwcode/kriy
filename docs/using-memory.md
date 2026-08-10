@@ -1,6 +1,6 @@
 # Memory
 
-Atelier has two complementary layers of memory:
+KRIY has two complementary layers of memory:
 
 - **Session context (short-term)** — the conversation itself. Within a single chat, the agent remembers earlier turns. The transcript *is* the session memory.
 - **Facts Memory (long-term)** — persistent knowledge extracted from conversations that an agent can use across *any* future conversation.

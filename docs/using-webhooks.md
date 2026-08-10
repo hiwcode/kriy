@@ -1,14 +1,14 @@
 # Webhooks
 
-Webhooks are the **outbound** half of Atelier's integration surface. Your app emits events
-*in* ([Triggers](using-event-workflows.md)); Atelier posts platform events back *out* — so
+Webhooks are the **outbound** half of KRIY's integration surface. Your app emits events
+*in* ([Triggers](using-event-workflows.md)); KRIY posts platform events back *out* — so
 when a triggered agent finishes, its **result reaches your app** instead of sitting in
-Atelier.
+KRIY.
 
 ```mermaid
 flowchart LR
-    App["Your app"] -- "emit('doc.uploaded')" --> Atelier["Atelier"]
-    Atelier --> Run["Agent run\n(queued, retried)"]
+    App["Your app"] -- "emit('doc.uploaded')" --> KRIY["KRIY"]
+    KRIY --> Run["Agent run\n(queued, retried)"]
     Run -- "run.completed" --> Hook["POST your endpoint\nHMAC-signed"]
     Hook --> App2["Your app\n(dedupe on event id)"]
     Hook --> Log["Delivery log\n+ manual replay"]
@@ -16,8 +16,8 @@ flowchart LR
 
 | Direction | Synchronous | Asynchronous |
 | --- | --- | --- |
-| Inbound (your app → Atelier) | [`POST /events/decide`](using-gates.md) — a gate verdict | `POST /events` — an event that triggers agents |
-| Outbound (Atelier → your app) | REST API (you poll) | **Webhooks** — this page |
+| Inbound (your app → KRIY) | [`POST /events/decide`](using-gates.md) — a gate verdict | `POST /events` — an event that triggers agents |
+| Outbound (KRIY → your app) | REST API (you poll) | **Webhooks** — this page |
 
 > Webhooks carry **platform events** ("a run completed"). They're not how an agent *takes
 > actions* in the world — that's what tools, MCP, and `call_api` are for.
@@ -28,7 +28,7 @@ flowchart LR
 
 Open **Webhooks** in the sidebar (under Automation) → **New webhook**:
 
-- **Endpoint URL** — where Atelier POSTs the signed event. Must be a public `https` URL in
+- **Endpoint URL** — where KRIY POSTs the signed event. Must be a public `https` URL in
   production; internal and cloud-metadata hosts are blocked (SSRF guard), and `localhost`
   is allowed only in development.
 - **Events** — which event types to receive. Globs work: `run.completed`, `gate.*`,
@@ -82,8 +82,8 @@ Headers on every POST:
 | Header | Value |
 | --- | --- |
 | `Content-Type` | `application/json` |
-| `X-Atelier-Event` | the event type, e.g. `run.completed` |
-| `X-Atelier-Signature` | `t=<unix>,v1=<hex>` — see below |
+| `X-KRIY-Event` | the event type, e.g. `run.completed` |
+| `X-KRIY-Signature` | `t=<unix>,v1=<hex>` — see below |
 
 ## 4. Verify the signature
 
@@ -105,10 +105,10 @@ def verify(secret: str, body: str, header: str, tolerance: int = 300) -> bool:
     return hmac.compare_digest(expected, parts.get("v1", ""))
 
 
-@app.post("/atelier/webhook")
+@app.post("/kriy/webhook")
 async def receive(request: Request):
     raw = (await request.body()).decode()
-    if not verify(WHSEC, raw, request.headers["X-Atelier-Signature"]):
+    if not verify(WHSEC, raw, request.headers["X-KRIY-Signature"]):
         raise HTTPException(401, "bad signature")
     ...
 ```
@@ -119,9 +119,9 @@ async def receive(request: Request):
 import crypto from "node:crypto";
 
 // mount with express.raw({ type: "application/json" }) so `req.body` stays a Buffer
-app.post("/atelier/webhook", express.raw({ type: "application/json" }), (req, res) => {
+app.post("/kriy/webhook", express.raw({ type: "application/json" }), (req, res) => {
   const parts = Object.fromEntries(
-    req.header("X-Atelier-Signature")!.split(",").map((p) => p.split("=", 2))
+    req.header("X-KRIY-Signature")!.split(",").map((p) => p.split("=", 2))
   );
   const body = req.body.toString();
   const expected = crypto
@@ -165,11 +165,11 @@ app.post("/atelier/webhook", express.raw({ type: "application/json" }), (req, re
 
 ```bash
 curl -X POST http://localhost:8000/api/v1/webhooks \
-  -H "X-API-Key: ate-..." -H "Content-Type: application/json" \
-  -d '{"url":"https://api.acme.com/atelier","event_types":["run.completed"]}'
+  -H "X-API-Key: kriy-..." -H "Content-Type: application/json" \
+  -d '{"url":"https://api.acme.com/kriy","event_types":["run.completed"]}'
 ```
 
-> Use a **per-user API key** (starts with `ate-`, from **Config → API key**). The workspace
+> Use a **per-user API key** (starts with `kriy-`, from **Config → API key**). The workspace
 > comes from the `X-Workspace-Id` header, or your personal workspace by default.
 
 ## No endpoint to expose?

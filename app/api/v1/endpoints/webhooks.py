@@ -1,4 +1,4 @@
-"""Outbound webhook subscriptions — manage where Atelier delivers platform events.
+"""Outbound webhook subscriptions — manage where KRIY delivers platform events.
 
 See docs/outbound-webhooks-design.md. The subscription secret is shown only once
 (on create / rotate); afterwards only a hint is returned.

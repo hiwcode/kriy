@@ -15,7 +15,7 @@ const poppins = Poppins({
 
 
 export const metadata: Metadata = {
-  title: "Atelier",
+  title: "KRIY",
   description: "Your AI Workspace",
 };
 

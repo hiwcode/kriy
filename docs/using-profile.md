@@ -32,7 +32,7 @@ The Configuration page is your central place to manage API keys, integrations, a
 
 ## LLM Provider Keys
 
-Atelier supports multiple LLM providers. Set the API key for each provider you want to use.
+KRIY supports multiple LLM providers. Set the API key for each provider you want to use.
 
 ### Google API Key (Gemini)
 

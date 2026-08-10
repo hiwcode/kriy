@@ -102,7 +102,7 @@ Once configured, interact with the orchestrator like any other agent in the Chat
 | Type | Description | Use case |
 |------|-------------|----------|
 | **Local** | Agents in your workspace | Full control, shared tools and memory |
-| **External A2A** | Remote agents via URL | Cross-team agents, third-party services, agents on other Atelier instances |
+| **External A2A** | Remote agents via URL | Cross-team agents, third-party services, agents on other KRIY instances |
 
 External A2A agents communicate via the Agent-to-Agent protocol — they can run on different servers or even different platforms.
 

@@ -72,7 +72,7 @@ function MockFrame({
 
 function ChatCardsMock() {
   return (
-    <MockFrame url="atelier.app / agents / research">
+    <MockFrame url="kriy.app / agents / research">
       <div className="flex h-[380px] flex-col gap-3 overflow-hidden text-left">
         {/* user bubble */}
         <div className="flex justify-end">
@@ -154,7 +154,7 @@ function ChatCardsMock() {
 
 function WorkflowMock() {
   return (
-    <MockFrame url="atelier.app / workflows">
+    <MockFrame url="kriy.app / workflows">
       <div className="flex h-[380px] flex-col gap-3 overflow-hidden text-left">
         {/* emit */}
         <div className="rounded-xl border bg-background/60 p-3">
@@ -164,7 +164,7 @@ function WorkflowMock() {
           <div className="rounded-lg bg-zinc-950 p-2.5 font-mono text-[10px] leading-relaxed text-zinc-100">
             <span className="text-zinc-500">{"// on order shipped"}</span>
             <br />
-            atelier.<span className="text-emerald-400">emit</span>(
+            kriy.<span className="text-emerald-400">emit</span>(
             <span className="text-amber-300">&quot;order.shipped&quot;</span>, {"{ id }"})
           </div>
         </div>
@@ -224,7 +224,7 @@ function WorkflowMock() {
 
 function GateMock() {
   return (
-    <MockFrame url="atelier.app / gates">
+    <MockFrame url="kriy.app / gates">
       <div className="flex h-[380px] flex-col gap-3 overflow-hidden text-left">
         {/* ask */}
         <div className="rounded-xl border bg-background/60 p-3">
@@ -307,14 +307,14 @@ function GateMock() {
 
 function WebhookMock() {
   return (
-    <MockFrame url="atelier.app / webhooks">
+    <MockFrame url="kriy.app / webhooks">
       <div className="flex h-[380px] flex-col gap-3 overflow-hidden text-left">
         {/* subscription */}
         <div className="rounded-xl border bg-background/60 p-3">
           <div className="mb-2 flex items-center gap-2">
             <Webhook className="size-3.5 text-primary" />
             <code className="min-w-0 truncate font-mono text-[10px]">
-              https://api.acme.com/atelier
+              https://api.acme.com/kriy
             </code>
             <span className="ml-auto inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-1.5 py-0.5 text-[9px] font-medium text-emerald-600 dark:text-emerald-400">
               enabled
@@ -337,7 +337,7 @@ function WebhookMock() {
 
         {/* signed payload */}
         <div className="rounded-lg bg-zinc-950 p-2.5 font-mono text-[10px] leading-relaxed text-zinc-100">
-          <span className="text-zinc-500">X-Atelier-Signature:</span>{" "}
+          <span className="text-zinc-500">X-KRIY-Signature:</span>{" "}
           <span className="text-emerald-400">t=</span>1750…,
           <span className="text-emerald-400">v1=</span>9ab3…
           <br />
@@ -415,7 +415,7 @@ const ROWS: Row[] = [
     eyebrow: "Triggers",
     title: "Your app emits an event, the right agent handles it",
     description:
-      "Fire an event from anywhere in your stack. Atelier routes it to the matching workflow through a priority queue with automatic retries and backoff — no orchestration glue to maintain.",
+      "Fire an event from anywhere in your stack. KRIY routes it to the matching workflow through a priority queue with automatic retries and backoff — no orchestration glue to maintain.",
     points: ["One-line emit()", "Priority queue + retries", "Per-user routing"],
     mock: <WorkflowMock />,
   },
@@ -423,7 +423,7 @@ const ROWS: Row[] = [
     eyebrow: "Decision gates",
     title: "Ask before you act — get a verdict in the same call",
     description:
-      "Post a proposed action to /events/decide and Atelier answers allow or deny inline, from rules you build in the UI. Your policy stops living in scattered if-statements, and every verdict lands in an audit trail.",
+      "Post a proposed action to /events/decide and KRIY answers allow or deny inline, from rules you build in the UI. Your policy stops living in scattered if-statements, and every verdict lands in an audit trail.",
     points: [
       "Synchronous allow / deny",
       "Nested AND / OR / NONE rules",
@@ -435,7 +435,7 @@ const ROWS: Row[] = [
     eyebrow: "Outbound webhooks",
     title: "Results come back to you — signed, retried, replayable",
     description:
-      "Subscribe an endpoint to run.completed and Atelier posts the agent's result to your app, HMAC-signed and correlated to the request that started it. Every attempt is logged, and a failed one is one click from a replay.",
+      "Subscribe an endpoint to run.completed and KRIY posts the agent's result to your app, HMAC-signed and correlated to the request that started it. Every attempt is logged, and a failed one is one click from a replay.",
     points: [
       "HMAC-signed envelopes",
       "Per-event-type subscriptions",

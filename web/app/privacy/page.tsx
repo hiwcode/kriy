@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { LegalShell, LegalSection } from "@/components/legal/legal-shell";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — Atelier",
-  description: "How Atelier handles your data.",
+  title: "Privacy Policy — KRIY",
+  description: "How KRIY handles your data.",
 };
 
 const CONTACT = "contract@gethowitworks.com";
@@ -12,7 +12,7 @@ export default function PrivacyPage() {
   return (
     <LegalShell eyebrow="Legal" title="Privacy Policy" updated="July 3, 2026">
       <p className="text-sm leading-relaxed text-muted-foreground">
-        Atelier is an open-source, source-available AI workspace. This instance is
+        KRIY is an open-source, source-available AI workspace. This instance is
         operated by <strong>hiwcode</strong> (&quot;we&quot;, &quot;us&quot;) as a
         demo project. This policy explains, in plain language, what data
         we handle and why. Questions:{" "}
@@ -101,7 +101,7 @@ export default function PrivacyPage() {
           <a href={`mailto:${CONTACT}`} className="font-medium text-primary underline-offset-4 hover:underline">
             {CONTACT}
           </a>
-          . If you self-host Atelier, you control your own database and retention.
+          . If you self-host KRIY, you control your own database and retention.
         </p>
       </LegalSection>
 
@@ -128,7 +128,7 @@ export default function PrivacyPage() {
 
       <LegalSection title="Children">
         <p>
-          Atelier is not intended for anyone under the age required to consent to data
+          KRIY is not intended for anyone under the age required to consent to data
           processing in their country (typically 13, or 16 in parts of the EU).
         </p>
       </LegalSection>

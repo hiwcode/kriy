@@ -1,6 +1,6 @@
-# Atelier
+# KRIY
 
-An open-source workspace for building, managing, and orchestrating AI agents. Atelier gives teams a unified platform to create agents powered by **Google Gemini**, **OpenAI GPT**, and **Anthropic Claude** — with collaborative workspaces, scheduling, memory, and extensible tooling.
+An open-source workspace for building, managing, and orchestrating AI agents. KRIY gives teams a unified platform to create agents powered by **Google Gemini**, **OpenAI GPT**, and **Anthropic Claude** — with collaborative workspaces, scheduling, memory, and extensible tooling.
 
 Build agents and give them the tools to *do* work — MCP tools, skills, orchestration, and schedules — then let your app's events trigger the right agent automatically, check a decision gate before it acts, and get the result posted back over a signed webhook.
 
@@ -18,7 +18,7 @@ Build agents and give them the tools to *do* work — MCP tools, skills, orchest
 | **Memory** | Short-term session context plus auto-extracted long-term facts |
 | **Triggers** | Your app emits an event; the matching workflow runs the right agent |
 | **Gates** | Ask before you act — rules return an allow/deny verdict inline |
-| **Webhooks** | Atelier posts results back to your app, HMAC-signed and replayable |
+| **Webhooks** | KRIY posts results back to your app, HMAC-signed and replayable |
 | **Workspaces** | Personal and team workspaces with role-based access |
 
 ---

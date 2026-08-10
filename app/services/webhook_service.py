@@ -3,7 +3,7 @@
 Phase 1 delivers `run.completed` from the event worker. Delivery is at-least-once;
 consumers must dedupe on the event ``id``. Signature scheme (Stripe-style):
 
-    X-Atelier-Signature: t=<unix>,v1=<hex>
+    X-KRIY-Signature: t=<unix>,v1=<hex>
     v1 = HMAC_SHA256(subscription.secret, "<t>.<raw_body>")
 
 Note: MVP does a couple of bounded inline retries. Durable long-backoff redelivery
@@ -88,8 +88,8 @@ async def _deliver(pool, sub: dict, event_id: str, event_type: str, envelope: di
         try:
             headers = {
                 "Content-Type": "application/json",
-                "X-Atelier-Event": event_type,
-                "X-Atelier-Signature": signature_header(sub["secret"], body),
+                "X-KRIY-Event": event_type,
+                "X-KRIY-Signature": signature_header(sub["secret"], body),
             }
             async with httpx.AsyncClient(timeout=_TIMEOUT) as client:
                 resp = await client.post(sub["url"], content=body, headers=headers)

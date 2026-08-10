@@ -2,7 +2,7 @@
 
 Two backends:
 - **DigitalOcean Spaces / S3** when SPACES_* is configured (prod).
-- **Local disk** dev fallback (under ./bucket, override with ATELIER_STORAGE_DIR)
+- **Local disk** dev fallback (under ./bucket, override with KRIY_STORAGE_DIR)
   when Spaces is not configured and not running in production — so you can test
   uploads without any S3 setup. Presigned URLs become signed local URLs served
   by /api/v1/documents/local/{key}.
@@ -27,7 +27,7 @@ _client = None
 _DOCS_PREFIX = "docs/"
 
 _PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[2]
-_LOCAL_DIR = pathlib.Path(os.getenv("ATELIER_STORAGE_DIR") or (_PROJECT_ROOT / "bucket"))
+_LOCAL_DIR = pathlib.Path(os.getenv("KRIY_STORAGE_DIR") or (_PROJECT_ROOT / "bucket"))
 
 
 def _spaces_configured() -> bool:

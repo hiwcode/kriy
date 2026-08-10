@@ -43,8 +43,8 @@ export const ACCENT_PRESETS: AccentPreset[] = [
 
 export type ContrastMode = "default" | "high";
 
-export const ACCENT_STORAGE_KEY = "atelier-accent";
-export const CONTRAST_STORAGE_KEY = "atelier-contrast";
+export const ACCENT_STORAGE_KEY = "kriy-accent";
+export const CONTRAST_STORAGE_KEY = "kriy-contrast";
 
 export function getAccentById(id: string | null | undefined): AccentPreset {
   return (
