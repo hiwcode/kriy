@@ -127,17 +127,20 @@ export async function createAgent(
 
 export async function updateAgent(
   id: number,
-  payload: Partial<AgentPayload>
+  payload: Partial<AgentPayload>,
+  options: { notify?: boolean } = {}
 ): Promise<AgentItem> {
   try {
     const response = await apiFetch<AgentItem>(`/api/v1/agents/${id}`, {
       method: "PATCH",
       body: JSON.stringify(payload),
     });
-    toast.success("Agent updated");
+    if (options.notify !== false) toast.success("Agent updated");
     return response.data!;
   } catch (error) {
-    toast.error(error instanceof Error ? error.message : "Failed to update agent");
+    if (options.notify !== false) {
+      toast.error(error instanceof Error ? error.message : "Failed to update agent");
+    }
     throw error;
   }
 }

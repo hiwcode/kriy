@@ -5,7 +5,8 @@ import Link from "next/link";
 import { AppLayout } from "@/components/layout/app-layout";
 import { PageLayout } from "@/components/ui/page-layout";
 import { Button } from "@/components/ui/button";
-import { ChatBox, Message } from "@/components/ui/chat-box";
+import { ChatBox, Message, type ChatCard } from "@/components/ui/chat-box";
+import { upsertCards } from "@/components/chat/chat-cards";
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -23,11 +24,14 @@ import {
   getAgent,
   updateAgent,
   runAgentStream,
+  confirmToolStream,
   AgentItem,
 } from "@/lib/api/agents";
 import { OrchestratorFlow } from "@/components/orchestrator/orchestrator-flow";
 import { OrchestratorSidebar } from "@/components/orchestrator/orchestrator-sidebar";
+import { AgentCapabilityStrip } from "@/components/orchestrator/agent-capabilities";
 import { ensureExtraFields } from "@/lib/utils";
+import { toast } from "sonner";
 
 export default function OrchestratorPage() {
   const [agents, setAgents] = React.useState<AgentItem[]>([]);
@@ -60,7 +64,9 @@ export default function OrchestratorPage() {
         setOrchestrators(orch);
         setSelectedId((prev) => (prev === null && orch.length > 0 ? orch[0].id : prev));
       })
-      .catch(() => {})
+      .catch((error) => {
+        toast.error(error instanceof Error ? error.message : "Could not load orchestration");
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -120,6 +126,32 @@ export default function OrchestratorPage() {
               )
             );
           }
+          if (chunk.type === "card" && chunk.card) {
+            const card = chunk.card as ChatCard;
+            setMessages((prev) =>
+              prev.map((m) =>
+                m.id === assistantMessageId
+                  ? { ...m, cards: upsertCards(m.cards, card) }
+                  : m
+              )
+            );
+          }
+          if (chunk.type === "tool_confirmation" && chunk.function_call_id) {
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: `conf-${chunk.function_call_id}`,
+                role: "assistant" as const,
+                content: "",
+                toolConfirmation: {
+                  function_call_id: chunk.function_call_id!,
+                  hint: chunk.hint || "Approve this action?",
+                  tool_name: chunk.tool_name || "",
+                  args: chunk.args || {},
+                },
+              },
+            ]);
+          }
         }
       } catch (err) {
         setMessages((prev) =>
@@ -145,18 +177,98 @@ export default function OrchestratorPage() {
     setIsLoading(false);
   };
 
+  const handleToolConfirmation = async (functionCallId: string, confirmed: boolean) => {
+    if (!chatAgent || !sessionId) {
+      toast.error("The agent session is no longer available. Start a new message and try again.");
+      return;
+    }
+
+    const resumeMessageId = `resume-${Date.now()}`;
+    setMessages((prev) => [
+      ...prev,
+      { id: resumeMessageId, role: "assistant", content: "", timestamp: new Date() },
+    ]);
+    setIsLoading(true);
+    try {
+      let fullText = "";
+      for await (const chunk of confirmToolStream(chatAgent.id, {
+        session_id: sessionId,
+        function_call_id: functionCallId,
+        confirmed,
+      })) {
+        if (chunk.type === "text" && chunk.text) {
+          fullText += chunk.text;
+          setMessages((prev) =>
+            prev.map((message) =>
+              message.id === resumeMessageId ? { ...message, content: fullText } : message
+            )
+          );
+        }
+        if (chunk.type === "card" && chunk.card) {
+          const card = chunk.card as ChatCard;
+          setMessages((prev) =>
+            prev.map((message) =>
+              message.id === resumeMessageId
+                ? { ...message, cards: upsertCards(message.cards, card) }
+                : message
+            )
+          );
+        }
+        if (chunk.type === "error" && chunk.error) {
+          setMessages((prev) =>
+            prev.map((message) =>
+              message.id === resumeMessageId
+                ? { ...message, content: `Error: ${chunk.error}` }
+                : message
+            )
+          );
+        }
+        if (chunk.type === "tool_confirmation" && chunk.function_call_id) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: `conf-${chunk.function_call_id}`,
+              role: "assistant" as const,
+              content: "",
+              toolConfirmation: {
+                function_call_id: chunk.function_call_id!,
+                hint: chunk.hint || "Approve this action?",
+                tool_name: chunk.tool_name || "",
+                args: chunk.args || {},
+              },
+            },
+          ]);
+        }
+      }
+    } catch (error) {
+      setMessages((prev) =>
+        prev.map((message) =>
+          message.id === resumeMessageId
+            ? {
+                ...message,
+                content: `Error: ${error instanceof Error ? error.message : "Could not resume the agent"}`,
+              }
+            : message
+        )
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleConnect = React.useCallback(
     (agentId: number) => {
       if (!selected) return;
-      const next = [...(selected.sub_agent_ids ?? []), agentId];
-      updateAgent(selected.id, { sub_agent_ids: next })
+      const next = Array.from(new Set([...(selected.sub_agent_ids ?? []), agentId]));
+      updateAgent(selected.id, { sub_agent_ids: next }, { notify: false })
         .then((updated) => {
           setSelected(updated);
           setOrchestrators((prev) =>
             prev.map((o) => (o.id === updated.id ? updated : o))
           );
+          toast.success("Agent connected");
         })
-        .catch(() => {});
+        .catch((error) => toast.error(error instanceof Error ? error.message : "Could not connect agent"));
     },
     [selected]
   );
@@ -165,14 +277,15 @@ export default function OrchestratorPage() {
     (agentId: number) => {
       if (!selected) return;
       const next = (selected.sub_agent_ids ?? []).filter((id) => id !== agentId);
-      updateAgent(selected.id, { sub_agent_ids: next })
+      updateAgent(selected.id, { sub_agent_ids: next }, { notify: false })
         .then((updated) => {
           setSelected(updated);
           setOrchestrators((prev) =>
             prev.map((o) => (o.id === updated.id ? updated : o))
           );
+          toast.success("Agent disconnected");
         })
-        .catch(() => {});
+        .catch((error) => toast.error(error instanceof Error ? error.message : "Could not disconnect agent"));
     },
     [selected]
   );
@@ -186,14 +299,15 @@ export default function OrchestratorPage() {
       );
       updateAgent(selected.id, {
         extra_fields: { ...extra, a2a_connections: list },
-      })
+      }, { notify: false })
         .then((updated) => {
           setSelected(updated);
           setOrchestrators((prev) =>
             prev.map((o) => (o.id === updated.id ? updated : o))
           );
+          toast.success("External agent disconnected");
         })
-        .catch(() => {});
+        .catch((error) => toast.error(error instanceof Error ? error.message : "Could not disconnect external agent"));
     },
     [selected]
   );
@@ -207,14 +321,33 @@ export default function OrchestratorPage() {
       list.push({ url: url.trim(), name: (name || "external_agent").trim() || "external_agent" });
       updateAgent(selected.id, {
         extra_fields: { ...extra, a2a_connections: list },
-      })
+      }, { notify: false })
         .then((updated) => {
           setSelected(updated);
           setOrchestrators((prev) =>
             prev.map((o) => (o.id === updated.id ? updated : o))
           );
+          toast.success("External agent connected");
         })
-        .catch(() => {});
+        .catch((error) => toast.error(error instanceof Error ? error.message : "Could not connect external agent"));
+    },
+    [selected]
+  );
+
+  const handleSaveLayout = React.useCallback(
+    (positions: Record<string, { x: number; y: number }>) => {
+      if (!selected) return;
+      const extra = ensureExtraFields(selected.extra_fields);
+      updateAgent(
+        selected.id,
+        { extra_fields: { ...extra, orchestrator_layout: positions } },
+        { notify: false }
+      )
+        .then((updated) => {
+          setSelected(updated);
+          setOrchestrators((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+        })
+        .catch(() => toast.error("Could not save the canvas layout"));
     },
     [selected]
   );
@@ -270,11 +403,12 @@ export default function OrchestratorPage() {
                   onDisconnect={handleDisconnect}
                   onDisconnectA2a={handleDisconnectA2a}
                   onChatAgent={openChat}
+                  onSaveLayout={handleSaveLayout}
                 />
                 {selected && (
                   <div className="pointer-events-none absolute left-4 top-4 z-10 flex items-center gap-2 rounded-full border bg-background/85 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur">
                     <MousePointerClick className="size-3.5 text-primary" />
-                    Click any agent to chat
+                    Click to chat · hover capabilities for details
                   </div>
                 )}
               </div>
@@ -301,6 +435,7 @@ export default function OrchestratorPage() {
                     <SheetDescription className="text-xs">
                       {chatAgent?.is_orchestrator ? "Orchestrator" : "Agent"}
                     </SheetDescription>
+                    <AgentCapabilityStrip agent={chatAgent ?? undefined} compact limit={3} className="mt-1.5" />
                   </div>
                 </div>
                 <div className="flex shrink-0 items-center gap-1">
@@ -324,6 +459,7 @@ export default function OrchestratorPage() {
                   <ChatBox
                     messages={messages}
                     onSendMessage={handleSendMessage}
+                    onToolConfirmation={handleToolConfirmation}
                     isLoading={isLoading}
                     placeholder={`Message ${chatAgent.label || chatAgent.name}...`}
                     emptyState={

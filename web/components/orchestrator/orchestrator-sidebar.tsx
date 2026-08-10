@@ -2,10 +2,24 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { Bot, Sparkles, Plus, GripVertical, X, Globe, MessageSquare } from "lucide-react";
+import {
+  Bot,
+  Sparkles,
+  Plus,
+  GripVertical,
+  X,
+  Globe,
+  MessageSquare,
+  Search,
+  ChevronDown,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { AgentCapabilityStrip } from "@/components/orchestrator/agent-capabilities";
 import { cn, ensureExtraFields } from "@/lib/utils";
 import type { AgentItem } from "@/lib/api/agents";
 
@@ -32,10 +46,18 @@ export function OrchestratorSidebar({
 }: OrchestratorSidebarProps) {
   const [a2aUrl, setA2aUrl] = React.useState("");
   const [a2aName, setA2aName] = React.useState("");
+  const [a2aOpen, setA2aOpen] = React.useState(false);
+  const [a2aError, setA2aError] = React.useState<string | null>(null);
+  const [agentQuery, setAgentQuery] = React.useState("");
   const subAgents = agents.filter((a) => !a.is_orchestrator);
   const selectedOrchestrator = orchestrators.find((o) => o.id === selectedId);
   const connectedIds = selectedOrchestrator?.sub_agent_ids ?? [];
   const availableSubAgents = subAgents.filter((a) => !connectedIds.includes(a.id));
+  const filteredSubAgents = availableSubAgents.filter((agent) => {
+    const query = agentQuery.trim().toLowerCase();
+    if (!query) return true;
+    return `${agent.label} ${agent.name} ${agent.description ?? ""}`.toLowerCase().includes(query);
+  });
   const connectedSubAgents = subAgents.filter((a) => connectedIds.includes(a.id));
   const extra = ensureExtraFields(selectedOrchestrator?.extra_fields);
   const a2aConnections = ((extra.a2a_connections as { url?: string; name?: string }[]) ?? []).filter(
@@ -47,21 +69,46 @@ export function OrchestratorSidebar({
     e.dataTransfer.effectAllowed = "move";
   };
 
-  return (
-    <div className="flex h-full min-w-0 w-full flex-col gap-4 overflow-auto">
-      <div className="flex items-center gap-2.5 border-b border-border p-4">
-        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <Sparkles className="size-4" />
-        </span>
-        <div className="min-w-0">
-          <h3 className="font-semibold leading-tight text-foreground">Orchestrators</h3>
-          <p className="text-xs text-muted-foreground">
-            {orchestrators.length} available · select to design
-          </p>
-        </div>
-      </div>
+  const connectExternalAgent = () => {
+    const url = a2aUrl.trim();
+    let parsed: URL;
+    try {
+      parsed = new URL(url);
+    } catch {
+      setA2aError("Enter a valid HTTP or HTTPS URL.");
+      return;
+    }
+    if (!["http:", "https:"].includes(parsed.protocol)) {
+      setA2aError("The URL must use HTTP or HTTPS.");
+      return;
+    }
+    if (a2aConnections.some((connection) => connection.url === url)) {
+      setA2aError("This external agent is already connected.");
+      return;
+    }
+    onConnectA2a?.(url, a2aName.trim());
+    setA2aUrl("");
+    setA2aName("");
+    setA2aError(null);
+    setA2aOpen(false);
+  };
 
-      <ScrollArea className="flex-1 px-2">
+  return (
+    <TooltipProvider>
+      <div className="flex h-full min-w-0 w-full flex-col gap-4 overflow-auto">
+        <div className="flex items-center gap-2.5 border-b border-border p-4">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <Sparkles className="size-4" />
+          </span>
+          <div className="min-w-0">
+            <h3 className="font-semibold leading-tight text-foreground">Orchestrators</h3>
+            <p className="text-xs text-muted-foreground">
+              {orchestrators.length} available · select to design
+            </p>
+          </div>
+        </div>
+
+        <ScrollArea className="flex-1 px-2">
         <div className="space-y-1.5 pb-4">
           {orchestrators.length === 0 ? (
             <div className="rounded-lg border border-dashed bg-muted/30 p-4 text-center text-sm text-muted-foreground">
@@ -105,20 +152,34 @@ export function OrchestratorSidebar({
         </div>
 
         {selectedOrchestrator && (
-          <div className="space-y-2 border-t border-border pt-4">
+          <div className="flex flex-col gap-2 border-t border-border pt-4">
             <h4 className=" text-sm font-medium text-foreground">
               Sub-agents
             </h4>
             <p className=" text-xs text-muted-foreground">
               Drag onto canvas to connect
             </p>
-            <div className="space-y-2">
+            {availableSubAgents.length > 4 && (
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={agentQuery}
+                  onChange={(event) => setAgentQuery(event.target.value)}
+                  placeholder="Search agents"
+                  aria-label="Search available agents"
+                  className="pl-9"
+                />
+              </div>
+            )}
+            <div className="flex flex-col gap-2">
               {availableSubAgents.length === 0 ? (
                 <p className=" text-sm text-muted-foreground">
                   All agents connected
                 </p>
+              ) : filteredSubAgents.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No agents match your search.</p>
               ) : (
-                availableSubAgents.map((a) => (
+                filteredSubAgents.map((a) => (
                   <div
                     key={a.id}
                     draggable
@@ -127,9 +188,10 @@ export function OrchestratorSidebar({
                   >
                     <GripVertical className="size-4 shrink-0 text-muted-foreground" />
                     <Bot className="size-4 shrink-0 text-muted-foreground" />
-                    <span className="flex-1 truncate text-sm font-medium">
-                      {a.label || a.name}
-                    </span>
+                    <div className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium">{a.label || a.name}</span>
+                      <AgentCapabilityStrip agent={a} compact limit={1} className="mt-1" />
+                    </div>
                     {onChatAgent && (
                       <button
                         type="button"
@@ -146,23 +208,24 @@ export function OrchestratorSidebar({
             </div>
 
             {(connectedSubAgents.length > 0 || a2aConnections.length > 0) && (onDisconnect || onDisconnectA2a) && (
-              <div className="space-y-2 border-t border-border pt-4 mt-4">
+              <div className="mt-4 flex flex-col gap-2 border-t border-border pt-4">
                 <h4 className=" text-sm font-medium text-foreground">
                   Connected
                 </h4>
                 <p className=" text-xs text-muted-foreground">
                   Click remove to disconnect
                 </p>
-                <div className="space-y-2">
+                <div className="flex flex-col gap-2">
                   {connectedSubAgents.map((a) => (
                     <div
                       key={a.id}
                       className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 px-3 py-2"
                     >
                       <Bot className="size-4 shrink-0 text-muted-foreground" />
-                      <span className="truncate flex-1 text-sm font-medium">
-                        {a.label || a.name}
-                      </span>
+                      <div className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium">{a.label || a.name}</span>
+                        <AgentCapabilityStrip agent={a} compact limit={1} className="mt-1" />
+                      </div>
                       {onChatAgent && (
                         <button
                           type="button"
@@ -210,57 +273,62 @@ export function OrchestratorSidebar({
               </div>
             )}
             {onConnectA2a && (
-              <div className="space-y-2 border-t border-border pt-4 mt-4">
-                <h4 className="text-sm font-medium text-foreground">
-                  Connect external A2A
-                </h4>
-                <p className="text-xs text-muted-foreground">
-                  Add agent by URL (Agent-to-Agent protocol)
-                </p>
-                <div className="space-y-2">
-                  <Input
-                    placeholder="https://agent.example.com"
-                    value={a2aUrl}
-                    onChange={(e) => setA2aUrl(e.target.value)}
-                    className="text-sm"
-                  />
-                  <Input
-                    placeholder="Display name"
-                    value={a2aName}
-                    onChange={(e) => setA2aName(e.target.value)}
-                    className="text-sm"
-                  />
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    onClick={() => {
-                      const url = a2aUrl.trim();
-                      if (!url) return;
-                      onConnectA2a(url, a2aName.trim());
-                      setA2aUrl("");
-                      setA2aName("");
-                    }}
-                  >
-                    <Globe className="size-4 mr-2" />
-                    Add external agent
+              <Collapsible open={a2aOpen} onOpenChange={setA2aOpen} className="mt-4 border-t border-border pt-3">
+                <CollapsibleTrigger asChild>
+                  <Button type="button" variant="ghost" className="w-full justify-between">
+                    <span className="flex items-center gap-2">
+                      <Globe data-icon="inline-start" />
+                      External A2A agent
+                    </span>
+                    <ChevronDown className={cn("transition-transform", a2aOpen && "rotate-180")} />
                   </Button>
-                </div>
-              </div>
+                </CollapsibleTrigger>
+                <CollapsibleContent className="pt-3">
+                  <FieldGroup className="gap-3">
+                    <Field data-invalid={!!a2aError}>
+                      <FieldLabel htmlFor="a2a-url">Agent URL</FieldLabel>
+                      <Input
+                        id="a2a-url"
+                        placeholder="https://agent.example.com"
+                        value={a2aUrl}
+                        onChange={(event) => {
+                          setA2aUrl(event.target.value);
+                          setA2aError(null);
+                        }}
+                        aria-invalid={!!a2aError}
+                      />
+                      <FieldError>{a2aError}</FieldError>
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="a2a-name">Display name</FieldLabel>
+                      <Input
+                        id="a2a-name"
+                        placeholder="External agent"
+                        value={a2aName}
+                        onChange={(event) => setA2aName(event.target.value)}
+                      />
+                    </Field>
+                    <Button type="button" variant="outline" size="sm" onClick={connectExternalAgent}>
+                      <Plus data-icon="inline-start" />
+                      Connect external agent
+                    </Button>
+                  </FieldGroup>
+                </CollapsibleContent>
+              </Collapsible>
             )}
           </div>
         )}
-      </ScrollArea>
+        </ScrollArea>
 
-      <div className="border-t border-border p-4">
-        <Button variant="outline" className="w-full" asChild>
-          <Link href="/agents/new">
-            <Plus className="size-4 mr-2" />
-            New Agent
-          </Link>
-        </Button>
+        <div className="border-t border-border p-4">
+          <Button variant="outline" className="w-full" asChild>
+            <Link href="/agents/new">
+              <Plus data-icon="inline-start" />
+              New agent
+            </Link>
+          </Button>
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }

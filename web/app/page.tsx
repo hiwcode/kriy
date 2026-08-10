@@ -145,7 +145,7 @@ const HERO_NAV_GROUPS: { name: string; items: HeroNavItem[] }[] = [
     name: "Agents",
     items: [
       { label: "Agents", icon: Bot },
-      { label: "Orchestrator", icon: BrainCircuit },
+      { label: "Orchestration", icon: BrainCircuit },
     ],
   },
   {
@@ -418,7 +418,7 @@ export default function LandingPage() {
                 onClick={() => scrollTo("playground")}
                 className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
-                Playground
+                Demo
               </button>
               <button
                 onClick={() => scrollTo("how-it-works")}

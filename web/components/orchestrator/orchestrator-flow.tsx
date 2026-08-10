@@ -24,6 +24,8 @@ import "@xyflow/react/dist/style.css";
 import { Bot, Sparkles, X, Globe, BrainCircuit } from "lucide-react";
 import { cn, ensureExtraFields } from "@/lib/utils";
 import type { AgentItem } from "@/lib/api/agents";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { AgentCapabilityStrip } from "@/components/orchestrator/agent-capabilities";
 
 const ORCHESTRATOR_NODE = "orchestrator";
 const SUB_AGENT_NODE = "subAgent";
@@ -62,6 +64,7 @@ function OrchestratorNode(props: NodeProps<AgentNode>) {
       {model && (
         <span className="w-fit rounded-md bg-white/15 px-1.5 py-0.5 font-mono text-[10px] text-white/90">{model}</span>
       )}
+      <AgentCapabilityStrip agent={data.agent} compact limit={2} />
       <Handle type="source" position={Position.Bottom} className={HANDLE_CLS} />
     </div>
   );
@@ -85,6 +88,7 @@ function SubAgentNode(props: NodeProps<AgentNode>) {
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium leading-tight text-foreground">{data.label}</p>
         <p className="truncate text-[10px] text-muted-foreground">{sub}</p>
+        {!isExternal && <AgentCapabilityStrip agent={data.agent} compact limit={2} className="mt-1.5" />}
       </div>
       {data.onRemove && (
         <button
@@ -121,6 +125,17 @@ function flowNodesFromAgents(
   const subIds = orchestrator.sub_agent_ids ?? [];
   const connected = subAgents.filter((a) => subIds.includes(a.id));
   const extra = ensureExtraFields(orchestrator.extra_fields);
+  const savedLayout = (
+    extra.orchestrator_layout && typeof extra.orchestrator_layout === "object"
+      ? extra.orchestrator_layout
+      : {}
+  ) as Record<string, { x?: unknown; y?: unknown }>;
+  const positionFor = (id: string, fallback: { x: number; y: number }) => {
+    const saved = savedLayout[id];
+    return saved && typeof saved.x === "number" && typeof saved.y === "number"
+      ? { x: saved.x, y: saved.y }
+      : fallback;
+  };
   const a2aList = (extra.a2a_connections as A2aConnection[] | undefined) ?? [];
   const a2aFiltered = a2aList.filter(
     (c): c is A2aConnection => c != null && typeof c === "object" && typeof c.url === "string" && c.url.trim() !== ""
@@ -131,7 +146,7 @@ function flowNodesFromAgents(
   const orchestratorNode: Node = {
     id: `orch-${orchestrator.id}`,
     type: ORCHESTRATOR_NODE,
-    position: { x: 0, y: 0 },
+    position: positionFor(`orch-${orchestrator.id}`, { x: 0, y: 0 }),
     data: { label: orchestrator.label || orchestrator.name, agent: orchestrator },
     draggable: true,
   };
@@ -153,7 +168,7 @@ function flowNodesFromAgents(
     nodes.push({
       id: item.id,
       type: SUB_AGENT_NODE,
-      position: { x: 180 + col * 200, y: row * 100 },
+      position: positionFor(item.id, { x: 180 + col * 220, y: row * 126 }),
       data: { label: item.label, agent: item.agent, a2aUrl: item.a2aUrl },
       draggable: true,
     });
@@ -162,7 +177,7 @@ function flowNodesFromAgents(
       source: `orch-${orchestrator.id}`,
       target: item.id,
       type: "smoothstep",
-      animated: true,
+      animated: false,
     });
   });
 
@@ -176,6 +191,7 @@ interface OrchestratorFlowInnerProps {
   onDisconnect: (subAgentId: number) => void;
   onDisconnectA2a?: (url: string) => void;
   onChatAgent?: (agent: AgentItem) => void;
+  onSaveLayout?: (positions: Record<string, { x: number; y: number }>) => void;
   onNodesChange?: (nodes: Node[]) => void;
 }
 
@@ -186,6 +202,7 @@ function OrchestratorFlowInner({
   onDisconnect,
   onDisconnectA2a,
   onChatAgent,
+  onSaveLayout,
 }: OrchestratorFlowInnerProps) {
   const subAgents = React.useMemo(
     () => agents.filter((a) => !a.is_orchestrator),
@@ -318,7 +335,7 @@ function OrchestratorFlowInner({
           source: `orch-${orchestrator.id}`,
           target: `sub-${agentId}`,
           type: "smoothstep",
-          animated: true,
+          animated: false,
         })
       );
     },
@@ -329,6 +346,20 @@ function OrchestratorFlowInner({
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
   }, []);
+
+  const onNodeDragStop = React.useCallback(
+    (_: React.MouseEvent, movedNode: Node) => {
+      if (!onSaveLayout) return;
+      const positions = Object.fromEntries(
+        nodes.map((node) => {
+          const position = node.id === movedNode.id ? movedNode.position : node.position;
+          return [node.id, { x: position.x, y: position.y }];
+        })
+      );
+      onSaveLayout(positions);
+    },
+    [nodes, onSaveLayout]
+  );
 
   const onNodeClick = React.useCallback(
     (_: React.MouseEvent, node: Node) => {
@@ -362,6 +393,7 @@ function OrchestratorFlowInner({
       onEdgesChange={onEdgesChangeHandler}
       onConnect={onConnectHandler}
       onNodeClick={onNodeClick}
+      onNodeDragStop={onNodeDragStop}
       onDrop={onDrop}
       onDragOver={onDragOver}
       nodeTypes={nodeTypes}
@@ -372,7 +404,7 @@ function OrchestratorFlowInner({
       proOptions={{ hideAttribution: true }}
       defaultEdgeOptions={{
         type: "smoothstep",
-        animated: true,
+        animated: false,
         style: { stroke: "var(--primary)", strokeWidth: 1.5, opacity: 0.55 },
       }}
       className="bg-muted/10 [&_.react-flow__node]:cursor-pointer"
@@ -401,6 +433,7 @@ export interface OrchestratorFlowProps {
   onDisconnect: (subAgentId: number) => void;
   onDisconnectA2a?: (url: string) => void;
   onChatAgent?: (agent: AgentItem) => void;
+  onSaveLayout?: (positions: Record<string, { x: number; y: number }>) => void;
 }
 
 export function OrchestratorFlow({
@@ -410,19 +443,23 @@ export function OrchestratorFlow({
   onDisconnect,
   onDisconnectA2a,
   onChatAgent,
+  onSaveLayout,
 }: OrchestratorFlowProps) {
   return (
-    <ReactFlowProvider>
-      <div className="h-full w-full">
-        <OrchestratorFlowInner
-          orchestrator={orchestrator}
-          agents={agents}
-          onConnect={onConnect}
-          onDisconnect={onDisconnect}
-          onDisconnectA2a={onDisconnectA2a}
-          onChatAgent={onChatAgent}
-        />
-      </div>
-    </ReactFlowProvider>
+    <TooltipProvider>
+      <ReactFlowProvider>
+        <div className="h-full w-full">
+          <OrchestratorFlowInner
+            orchestrator={orchestrator}
+            agents={agents}
+            onConnect={onConnect}
+            onDisconnect={onDisconnect}
+            onDisconnectA2a={onDisconnectA2a}
+            onChatAgent={onChatAgent}
+            onSaveLayout={onSaveLayout}
+          />
+        </div>
+      </ReactFlowProvider>
+    </TooltipProvider>
   );
 }

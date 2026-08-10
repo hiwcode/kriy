@@ -3,6 +3,7 @@
 import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Check,
   Database,
@@ -19,13 +20,14 @@ import {
   UserPlus,
   PackageCheck,
   ArrowRight,
+  Wrench,
 } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
 /*  Emit scenarios (async event → workflow → agent)                    */
 /* ------------------------------------------------------------------ */
 
-type EmitStep = { icon: React.ComponentType<{ className?: string }>; label: string };
+type EmitStep = { icon: React.ComponentType<{ className?: string }>; tool: string; label: string };
 type EmitScenario = {
   id: string;
   label: string;
@@ -48,9 +50,9 @@ const EMIT_SCENARIOS: EmitScenario[] = [
     workflow: "Fulfilment",
     agent: "Fulfilment Agent",
     steps: [
-      { icon: Bell, label: "Email the customer a tracking link" },
-      { icon: Database, label: "Mark the order shipped in the CRM" },
-      { icon: Send, label: "Post to #shipping" },
+      { icon: Bell, tool: "Email", label: "Email the customer a tracking link" },
+      { icon: Database, tool: "CRM", label: "Mark the order shipped in the CRM" },
+      { icon: Send, tool: "Slack", label: "Post to #shipping" },
     ],
     outcome: "Customer notified · CRM updated",
   },
@@ -63,9 +65,9 @@ const EMIT_SCENARIOS: EmitScenario[] = [
     workflow: "Revenue operations",
     agent: "Billing Agent",
     steps: [
-      { icon: Check, label: "Verify the payment record" },
-      { icon: Database, label: "Mark the invoice as paid" },
-      { icon: Bell, label: "Notify the account team" },
+      { icon: Check, tool: "Payments", label: "Verify the payment record" },
+      { icon: Database, tool: "Billing DB", label: "Mark the invoice as paid" },
+      { icon: Bell, tool: "Notifications", label: "Notify the account team" },
     ],
     outcome: "Invoice reconciled · team notified",
   },
@@ -78,9 +80,9 @@ const EMIT_SCENARIOS: EmitScenario[] = [
     workflow: "Onboarding",
     agent: "Onboarding Agent",
     steps: [
-      { icon: Bell, label: "Send the welcome email" },
-      { icon: Sparkles, label: "Provision a demo workspace" },
-      { icon: RefreshCw, label: "Schedule a day-3 tip" },
+      { icon: Bell, tool: "Email", label: "Send the welcome email" },
+      { icon: Sparkles, tool: "Provisioning", label: "Provision a demo workspace" },
+      { icon: RefreshCw, tool: "Scheduler", label: "Schedule a day-3 tip" },
     ],
     outcome: "New user onboarded",
   },
@@ -131,7 +133,7 @@ export function Playground() {
     <section id="playground" className="scroll-mt-20 py-24 md:py-32">
       <div className="mx-auto max-w-6xl px-6">
         <div className="mx-auto max-w-2xl text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Playground</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Interactive demo</p>
           <h2 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
             Watch a product event become agent work
           </h2>
@@ -251,6 +253,14 @@ export function Playground() {
                       <Bot className="size-3.5" />
                     </div>
                     <p className="text-[11px] font-semibold">{emitScenario.agent}</p>
+                  </div>
+                  <div className="mb-2 flex flex-wrap items-center gap-1">
+                    <Wrench className="size-3 text-muted-foreground" aria-hidden />
+                    {emitScenario.steps.map((step) => (
+                      <Badge key={step.tool} variant="secondary">
+                        {step.tool}
+                      </Badge>
+                    ))}
                   </div>
                   <ul className="space-y-1.5 pl-1">
                     {emitScenario.steps.map((st, k) => {

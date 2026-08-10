@@ -12,7 +12,7 @@ Build agents and give them the tools to *do* work — MCP tools, skills, orchest
 |------------|-------------|
 | **Multi-LLM Agents** | Create agents with Gemini, GPT, and Claude models; select a model per agent |
 | **Skills** | Bundle reusable instructions and tools into shareable skill packs |
-| **Orchestrator** | Design multi-agent workflows with a visual canvas |
+| **Orchestration** | Design multi-agent workflows with a visual canvas |
 | **Tools & MCP** | Built-in tools, file system access, Claude Code, shell, MCP servers, databases |
 | **Schedules** | Run agents on cron schedules or one-time triggers |
 | **Memory** | Short-term session context plus auto-extracted long-term facts |
@@ -47,7 +47,7 @@ Build agents and give them the tools to *do* work — MCP tools, skills, orchest
 
 | Guide | Description |
 |-------|-------------|
-| [Orchestrator](using-orchestrator.md) | Build multi-agent flows with visual coordination |
+| [Orchestration](using-orchestrator.md) | Build multi-agent flows with visual coordination |
 | [Schedules](using-schedules.md) | One-time and recurring automated agent runs |
 | [Triggers](using-event-workflows.md) | React to events from your app — emit an event, an agent handles it |
 | [Gates](using-gates.md) | Synchronous allow/deny rules your app checks before it acts |

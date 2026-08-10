@@ -17,7 +17,7 @@ const DOC_NAMES: Record<string, string> = {
   "workspace-transfer": "Workspace Transfer",
   "using-agents": "Agents",
   "using-skills": "Skills",
-  "using-orchestrator": "Orchestrator",
+  "using-orchestrator": "Orchestration",
   "using-tools": "Tools & Prompts",
   "using-schedules": "Schedules",
   "using-memory": "Memory",

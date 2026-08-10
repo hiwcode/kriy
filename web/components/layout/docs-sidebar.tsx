@@ -72,7 +72,7 @@ const DOC_SECTIONS: DocSection[] = [
   {
     label: "Advanced",
     items: [
-      { slug: "using-orchestrator", name: "Orchestrator", href: "/docs/using-orchestrator", icon: BrainCircuit },
+      { slug: "using-orchestrator", name: "Orchestration", href: "/docs/using-orchestrator", icon: BrainCircuit },
       { slug: "using-schedules", name: "Schedules", href: "/docs/using-schedules", icon: CalendarClock },
       { slug: "using-event-workflows", name: "Triggers", href: "/docs/using-event-workflows", icon: Workflow },
       { slug: "using-gates", name: "Gates", href: "/docs/using-gates", icon: ShieldCheck },

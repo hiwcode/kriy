@@ -1,4 +1,4 @@
-# Orchestrator
+# Orchestration
 
 The Orchestrator lets you build multi-agent workflows where a central agent coordinates multiple sub-agents to handle complex tasks. Instead of one agent doing everything, you can decompose work across specialized agents.
 
@@ -43,7 +43,7 @@ Before building an orchestrator, create the agents you want to coordinate. Each 
 
 ### Step 2: Open the Orchestrator
 
-1. Go to **Orchestrator** in the sidebar
+1. Go to **Orchestration** in the sidebar
 2. You'll see a visual canvas with the orchestrator node in the center
 
 ### Step 3: Add Sub-Agents
@@ -90,10 +90,11 @@ Once configured, interact with the orchestrator like any other agent in the Chat
 
 ## Editing the Canvas
 
-- **Edit a node** — Click a sub-agent node to modify its configuration
+- **Inspect capabilities** — Tool and skill labels appear on each local agent node; hover them to see the complete list
+- **Chat with an agent** — Click a local node, then use **Edit** in the chat drawer to open its full configuration
 - **Remove a node** — Use the remove control on the node or in the sidebar panel
 - **Remove a connection** — Click an edge and press delete, or use the edge's remove button
-- **Rearrange** — Drag nodes to organize the visual layout
+- **Rearrange** — Drag nodes to organize the canvas; positions are saved automatically
 
 ---
 
