@@ -119,7 +119,7 @@ const historyColumns: ColumnDef<HistoryItem>[] = [
   {
     id: "actions",
     header: "",
-    cell: ({ row }) => (
+    cell: () => (
       <Button variant="ghost" size="sm">
         <Eye className="size-4 mr-1" />
         View
@@ -178,7 +178,7 @@ function ChatTab({ agentName }: { agentName: string }) {
   );
 }
 
-function HistoryContent({ agentName }: { agentName: string }) {
+function HistoryContent() {
   return (
     <DataTable
       columns={historyColumns}
@@ -246,7 +246,7 @@ export function AgentPage({ agentId, agentName }: AgentPageProps) {
         id: "history",
         name: "History",
         icon: <History className="size-4" />,
-        component: <HistoryContent agentName={agentName} />,
+        component: <HistoryContent />,
       },
       {
         id: "mcp",

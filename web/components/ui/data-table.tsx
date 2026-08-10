@@ -246,6 +246,9 @@ export function DataTable<TData, TValue>({
     return [selectionColumn, ...columns];
   }, [columns, selectable]);
 
+  // TanStack Table intentionally returns stateful functions; React Compiler
+  // correctly leaves this component un-memoized.
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
     data,
     columns: tableColumns,

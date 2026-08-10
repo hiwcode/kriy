@@ -114,17 +114,26 @@ export default function SkillsPage() {
   const refreshTree=async(sid:number)=>{try{const t=await getSkillTree(sid);setTrees(p=>({...p,[sid]:t}));}catch{}};
 
   React.useEffect(()=>{fetchSkills();getBuiltinTools().then(setBTools).catch(()=>{});listMcpConnections({limit:200,offset:0}).then(({items})=>setMcpC(items.map(c=>({id:c.id,name:c.name})))).catch(()=>{});listDatabaseConnections({limit:200,offset:0}).then(({items})=>setDbC(items.map(c=>({id:c.id,name:c.name})))).catch(()=>{});},[fetchSkills]);
+  // Opening is driven by URL/skill changes; including the tab callback would
+  // retrigger when its tab state changes and reopen a tab the user just closed.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   React.useEffect(()=>{const s=searchParams.get("selected");if(s&&skills.length){const id=Number(s);if(id)openSkillTab(id);}},[searchParams,skills]);
 
-  const togSkill=async(sid:number)=>{setExpSkills(p=>{const n=new Set(p);n.has(sid)?n.delete(sid):n.add(sid);return n;});if(!trees[sid]&&!loadingTree.has(sid)){setLoadingTree(p=>new Set(p).add(sid));try{const t=await getSkillTree(sid);setTrees(p=>({...p,[sid]:t}));}catch{}finally{setLoadingTree(p=>{const n=new Set(p);n.delete(sid);return n;});}}};
-  const togFolder=(k:string)=>setExpFolders(p=>{const n=new Set(p);n.has(k)?n.delete(k):n.add(k);return n;});
+  const togSkill=async(sid:number)=>{setExpSkills(p=>{const n=new Set(p);if(n.has(sid)){n.delete(sid);}else{n.add(sid);}return n;});if(!trees[sid]&&!loadingTree.has(sid)){setLoadingTree(p=>new Set(p).add(sid));try{const t=await getSkillTree(sid);setTrees(p=>({...p,[sid]:t}));}catch{}finally{setLoadingTree(p=>{const n=new Set(p);n.delete(sid);return n;});}}};
+  const togFolder=(k:string)=>setExpFolders(p=>{const n=new Set(p);if(n.has(k)){n.delete(k);}else{n.add(k);}return n;});
 
+  // togSkill is intentionally excluded: it is recreated from live tree-loading
+  // state, while this callback already receives fresh values through its deps.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const openSkillTab=React.useCallback((sid:number)=>{const skill=skills.find(s=>s.id===sid);if(!skill)return;const k=`skill-${sid}`;if(!tabs.find(t=>tk(t)===k))setTabs(p=>[...p,{type:"skill",id:sid,skillId:sid,name:skill.name,dirty:false}]);setATab(k);setSelSkill(skill);setSelFile(null);setST(Array.isArray(skill.tools)?skill.tools:[]);setToolsOpen(false);const tree=trees[sid];const md=tree?.files?.find(f=>f.name==="SKILL.md");setContent(md?.content??skill.instructions??"");setMode("preview");setSelFile(md??null);if(!expSkills.has(sid))togSkill(sid);},[skills,tabs,trees,expSkills]);
   const openFileTab=React.useCallback(async(fid:number,sid:number)=>{const k=`file-${fid}`;setATab(k);setLoadingC(true);try{const f=await getSkillFile(fid);if(!tabs.find(t=>tk(t)===k))setTabs(p=>[...p,{type:"file",id:fid,skillId:sid,name:f.name,dirty:false}]);setSelFile(f);setSelSkill(null);setContent(f.content);setMode(isMd(f.name)?"preview":"edit");setToolsOpen(false);}catch{}finally{setLoadingC(false);}},[tabs]);
-  const closeTab=(k:string)=>{setTabs(p=>p.filter(t=>tk(t)!==k));if(aTab===k){const rem=tabs.filter(t=>tk(t)!==k);if(rem.length){const l=rem[rem.length-1];setATab(tk(l));l.type==="skill"?openSkillTab(l.id):openFileTab(l.id,l.skillId);}else{setATab(null);setSelFile(null);setSelSkill(null);}}};
+  const closeTab=(k:string)=>{setTabs(p=>p.filter(t=>tk(t)!==k));if(aTab===k){const rem=tabs.filter(t=>tk(t)!==k);if(rem.length){const l=rem[rem.length-1];setATab(tk(l));if(l.type==="skill"){openSkillTab(l.id);}else{openFileTab(l.id,l.skillId);}}else{setATab(null);setSelFile(null);setSelSkill(null);}}};
   const markDirty=()=>{if(aTab)setTabs(p=>p.map(t=>tk(t)===aTab?{...t,dirty:true}:t));};
 
   const handleSave=async()=>{if(!at)return;setSaving(true);try{if(at.type==="file"&&selFile){await updateSkillFile(selFile.id,{content});setSelFile(p=>p?{...p,content}:p);await refreshTree(selFile.skill_id);}else if(at.type==="skill"&&selSkill){if(selFile?.name==="SKILL.md"){await updateSkillFile(selFile.id,{content});setSelFile(p=>p?{...p,content}:p);}await updateSkill(selSkill.id,{tools:sT});await fetchSkills();await refreshTree(selSkill.id);}setTabs(p=>p.map(t=>tk(t)===aTab?{...t,dirty:false}:t));}catch{}finally{setSaving(false);}};
+  // The listed editor state is the complete save payload. Depending on the
+  // recreated wrapper itself would reinstall the listener on every render.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   React.useEffect(()=>{const h=(e:KeyboardEvent)=>{if((e.metaKey||e.ctrlKey)&&e.key==="s"){e.preventDefault();handleSave();}};window.addEventListener("keydown",h);return()=>window.removeEventListener("keydown",h);},[at,content,selFile,selSkill,sT]);
 
   const handleUpload=async(files:FileList,sid:number,fid?:number|null)=>{setUploading(true);try{for(const f of Array.from(files)){const t=await uploadSkillFiles(sid,f,fid);setTrees(p=>({...p,[sid]:t}));}if(!expSkills.has(sid))togSkill(sid);}catch{}finally{setUploading(false);setDragOver(false);}};
@@ -142,7 +151,7 @@ export default function SkillsPage() {
   const togDB=(id:number)=>{setST(p=>p.some(t=>t.type==="database"&&Number(t.database_connection_id)===id)?p.filter(t=>!(t.type==="database"&&Number(t.database_connection_id)===id)):[...p,{type:"database",database_connection_id:id}]);markDirty();};
   const isMC=(c:number)=>sT.some(t=>t.type==="mcp"&&Number(t.mcp_connection_id)===c);
   const togMC=(c:number)=>{if(isMC(c)){setST(p=>p.filter(t=>!(t.type==="mcp"&&Number(t.mcp_connection_id)===c)));}else{setST(p=>[...p,{type:"mcp",mcp_connection_id:c,tool_names:[]}]);if(!mcpCache[c]){setMcpCache(p=>({...p,[c]:{loading:true,tools:[]}}));listMcpConnectionTools(c).then(t=>setMcpCache(p=>({...p,[c]:{loading:false,tools:t}}))).catch(e=>setMcpCache(p=>({...p,[c]:{loading:false,tools:[],error:e?.message}})));}setMcpExp(c);}markDirty();};
-  const togMCT=(c:number,n:string)=>{setMcpSel(p=>{const s=new Set(p[c]??[]);s.has(n)?s.delete(n):s.add(n);return{...p,[c]:s};});setST(p=>p.map(t=>{if(t.type!=="mcp"||Number(t.mcp_connection_id)!==c)return t;const s=new Set(t.tool_names??[]);s.has(n)?s.delete(n):s.add(n);return{...t,tool_names:Array.from(s)};}));markDirty();};
+  const togMCT=(c:number,n:string)=>{setMcpSel(p=>{const s=new Set(p[c]??[]);if(s.has(n)){s.delete(n);}else{s.add(n);}return{...p,[c]:s};});setST(p=>p.map(t=>{if(t.type!=="mcp"||Number(t.mcp_connection_id)!==c)return t;const s=new Set(t.tool_names??[]);if(s.has(n)){s.delete(n);}else{s.add(n);}return{...t,tool_names:Array.from(s)};}));markDirty();};
 
   const filtered=search.trim()?skills.filter(s=>s.name.toLowerCase().includes(search.toLowerCase())):skills;
 
@@ -195,7 +204,7 @@ export default function SkillsPage() {
           <ResizableHandle/>
           <ResizablePanel defaultSize={76} minSize={40}>
             <div className="flex flex-col h-full">
-              {tabs.length>0&&(<div className="flex items-center border-b h-[35px] shrink-0 overflow-x-auto">{tabs.map(t=>{const k=tk(t);const active=k===aTab;return(<div role="tab" key={k} className={`flex items-center gap-1.5 px-3 h-full text-[12px] border-r shrink-0 transition-colors cursor-pointer ${active?"bg-background text-foreground border-b-2 border-b-primary":"text-muted-foreground hover:text-foreground hover:bg-background/50"}`} onClick={()=>{setATab(k);t.type==="skill"?openSkillTab(t.id):openFileTab(t.id,t.skillId);}}>{t.type==="skill"?<Package className="size-3 text-violet-400"/>:fIcon(t.name,"size-3")}<span className="max-w-32 truncate">{t.name}</span>{t.dirty&&<Circle className="size-1.5 fill-current text-orange-400"/>}<Button variant="ghost" size="icon" className="ml-1 size-5 opacity-60 hover:opacity-100" onClick={e=>{e.stopPropagation();closeTab(k);}}><X className="size-3"/></Button></div>);})}</div>)}
+              {tabs.length>0&&(<div className="flex items-center border-b h-[35px] shrink-0 overflow-x-auto">{tabs.map(t=>{const k=tk(t);const active=k===aTab;return(<div role="tab" key={k} className={`flex items-center gap-1.5 px-3 h-full text-[12px] border-r shrink-0 transition-colors cursor-pointer ${active?"bg-background text-foreground border-b-2 border-b-primary":"text-muted-foreground hover:text-foreground hover:bg-background/50"}`} onClick={()=>{setATab(k);if(t.type==="skill"){openSkillTab(t.id);}else{openFileTab(t.id,t.skillId);}}}>{t.type==="skill"?<Package className="size-3 text-violet-400"/>:fIcon(t.name,"size-3")}<span className="max-w-32 truncate">{t.name}</span>{t.dirty&&<Circle className="size-1.5 fill-current text-orange-400"/>}<Button variant="ghost" size="icon" className="ml-1 size-5 opacity-60 hover:opacity-100" onClick={e=>{e.stopPropagation();closeTab(k);}}><X className="size-3"/></Button></div>);})}</div>)}
               {!at?(<div className="flex-1 flex items-center justify-center"><div className="text-center max-w-xs"><Package className="size-12 text-muted-foreground/10 mx-auto mb-4"/><p className="text-sm text-muted-foreground mb-1">No file open</p><p className="text-[11px] text-muted-foreground/50 leading-relaxed">Select a skill or file from the explorer. Drag & drop ZIP files, or import from GitHub.</p></div></div>
               ):loadingC?(<div className="flex-1 flex items-center justify-center"><Loader2 className="size-5 animate-spin text-muted-foreground"/></div>
               ):at.type==="skill"&&selSkill?(

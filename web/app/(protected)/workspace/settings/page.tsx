@@ -179,7 +179,7 @@ export default function WorkspaceSettingsPage() {
     } catch {
       setInvites([]);
     }
-  }, [activeWs?.id]);
+  }, [activeWs]);
 
   const loadInvitations = React.useCallback(async () => {
     try {

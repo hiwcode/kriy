@@ -37,7 +37,7 @@ export async function listSchedules(params: {
   limit: number;
   offset: number;
   status?: string;
-}): Promise<ListScheduleResult> {
+}, signal?: AbortSignal): Promise<ListScheduleResult> {
   const searchParams = new URLSearchParams();
   searchParams.set("limit", String(params.limit));
   searchParams.set("offset", String(params.offset));
@@ -45,7 +45,7 @@ export async function listSchedules(params: {
 
   const response = await apiFetch<ScheduleItem[]>(
     `/api/v1/schedules?${searchParams.toString()}`,
-    { method: "GET" }
+    { method: "GET", signal }
   );
   return {
     items: response.data ?? [],

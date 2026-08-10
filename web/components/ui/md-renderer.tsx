@@ -17,7 +17,9 @@ function MermaidBlock({ code }: { code: string }) {
         mermaid.initialize({
           startOnLoad: false,
           theme: "neutral",
-          securityLevel: "loose",
+          // Agent and MCP output is untrusted. Strict mode disables HTML labels,
+          // scripts, and interactive links before the generated SVG is mounted.
+          securityLevel: "strict",
         });
         const id = `mermaid-${Math.random().toString(36).slice(2)}`;
         const { svg } = await mermaid.render(id, code);

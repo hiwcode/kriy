@@ -72,7 +72,8 @@ jobs:
       # Typecheck catches type/import breakage.
       - name: Typecheck
         run: npm run typecheck
-      # Blocking: the tree is lint-clean (0 errors). ESLint still exits 0 on
-      # warnings, so remaining non-error debt is surfaced without failing CI.
+      # Blocking: package script uses --max-warnings=0 to keep the tree clean.
       - name: Lint
         run: npm run lint
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=moderate

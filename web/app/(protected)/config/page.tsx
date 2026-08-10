@@ -458,7 +458,7 @@ export default function ConfigPage() {
               title="Opik Observability"
               description="Trace and monitor your agent runs with deep observability"
               status={
-                <StatusBadge active={!!config?.opik_enabled} activeLabel="Enabled" inactiveLabel="Disabled" />
+                <StatusBadge active={!!config?.opik_enabled} activeLabel="Configured" inactiveLabel="Disabled" />
               }
               onClick={() => setOpenDialog("opik")}
             />

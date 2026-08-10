@@ -1,4 +1,4 @@
-import { apiFetch, ApiResponse, ApiPagination } from "./client";
+import { apiFetch, ApiPagination } from "./client";
 import { toast } from "sonner";
 
 export interface McpConnectionItem {

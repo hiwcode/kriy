@@ -111,10 +111,13 @@ export default function SchedulesPage() {
     async (nextQuery = query, signal?: AbortSignal) => {
       setLoading(true);
       try {
-        const { items, pagination } = await listSchedules({
-          limit: nextQuery.pageSize,
-          offset: nextQuery.pageIndex * nextQuery.pageSize,
-        });
+        const { items, pagination } = await listSchedules(
+          {
+            limit: nextQuery.pageSize,
+            offset: nextQuery.pageIndex * nextQuery.pageSize,
+          },
+          signal
+        );
         setSchedules(items);
         setTotal(pagination.total ?? items.length);
       } catch (err) {

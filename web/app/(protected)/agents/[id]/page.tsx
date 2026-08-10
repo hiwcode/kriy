@@ -6,7 +6,6 @@ import Link from "next/link";
 import {
   AppLayout,
 } from "@/components/layout/app-layout";
-import { PageLayout } from "@/components/ui/page-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,13 +14,10 @@ import { Switch } from "@/components/ui/switch";
 import { TabLayout, TabConfig } from "@/components/ui/tab-layout";
 import { ChatBox, Message, type ChatCard, type MessageAttachment } from "@/components/ui/chat-box";
 import { upsertCards } from "@/components/chat/chat-cards";
-import { DataTable, ColumnFilter } from "@/components/ui/data-table";
-import { ColumnDef, SortingState } from "@tanstack/react-table";
 import {
   Settings2,
   MessageSquare,
   History,
-  ArrowLeft,
   Bot,
   X,
 } from "lucide-react";
@@ -67,13 +63,6 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { ChevronDown, ChevronRight, Loader2, Plug, Wrench, Puzzle, Plus, Trash2, Clock, Database, Globe, Link2, Copy, Check, ExternalLink, Play, RefreshCw, Send, AlertTriangle, Sparkles, Save, Cpu } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { SheetTitle } from "@/components/ui/sheet";
@@ -86,16 +75,7 @@ import {
   getIntegrationAgent,
   type IntegrationAgent,
 } from "@/lib/api/integration";
-import { siteConfig } from "@/config/site";
 import { ensureExtraFields, cn } from "@/lib/utils";
-
-interface HistoryItem {
-  id: string;
-  title: string;
-  preview: string;
-  messages: number;
-  date: string;
-}
 
 /* ------------------------------------------------------------------ */
 /*  Selectable UI primitives (Configuration tab)                       */
@@ -249,7 +229,6 @@ function PanelSection({
 
 function ConfigurationContent({
   agentId,
-  agent,
   formState,
   setFormState,
   onSubmit,
@@ -262,7 +241,6 @@ function ConfigurationContent({
   allSkills,
 }: {
   agentId: string;
-  agent: AgentItem | null;
   formState: AgentFormState;
   setFormState: React.Dispatch<React.SetStateAction<AgentFormState>>;
   onSubmit: () => void;
@@ -302,7 +280,10 @@ function ConfigurationContent({
       : names;
   }, [models, formState.model]);
 
-  const toolsArray = Array.isArray(formState.tools) ? formState.tools : [];
+  const toolsArray = React.useMemo(
+    () => (Array.isArray(formState.tools) ? formState.tools : []),
+    [formState.tools]
+  );
 
   // Auto-fetch MCP tools when we have an entry (from loaded agent) but no cache (e.g. after refresh)
   const mcpConnIdsInTools = React.useMemo(
@@ -334,7 +315,7 @@ function ConfigurationContent({
           }))
         );
     }
-  }, [mcpConnIdsInTools.join(",")]);
+  }, [mcpConnIdsInTools, mcpToolsCache, toolsArray]);
 
   const handleToolToggle = (type: "builtin" | "mcp" | "database", id: string | number) => {
     const tools = [...toolsArray];
@@ -1228,20 +1209,18 @@ function ChatTab({
    *  in-flight conversation. */
   const didInitRef = React.useRef(false);
 
-  const Logo = siteConfig.logo;
-
   // Track sessions where THIS browser left a run going, so the "finished while
   // away" toast only fires when you actually left one behind (not on every open).
   const pendingKey = (aid: number, sid: string) => `kriy:pendingRun:${aid}:${sid}`;
   const markPending = (aid: number, sid: string) => {
     try { sessionStorage.setItem(pendingKey(aid, sid), "1"); } catch {}
   };
-  const clearPending = (aid: number, sid: string) => {
+  const clearPending = React.useCallback((aid: number, sid: string) => {
     try { sessionStorage.removeItem(pendingKey(aid, sid)); } catch {}
-  };
-  const hasPending = (aid: number, sid: string) => {
+  }, []);
+  const hasPending = React.useCallback((aid: number, sid: string) => {
     try { return sessionStorage.getItem(pendingKey(aid, sid)) === "1"; } catch { return false; }
-  };
+  }, []);
 
   const fetchSessions = React.useCallback(() => {
     if (!agentId) return;
@@ -1375,7 +1354,7 @@ function ChatTab({
       clearPending(agentId, sid);
       toast.success("Agent finished while you were away");
     }
-  }, [agentId, streamReattach]);
+  }, [agentId, streamReattach, clearPending, hasPending]);
 
   React.useEffect(() => {
     if (
@@ -1388,6 +1367,9 @@ function ChatTab({
     ) {
       handleSelectSession(sessions[0].session_id);
     }
+    // handleSelectSession is declared later and reads the current session state;
+    // adding it here would make this one-time initializer run on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionsLoading, sessions, sessionId, sessionToLoad, sessionFromUrl]);
 
   React.useEffect(() => {
@@ -1841,37 +1823,6 @@ function ChatTab({
   );
 }
 
-const historyColumns: ColumnDef<HistoryItem>[] = [
-  { accessorKey: "title", header: "Title" },
-  { accessorKey: "messages", header: "Messages" },
-  { accessorKey: "date", header: "Date" },
-];
-
-function toApiFilters(filters: ColumnFilter[]) {
-  const fieldMap: Record<string, string> = {
-    messages: "message_count",
-    date: "last_update_time",
-  };
-  return filters.map((filter) => ({
-    filterField: fieldMap[filter.id] ?? filter.id,
-    filterOp: filter.type,
-    filterValue: filter.type === "empty" || filter.type === "notEmpty" ? null : filter.value,
-  }));
-}
-
-function toApiSort(sorting: SortingState): { sortField?: string; sortOrder?: "asc" | "desc" } {
-  if (!sorting.length) return {};
-  const primary = sorting[0];
-  const sortFieldMap: Record<string, string> = {
-    messages: "message_count",
-    date: "last_update_time",
-  };
-  return {
-    sortField: sortFieldMap[primary.id] ?? primary.id,
-    sortOrder: primary.desc ? "desc" : "asc",
-  };
-}
-
 function IntegrationCopyButton({ text }: { text: string }) {
   const [copied, setCopied] = React.useState(false);
   return (
@@ -1945,7 +1896,7 @@ function IntegrationEndpointRow({
   );
 }
 
-function CodeBlock({ code, id }: { code: string; id: string }) {
+function CodeBlock({ code }: { code: string }) {
   const [copied, setCopied] = React.useState(false);
   return (
     <div className="relative">
@@ -1970,10 +1921,8 @@ function CodeBlock({ code, id }: { code: string; id: string }) {
 
 function IntegrateContent({
   agentId,
-  agentName,
 }: {
   agentId: number;
-  agentName: string;
 }) {
   const [a2aReloading, setA2aReloading] = React.useState(false);
   const [agentMeta, setAgentMeta] = React.useState<IntegrationAgent | null>(null);
@@ -2153,13 +2102,13 @@ for line in response.iter_lines():
               <TabsTrigger value="python">Python</TabsTrigger>
             </TabsList>
             <TabsContent value="curl" className="mt-3">
-              <CodeBlock code={curlExample} id="curl" />
+              <CodeBlock code={curlExample} />
             </TabsContent>
             <TabsContent value="nodejs" className="mt-3">
-              <CodeBlock code={nodeExample} id="node" />
+              <CodeBlock code={nodeExample} />
             </TabsContent>
             <TabsContent value="python" className="mt-3">
-              <CodeBlock code={pythonExample} id="python" />
+              <CodeBlock code={pythonExample} />
             </TabsContent>
           </Tabs>
             </PanelSection>
@@ -2280,115 +2229,9 @@ for line in response.iter_lines():
   );
 }
 
-function HistoryContent({
-  agentId,
-  onSelectSession,
-}: {
-  agentId: number | null;
-  onSelectSession: (sessionId: string) => void;
-}) {
-  const [sessions, setSessions] = React.useState<AgentSessionItem[]>([]);
-  const [total, setTotal] = React.useState(0);
-  const [loading, setLoading] = React.useState(false);
-  const [query, setQuery] = React.useState({
-    search: "",
-    filters: [] as ColumnFilter[],
-    pageIndex: 0,
-    pageSize: 10,
-    sorting: [] as SortingState,
-  });
-
-  const fetchData = React.useCallback(
-    async (nextQuery = query, signal?: AbortSignal) => {
-      if (!agentId) {
-        setSessions([]);
-        setTotal(0);
-        return;
-      }
-      setLoading(true);
-      try {
-        const { items, pagination } = await listAgentSessions(
-          agentId,
-          {
-            limit: nextQuery.pageSize,
-            offset: nextQuery.pageIndex * nextQuery.pageSize,
-            search: nextQuery.search || undefined,
-            filters: nextQuery.filters.length ? toApiFilters(nextQuery.filters) : undefined,
-            ...toApiSort(nextQuery.sorting),
-          },
-          signal
-        );
-        setSessions(items);
-        setTotal(pagination.total ?? items.length);
-      } catch {
-        setSessions([]);
-        setTotal(0);
-      } finally {
-        setLoading(false);
-      }
-    },
-    [agentId, query]
-  );
-
-  React.useEffect(() => {
-    const controller = new AbortController();
-    fetchData(query, controller.signal);
-    return () => controller.abort();
-  }, [fetchData, query]);
-
-  const handleQueryChange = React.useCallback(
-    (next: {
-      search: string;
-      filters: ColumnFilter[];
-      pageIndex: number;
-      pageSize: number;
-      sorting: SortingState;
-    }) => {
-      setQuery(next);
-    },
-    []
-  );
-
-  const data: HistoryItem[] = React.useMemo(
-    () =>
-      sessions.map((s) => ({
-        id: s.session_id,
-        title: s.title || "New conversation",
-        preview: s.title || "New conversation",
-        messages: s.message_count,
-        date: new Date((s.last_updated || 0) * 1000).toLocaleDateString(),
-      })),
-    [sessions]
-  );
-
-  return (
-    <DataTable
-      columns={historyColumns}
-      data={data}
-      searchPlaceholder="Search sessions..."
-      pagination={true}
-      pageSize={10}
-      serverSide={true}
-      rowCount={total}
-      loading={loading}
-      onQueryChange={handleQueryChange}
-      emptyState={
-        <div className="text-center py-8">
-          <History className="mx-auto size-8 text-muted-foreground mb-2" />
-          <p className="text-muted-foreground">
-            {loading ? "Loading..." : agentId ? "No conversation history yet" : "Save the agent first"}
-          </p>
-        </div>
-      }
-      onRowClick={agentId ? (row) => onSelectSession(row.original.id) : undefined}
-    />
-  );
-}
-
 export default function AgentDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
   const agentId = params.id as string;
 
@@ -2652,7 +2495,6 @@ export default function AgentDetailPage() {
         component: (
           <ConfigurationContent
             agentId={agentId}
-            agent={agent}
             formState={formState}
             setFormState={setFormState}
             onSubmit={handleSubmit}
@@ -2673,10 +2515,7 @@ export default function AgentDetailPage() {
               name: "Integrate",
               icon: <Link2 className="size-4" />,
               component: (
-                <IntegrateContent
-                  agentId={parseInt(agentId, 10)}
-                  agentName={agentName}
-                />
+                <IntegrateContent agentId={parseInt(agentId, 10)} />
               ),
             } as const,
           ]

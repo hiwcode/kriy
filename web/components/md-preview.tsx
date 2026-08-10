@@ -31,6 +31,9 @@ function MermaidBlock({ code }: { code: string }) {
         mermaid.initialize({
           startOnLoad: false,
           theme: "neutral",
+          // Skill files can come from third-party repositories; never allow their
+          // diagrams to inject HTML, scripts, or interactive links into KRIY.
+          securityLevel: "strict",
         })
 
         const id = `mermaid-${Math.random().toString(36).slice(2)}`
@@ -173,6 +176,9 @@ export function MarkdownPreview({ content, className }: MarkdownPreviewProps) {
       img({ src, alt }: { src?: string; alt?: string }) {
         if (!src) return null
         return (
+          // Markdown images can be arbitrary remote or signed workspace URLs, so
+          // they cannot use Next/Image's static host allowlist.
+          // eslint-disable-next-line @next/next/no-img-element
           <img
             src={src}
             alt={alt || "Image"}

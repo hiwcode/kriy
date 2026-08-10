@@ -17,6 +17,7 @@ _opik_available = False
 try:
     import opik
     from opik.integrations.adk import OpikTracer, track_adk_agent_recursive
+    from opik.integrations.adk.patchers import patch_adk
 
     _opik_available = True
 except ImportError:
@@ -46,23 +47,23 @@ def setup_opik_tracing(
     if not api_key:
         return None
 
+    client: Any | None = None
     try:
-        # Configure the global Opik client for this user
-        configure_kwargs: dict[str, Any] = {
-            "api_key": api_key,
-            "force": True,  # re-configure even if already set
-        }
-        if opik_config.get("opik_workspace"):
-            configure_kwargs["workspace"] = opik_config["opik_workspace"]
-        if opik_config.get("opik_url_override"):
-            configure_kwargs["url"] = opik_config["opik_url_override"]
+        # Build an isolated client instead of calling opik.configure(), which writes
+        # user credentials to a process-global config file. KRIY is multi-tenant, so
+        # every run must retain its own immutable client configuration.
+        project_name = opik_config.get("opik_project_name") or "kriy"
+        client = opik.Opik(
+            project_name=project_name,
+            workspace=opik_config.get("opik_workspace") or None,
+            host=opik_config.get("opik_url_override") or None,
+            api_key=api_key,
+            _use_batching=True,
+        )
 
-        opik.configure(**configure_kwargs)
-
-        # Create tracer with agent name as project (each agent = its own Opik project)
         tracer = OpikTracer(
             name=f"agent-run/{agent_name}",
-            project_name=agent_name,
+            project_name=project_name,
             tags=["agent-run", agent_name],
             metadata={
                 "agent_id": agent_id,
@@ -73,6 +74,12 @@ def setup_opik_tracing(
             },
         )
 
+        # OpikTracer currently obtains a process-global cached client internally.
+        # Replace it with this run's isolated client and re-patch ADK telemetry so
+        # both callback and OpenTelemetry spans use the same tenant credentials.
+        tracer._opik_client = client
+        patch_adk(client)
+
         # Recursively inject callbacks into the entire agent tree
         # This instruments: agents, sub-agents, tool calls, LLM calls
         track_adk_agent_recursive(agent, tracer)
@@ -81,14 +88,26 @@ def setup_opik_tracing(
         return tracer
 
     except Exception:
-        logger.debug("Failed to set up Opik tracing", exc_info=True)
+        if client is not None:
+            try:
+                client.end()
+            except Exception:
+                pass
+        logger.warning("Failed to set up Opik tracing; this run will continue without traces")
         return None
 
 
 def flush_tracer(tracer: Any | None) -> None:
-    """Flush pending Opik data."""
+    """Flush pending Opik data and release this run's background sender."""
     if tracer is not None:
         try:
             tracer.flush()
         except Exception:
-            logger.debug("Failed to flush Opik tracer", exc_info=True)
+            logger.warning("Failed to flush Opik tracer; trace delivery may be incomplete")
+        finally:
+            client = getattr(tracer, "_opik_client", None)
+            if client is not None:
+                try:
+                    client.end()
+                except Exception:
+                    logger.warning("Failed to close Opik client cleanly")

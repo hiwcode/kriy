@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Send, Bot, User, Loader2, ShieldCheck, ShieldX, Terminal, FileImage, Download, Paperclip, X, FileText } from "lucide-react";
+import { Send, User, Loader2, ShieldCheck, ShieldX, Terminal, FileImage, Paperclip, X, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { siteConfig } from "@/config/site";
@@ -9,36 +9,6 @@ import { MdRenderer } from "./md-renderer";
 import { ChatCards, type ChatCard } from "@/components/chat/chat-cards";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
-const WORKSPACE_DIR = "/Users/hiwcode/Desktop/Playground/KRIY/temp/";
-const IMAGE_EXTS = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp"];
-
-function extractWorkspaceFiles(text: string): { images: string[]; files: string[] } {
-  const images: string[] = [];
-  const files: string[] = [];
-  // Match paths like /Users/.../temp/something.png or just filename.png in the temp dir
-  const pathRegex = new RegExp(WORKSPACE_DIR.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "([\\w./-]+)", "g");
-  let match;
-  while ((match = pathRegex.exec(text)) !== null) {
-    const fileName = match[1];
-    const ext = fileName.substring(fileName.lastIndexOf(".")).toLowerCase();
-    if (IMAGE_EXTS.includes(ext)) {
-      images.push(fileName);
-    } else {
-      files.push(fileName);
-    }
-  }
-  // Also match standalone filenames mentioned with common extensions
-  const nameRegex = /\b([\w-]+\.(png|jpg|jpeg|gif|webp|svg|pdf|txt|json|csv|html|md))\b/gi;
-  while ((match = nameRegex.exec(text)) !== null) {
-    const fileName = match[1];
-    const ext = fileName.substring(fileName.lastIndexOf(".")).toLowerCase();
-    if (IMAGE_EXTS.includes(ext) && !images.includes(fileName)) {
-      images.push(fileName);
-    }
-  }
-  return { images, files };
-}
-
 export interface ToolConfirmation {
   function_call_id: string;
   hint: string;
@@ -356,7 +326,6 @@ function ChatMessage({ message, Logo, onToolConfirmation }: { message: Message; 
             {!isUser && message.cards && message.cards.length > 0 && (
               <ChatCards cards={message.cards} />
             )}
-            {/* {!isUser && <WorkspaceFiles content={message.content} />} */}
             {message.timestamp && (
               <p className="mt-1 text-xs">
                 {message.timestamp.toLocaleTimeString([], {
@@ -415,61 +384,5 @@ function AttachmentChip({ attachment: a }: { attachment: MessageAttachment }) {
     </a>
   ) : (
     chip
-  );
-}
-
-function WorkspaceFiles({ content }: { content: string }) {
-  const { images, files } = React.useMemo(() => extractWorkspaceFiles(content), [content]);
-  const [authHeaders, setAuthHeaders] = React.useState<Record<string, string>>({});
-
-  React.useEffect(() => {
-    import("@/lib/auth").then(({ getAuthToken }) => {
-      const token = getAuthToken();
-      if (token) setAuthHeaders({ Authorization: `Bearer ${token}` });
-    });
-  }, []);
-
-  if (!images.length && !files.length) return null;
-
-  return (
-    <div className="mt-3 space-y-2">
-      {images.map((img) => (
-        <div key={img} className="space-y-1">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <FileImage className="size-3" />
-            <span>{img}</span>
-            <a
-              href={`${API_BASE}/api/v1/agents/workspace-file/${img}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="ml-auto text-primary hover:underline"
-            >
-              <Download className="size-3" />
-            </a>
-          </div>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={`${API_BASE}/api/v1/agents/workspace-file/${img}`}
-            alt={img}
-            className="rounded-lg border max-w-full max-h-96 object-contain bg-background"
-            onError={(e) => {
-              (e.target as HTMLImageElement).style.display = "none";
-            }}
-          />
-        </div>
-      ))}
-      {files.map((f) => (
-        <a
-          key={f}
-          href={`${API_BASE}/api/v1/agents/workspace-file/${f}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-1.5 text-xs text-primary hover:underline"
-        >
-          <Download className="size-3" />
-          {f}
-        </a>
-      ))}
-    </div>
   );
 }

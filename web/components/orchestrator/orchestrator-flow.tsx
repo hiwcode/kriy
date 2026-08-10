@@ -116,8 +116,7 @@ interface A2aConnection {
 
 function flowNodesFromAgents(
   orchestrator: AgentItem,
-  subAgents: AgentItem[],
-  agents: AgentItem[]
+  subAgents: AgentItem[]
 ): { nodes: Node[]; edges: Edge[] } {
   const subIds = orchestrator.sub_agent_ids ?? [];
   const connected = subAgents.filter((a) => subIds.includes(a.id));
@@ -188,14 +187,16 @@ function OrchestratorFlowInner({
   onDisconnectA2a,
   onChatAgent,
 }: OrchestratorFlowInnerProps) {
-  const subAgents = agents.filter((a) => !a.is_orchestrator);
+  const subAgents = React.useMemo(
+    () => agents.filter((a) => !a.is_orchestrator),
+    [agents]
+  );
   const { nodes: initialNodes, edges: initialEdges } = orchestrator
     ? flowNodesFromAgents(
         orchestrator,
         subAgents.filter((a) =>
           (orchestrator.sub_agent_ids ?? []).includes(a.id)
-        ),
-        agents
+        )
       )
     : { nodes: [], edges: [] };
 
@@ -209,8 +210,7 @@ function OrchestratorFlowInner({
           orchestrator,
           subAgents.filter((a) =>
             (orchestrator.sub_agent_ids ?? []).includes(a.id)
-          ),
-          agents
+          )
         )
       : { nodes: [], edges: [] };
     const nodesWithRemove = n.map((node) => {
@@ -234,10 +234,8 @@ function OrchestratorFlowInner({
     setNodes(nodesWithRemove);
     setEdges(e);
   }, [
-    orchestrator?.id,
-    orchestrator?.sub_agent_ids,
-    orchestrator?.extra_fields,
-    agents,
+    orchestrator,
+    subAgents,
     onDisconnect,
     onDisconnectA2a,
     setNodes,
