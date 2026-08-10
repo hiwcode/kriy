@@ -26,6 +26,9 @@ import {
 } from "lucide-react";
 
 import { AppLayout } from "@/components/layout/app-layout";
+import { PageLayout } from "@/components/ui/page-layout";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -165,11 +168,11 @@ export default function GatesPage() {
   const headerButtons = (
     <div className="flex gap-2">
       <Button variant="outline" size="sm" onClick={() => setActivityOpen(true)}>
-        <Activity className="size-4" />
+        <Activity data-icon="inline-start" />
         Activity
       </Button>
       <Button variant="outline" size="sm" onClick={() => setCodeOpen(true)}>
-        <Code2 className="size-4" />
+        <Code2 data-icon="inline-start" />
         Integrate
       </Button>
     </div>
@@ -177,27 +180,14 @@ export default function GatesPage() {
 
   return (
     <AppLayout>
-      <div className="mx-auto flex min-h-full w-full max-w-[1600px] flex-col">
-        {/* Header (matches Triggers) */}
-        <div className="border-b border-border">
-          <div className="flex flex-col items-start justify-between gap-4 px-4 pb-4 pt-6 sm:flex-row sm:px-6 lg:px-8">
-            <div className="min-w-0">
-              <h1 className="text-2xl font-semibold tracking-tight text-foreground">Decision gates</h1>
-              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{DESCRIPTION}</p>
-            </div>
-            <div className="flex shrink-0 items-center gap-2">{headerButtons}</div>
-          </div>
-        </div>
-
-        {/* Content */}
-        <div className="flex-1 p-4 sm:p-6 lg:p-8">
-          <div className="mx-auto max-w-4xl space-y-4">
+      <PageLayout title="Decision gates" subtitle={DESCRIPTION} actions={headerButtons}>
+          <div className="mx-auto flex max-w-4xl flex-col gap-4">
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm text-muted-foreground">
                 Rules are evaluated in priority order; the first match decides the verdict.
               </p>
               <Button size="sm" onClick={openNew}>
-                <Plus className="size-4" /> New gate
+                <Plus data-icon="inline-start" /> New gate
               </Button>
             </div>
             <GatesList
@@ -209,8 +199,7 @@ export default function GatesPage() {
               onRemove={remove}
             />
           </div>
-        </div>
-      </div>
+      </PageLayout>
 
       <GateEditor
         open={editorOpen}
@@ -246,28 +235,29 @@ function GatesList({
 }) {
   if (loading) {
     return (
-      <div className="space-y-2.5">
+      <div className="flex flex-col gap-2.5">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="h-24 animate-pulse rounded-xl border bg-card" />
+          <Skeleton key={i} className="h-24 rounded-xl" />
         ))}
       </div>
     );
   }
   if (gates.length === 0) {
     return (
-      <div className="mx-auto mt-6 max-w-md rounded-2xl border border-dashed bg-card p-12 text-center shadow-sm">
-        <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-          <Shield className="size-7" />
-        </div>
-        <h2 className="mb-1.5 text-lg font-semibold tracking-tight">No gates yet</h2>
-        <p className="mx-auto max-w-sm text-sm text-muted-foreground">
-          Add a gate to allow or deny a high-stakes event (refunds, deletes, external sends)
-          before it runs.
-        </p>
-        <Button size="sm" className="mt-5" onClick={onNew}>
-          <Plus className="size-4" /> New gate
-        </Button>
-      </div>
+      <Empty className="mt-6 border bg-card">
+        <EmptyHeader>
+          <EmptyMedia variant="icon"><Shield /></EmptyMedia>
+          <EmptyTitle>No gates yet</EmptyTitle>
+          <EmptyDescription>
+            Add a gate to allow or deny a high-stakes event before it runs.
+          </EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
+          <Button size="sm" onClick={onNew}>
+            <Plus data-icon="inline-start" /> New gate
+          </Button>
+        </EmptyContent>
+      </Empty>
     );
   }
   return (
@@ -281,7 +271,7 @@ function GatesList({
             <span
               className={cn(
                 "flex size-9 shrink-0 items-center justify-center rounded-xl",
-                g.action === "deny" ? "bg-destructive/10 text-destructive" : "bg-emerald-500/10 text-emerald-500",
+                g.action === "deny" ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary",
               )}
             >
               {g.action === "deny" ? <ShieldBan className="size-[18px]" /> : <ShieldCheck className="size-[18px]" />}
@@ -753,7 +743,7 @@ function CopyBlock({ filename, code }: { filename: string; code: string }) {
             setTimeout(() => setCopied(false), 1500);
           }}
         >
-          {copied ? <Check className="size-3.5 text-green-500" /> : <Copy className="size-3.5" />}
+          {copied ? <Check className="size-3.5 text-primary" /> : <Copy className="size-3.5" />}
         </Button>
       </div>
       <pre className="overflow-x-auto bg-muted/40 p-4 font-mono text-[12px] leading-relaxed">{code}</pre>
@@ -764,11 +754,7 @@ function CopyBlock({ filename, code }: { filename: string; code: string }) {
 /** Drawer with a generic, drop-in sample so users know how to gate an action
  *  before it runs — call /events/decide and honor the verdict. */
 function CodeDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
-  const base = (
-    typeof window !== "undefined"
-      ? process.env.NEXT_PUBLIC_API_BASE_URL ?? window.location.origin.replace(":3000", ":8000")
-      : process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"
-  ).replace(/\/$/, "");
+  const base = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000").replace(/\/$/, "");
 
   const envExample = `KRIY_URL=${base}
 KRIY_API_KEY=kriy-...          # Settings → API access

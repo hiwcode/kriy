@@ -25,6 +25,7 @@ export interface DashboardAgent {
 export interface TokensPerAgent {
   id: number;
   name: string;
+  model?: string | null;
   input_tokens: number;
   output_tokens: number;
   tokens: number;

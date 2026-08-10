@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import {
   Workflow as WorkflowIcon,
@@ -26,6 +27,10 @@ import {
 import { AppLayout } from "@/components/layout/app-layout";
 import { TabLayout, TabConfig } from "@/components/ui/tab-layout";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import { PageLayout } from "@/components/ui/page-layout";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -91,7 +96,7 @@ function CopyBlock({ filename, code }: { filename: string; code: string }) {
             setTimeout(() => setCopied(false), 1500);
           }}
         >
-          {copied ? <Check className="size-3.5 text-green-500" /> : <Copy className="size-3.5" />}
+          {copied ? <Check className="size-3.5 text-primary" /> : <Copy className="size-3.5" />}
         </Button>
       </div>
       <pre className="overflow-x-auto bg-muted/40 p-4 font-mono text-[12px] leading-relaxed">
@@ -104,11 +109,7 @@ function CopyBlock({ filename, code }: { filename: string; code: string }) {
 /** Drawer with a generic, drop-in integration sample so users know how to emit
  *  events from their own app. */
 function CodeDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
-  const base = (
-    typeof window !== "undefined"
-      ? process.env.NEXT_PUBLIC_API_BASE_URL ?? window.location.origin.replace(":3000", ":8000")
-      : process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000"
-  ).replace(/\/$/, "");
+  const base = (process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000").replace(/\/$/, "");
 
   const envExample = `KRIY_URL=${base}
 KRIY_API_KEY=kriy-...          # Settings → API access
@@ -207,6 +208,7 @@ export default function WorkflowsPage() {
   const [agents, setAgents] = React.useState<IntegrationAgent[]>([]);
   const [eventTypes, setEventTypes] = React.useState<EventType[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [loadError, setLoadError] = React.useState<string | null>(null);
   const [saving, setSaving] = React.useState(false);
 
   const [editorOpen, setEditorOpen] = React.useState(false);
@@ -236,11 +238,16 @@ export default function WorkflowsPage() {
   }, []);
 
   React.useEffect(() => {
-    Promise.all([
-      listWorkflows().then(setWorkflows).catch(() => {}),
-      listIntegrationAgents().then(setAgents).catch(() => {}),
-      listEventTypes().then(setEventTypes).catch(() => {}),
-    ]).finally(() => setLoading(false));
+    Promise.all([listWorkflows(), listIntegrationAgents(), listEventTypes()])
+      .then(([nextWorkflows, nextAgents, nextEventTypes]) => {
+        setWorkflows(nextWorkflows);
+        setAgents(nextAgents);
+        setEventTypes(nextEventTypes);
+      })
+      .catch((reason) => {
+        setLoadError(reason instanceof Error ? reason.message : "Workflows could not be loaded.");
+      })
+      .finally(() => setLoading(false));
   }, []);
 
   const openNew = (agentId: number) => {
@@ -361,21 +368,27 @@ export default function WorkflowsPage() {
   if (loading) {
     return (
       <AppLayout>
-        <div className="flex flex-col">
-          <div className="border-b border-border px-6 pb-4 pt-6">
-            <div className="h-7 w-40 animate-pulse rounded-md bg-muted" />
-            <div className="mt-4 flex gap-2">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="h-8 w-28 animate-pulse rounded-lg bg-muted/70" />
-              ))}
-            </div>
-          </div>
-          <div className="space-y-3 p-6">
+        <PageLayout title="Workflows" subtitle="Run agents when your application emits matching events.">
+          <div className="flex flex-col gap-3">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-20 animate-pulse rounded-xl border bg-card" />
+              <Skeleton key={i} className="h-20 rounded-xl" />
             ))}
           </div>
-        </div>
+        </PageLayout>
+      </AppLayout>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <AppLayout>
+        <PageLayout title="Workflows" subtitle="Run agents when your application emits matching events.">
+          <Alert variant="destructive">
+            <AlertTriangle />
+            <AlertTitle>Workflows unavailable</AlertTitle>
+            <AlertDescription>{loadError}</AlertDescription>
+          </Alert>
+        </PageLayout>
       </AppLayout>
     );
   }
@@ -383,15 +396,16 @@ export default function WorkflowsPage() {
   if (agents.length === 0) {
     return (
       <AppLayout>
-        <div className="mx-auto mt-10 max-w-md rounded-2xl border border-dashed bg-card p-12 text-center shadow-sm">
-          <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-            <WorkflowIcon className="size-7" />
-          </div>
-          <h2 className="mb-1.5 text-lg font-semibold tracking-tight">No agents yet</h2>
-          <p className="mx-auto max-w-sm text-sm text-muted-foreground">
-            An event workflow runs an agent when your app emits an event. Create an agent first.
-          </p>
-        </div>
+        <PageLayout title="Workflows" subtitle="Run agents when your application emits matching events.">
+          <Empty className="border">
+            <EmptyHeader>
+              <EmptyMedia variant="icon"><WorkflowIcon /></EmptyMedia>
+              <EmptyTitle>No agents yet</EmptyTitle>
+              <EmptyDescription>Create an agent before building an event workflow.</EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent><Button asChild><Link href="/agents">Create an agent</Link></Button></EmptyContent>
+          </Empty>
+        </PageLayout>
       </AppLayout>
     );
   }
@@ -457,7 +471,7 @@ function WorkflowsList({
     return (
       <div className="space-y-3">
         {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="h-24 animate-pulse rounded-xl border bg-card" />
+          <Skeleton key={i} className="h-24 rounded-xl" />
         ))}
       </div>
     );
@@ -766,9 +780,9 @@ function WorkflowEditor({
 /* ------------------------------------------------------------------ */
 
 const STATUS_STYLES: Record<string, string> = {
-  done: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+  done: "bg-primary/10 text-primary",
   error: "bg-destructive/10 text-destructive",
-  running: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+  running: "bg-muted text-muted-foreground",
   pending: "bg-muted text-muted-foreground",
 };
 
@@ -1109,7 +1123,7 @@ function EventsTab({
       </div>
 
       {loading ? (
-        <div className="h-20 animate-pulse rounded-xl border bg-card" />
+        <Skeleton className="h-20 rounded-xl" />
       ) : eventTypes.length === 0 ? (
         <EmptyState
           icon={<Radio className="size-7" />}

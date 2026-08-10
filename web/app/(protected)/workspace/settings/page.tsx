@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Select,
@@ -248,9 +249,9 @@ export default function WorkspaceSettingsPage() {
       <AppLayout>
         <PageLayout title="Workspace settings" subtitle="Manage workspace access, members, invitations, and resource ownership.">
           <div className="mx-auto max-w-3xl space-y-4">
-            <div className="h-28 animate-pulse rounded-2xl border bg-card" />
-            <div className="h-20 animate-pulse rounded-xl border bg-card" />
-            <div className="h-20 animate-pulse rounded-xl border bg-card" />
+            <Skeleton className="h-28 rounded-2xl" />
+            <Skeleton className="h-20 rounded-xl" />
+            <Skeleton className="h-20 rounded-xl" />
           </div>
         </PageLayout>
       </AppLayout>
@@ -360,10 +361,10 @@ export default function WorkspaceSettingsPage() {
                 <div className="divide-y">
                   {Array.from({ length: 3 }).map((_, i) => (
                     <div key={i} className="flex items-center gap-3 p-4">
-                      <div className="size-9 animate-pulse rounded-full bg-muted" />
+                      <Skeleton className="size-9 rounded-full" />
                       <div className="flex-1 space-y-1.5">
-                        <div className="h-3.5 w-32 animate-pulse rounded bg-muted" />
-                        <div className="h-3 w-48 animate-pulse rounded bg-muted/70" />
+                        <Skeleton className="h-3.5 w-32" />
+                        <Skeleton className="h-3 w-48" />
                       </div>
                     </div>
                   ))}

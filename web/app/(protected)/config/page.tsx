@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import {
   Select,
@@ -326,9 +327,9 @@ export default function ConfigPage() {
       <AppLayout>
         <PageLayout title="Settings" subtitle="Manage your account and provider configuration.">
           <div className="mx-auto max-w-3xl space-y-4">
-            <div className="h-28 animate-pulse rounded-xl border bg-card" />
+            <Skeleton className="h-28 rounded-xl" />
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-20 animate-pulse rounded-xl border bg-card" />
+              <Skeleton key={i} className="h-20 rounded-xl" />
             ))}
           </div>
         </PageLayout>
@@ -548,8 +549,8 @@ export default function ConfigPage() {
 
       <div className="mx-auto max-w-3xl mt-4">                                                                                                                  
         <div className="flex items-start gap-3 rounded-xl border border-primary bg-primary/20 p-4 dark:border-primary dark:bg-primary/20">                      
-          <Info className="mt-0.5 size-4 shrink-0 text-blue-600 dark:text-blue-400" />                                                                          
-          <p className="text-sm text-blue-700 dark:text-blue-300">                                                                                            
+          <Info className="mt-0.5 size-4 shrink-0 text-primary" />
+          <p className="text-sm text-muted-foreground">
           This configuration is shared across all your workspaces. Changes here apply everywhere.                                                             
           </p>                                                                                                                                                
         </div>                                                                                                                                           

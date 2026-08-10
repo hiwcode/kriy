@@ -267,8 +267,8 @@ export default function DatabaseConnectionsPage() {
         <span
           className={
             row.original.read_only
-              ? "text-amber-600"
-              : "text-emerald-600"
+              ? "text-muted-foreground"
+              : "text-primary"
           }
         >
           {row.original.read_only ? "Read-only" : "Read/write"}

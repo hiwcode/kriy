@@ -10,12 +10,15 @@ import {
   CircleCheck,
   TriangleAlert,
   CircleX,
-  Loader2,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { AppLayout } from "@/components/layout/app-layout";
 import { PageLayout } from "@/components/ui/page-layout";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import {
   listNotifications,
@@ -35,9 +38,9 @@ const LEVEL_ICON: Record<NotificationLevel, React.ComponentType<{ className?: st
   error: CircleX,
 };
 const LEVEL_COLOR: Record<NotificationLevel, string> = {
-  info: "text-blue-500",
-  success: "text-emerald-500",
-  warning: "text-amber-500",
+  info: "text-muted-foreground",
+  success: "text-primary",
+  warning: "text-primary",
   error: "text-destructive",
 };
 
@@ -56,15 +59,19 @@ export default function NotificationsPage() {
   const [total, setTotal] = React.useState(0);
   const [page, setPage] = React.useState(0);
   const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
 
   const load = React.useCallback((p: number) => {
     setLoading(true);
+    setError(null);
     listNotifications(PAGE_SIZE, p * PAGE_SIZE)
       .then((res) => {
         setItems(res.items);
         setTotal(res.total);
       })
-      .catch(() => {})
+      .catch((reason) => {
+        setError(reason instanceof Error ? reason.message : "Notifications could not be loaded.");
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -91,7 +98,8 @@ export default function NotificationsPage() {
     try {
       await markNotificationRead(n.id);
     } catch {
-      /* best effort */
+      setItems((prev) => prev.map((x) => (x.id === n.id ? { ...x, read: false } : x)));
+      toast.error("Notification could not be marked as read.");
     }
   };
 
@@ -100,7 +108,8 @@ export default function NotificationsPage() {
     try {
       await markAllNotificationsRead();
     } catch {
-      /* best effort */
+      load(page);
+      toast.error("Notifications could not be updated.");
     }
   };
 
@@ -114,26 +123,42 @@ export default function NotificationsPage() {
         title="Notifications"
         subtitle="Review notifications from agents, workflows, and workspace activity."
         actions={
-          <Button variant="outline" size="sm" onClick={onReadAll}>
-            <CheckCheck className="size-4" /> Mark all read
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onReadAll}
+            disabled={loading || !items.some((item) => !item.read)}
+          >
+            <CheckCheck data-icon="inline-start" /> Mark all read
           </Button>
         }
       >
         <div className="mx-auto max-w-3xl">
           {loading ? (
-            <div className="flex items-center justify-center py-16 text-muted-foreground">
-              <Loader2 className="size-5 animate-spin" />
+            <div className="flex flex-col gap-2.5">
+              {Array.from({ length: 5 }).map((_, index) => (
+                <Skeleton key={index} className="h-20 rounded-xl" />
+              ))}
             </div>
+          ) : error ? (
+            <Alert variant="destructive">
+              <CircleX />
+              <AlertTitle>Notifications unavailable</AlertTitle>
+              <AlertDescription className="flex flex-col items-start gap-3">
+                <span>{error}</span>
+                <Button size="sm" variant="outline" onClick={() => load(page)}>Try again</Button>
+              </AlertDescription>
+            </Alert>
           ) : items.length === 0 ? (
-            <div className="rounded-2xl border border-dashed bg-card p-12 text-center shadow-sm">
-              <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                <Bell className="size-7" />
-              </div>
-              <h3 className="mb-1 font-semibold tracking-tight">No notifications</h3>
-              <p className="mx-auto max-w-sm text-sm text-muted-foreground">
-                When an agent or workflow notifies you, it shows up here.
-              </p>
-            </div>
+            <Empty className="border bg-card">
+              <EmptyHeader>
+                <EmptyMedia variant="icon"><Bell /></EmptyMedia>
+                <EmptyTitle>No notifications</EmptyTitle>
+                <EmptyDescription>
+                  When an agent or workflow notifies you, it shows up here.
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           ) : (
             <div className="divide-y overflow-hidden rounded-xl border bg-card">
               {items.map((n) => {
@@ -151,7 +176,7 @@ export default function NotificationsPage() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <p className="truncate text-sm font-medium">{n.title}</p>
-                        {!n.read && <span className="size-1.5 shrink-0 rounded-full bg-primary" />}
+                        {!n.read && <span className="size-1.5 shrink-0 rounded-full bg-primary" aria-label="Unread" />}
                       </div>
                       {n.body && <p className="mt-0.5 text-sm text-muted-foreground">{n.body}</p>}
                       <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">

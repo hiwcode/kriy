@@ -1,7 +1,17 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { cn } from "@/lib/utils";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export interface TabItem {
   id: number | string;
@@ -17,6 +27,9 @@ export interface TabConfig {
   description?: string;
   /** Optional actions rendered at the top-right of the header */
   headerActions?: React.ReactNode;
+  /** Optional parent destination shown above the page title. */
+  backHref?: string;
+  backLabel?: string;
   items: TabItem[];
 }
 
@@ -46,14 +59,39 @@ export function TabLayout({ config, defaultTab, className, activeTabId: controll
   );
 
   const activeTab = config.items.find((item) => item.id === activeTabId);
+  const activeValue = String(activeTab?.id ?? config.items[0]?.id ?? "");
+
+  const handleValueChange = (value: string) => {
+    const item = config.items.find((candidate) => String(candidate.id) === value);
+    if (item) setActiveTabId(item.id);
+  };
 
   return (
-    <div className={cn("mx-auto flex min-h-full w-full max-w-[1600px] flex-col", className)}>
+    <Tabs
+      value={activeValue}
+      onValueChange={handleValueChange}
+      className={cn("mx-auto min-h-full w-full max-w-[1600px] gap-0", className)}
+    >
       {/* Header with title and tabs */}
       <div className="border-b border-border">
         {/* Title */}
         <div className="flex flex-col items-start justify-between gap-4 px-4 pb-4 pt-6 sm:flex-row sm:px-6 lg:px-8">
           <div className="min-w-0">
+            {config.backHref && (
+              <Breadcrumb className="mb-2">
+                <BreadcrumbList>
+                  <BreadcrumbItem>
+                    <BreadcrumbLink asChild>
+                      <Link href={config.backHref}>{config.backLabel ?? "Back"}</Link>
+                    </BreadcrumbLink>
+                  </BreadcrumbItem>
+                  <BreadcrumbSeparator />
+                  <BreadcrumbItem>
+                    <BreadcrumbPage>{config.tabName}</BreadcrumbPage>
+                  </BreadcrumbItem>
+                </BreadcrumbList>
+              </Breadcrumb>
+            )}
             <h1 className="text-2xl font-semibold tracking-[-0.025em] text-foreground">
               {config.tabName}
             </h1>
@@ -69,42 +107,32 @@ export function TabLayout({ config, defaultTab, className, activeTabId: controll
         </div>
 
         {/* Tab Navigation */}
-        <nav className="-mb-px flex gap-1 overflow-x-auto overflow-y-hidden px-3 sm:px-5 lg:px-7" role="tablist">
-          {config.items.map((item) => {
-            const isActive = item.id === activeTabId;
-
-            return (
-              <button
+        <div className="overflow-x-auto overflow-y-hidden px-3 sm:px-5 lg:px-7">
+          <TabsList variant="line" className="h-auto">
+            {config.items.map((item) => (
+              <TabsTrigger
                 key={item.id}
-                role="tab"
-                aria-selected={isActive}
-                onClick={() => setActiveTabId(item.id)}
-                className={cn(
-                  "group relative flex shrink-0 flex-row items-center gap-2 whitespace-nowrap rounded-t-lg px-3.5 py-2.5 text-sm font-medium transition-colors",
-                  isActive
-                    ? "text-primary"
-                    : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                )}
+                value={String(item.id)}
+                className="h-10 shrink-0 px-3.5"
               >
-                <span className={cn("transition-colors", isActive ? "text-primary" : "text-muted-foreground/70 group-hover:text-foreground")}>
-                  {item.icon}
-                </span>
+                {item.icon}
                 {item.name}
-                {/* Active indicator */}
-                <span
-                  className={cn(
-                    "absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-primary transition-all duration-200",
-                    isActive ? "opacity-100" : "opacity-0"
-                  )}
-                />
-              </button>
-            );
-          })}
-        </nav>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </div>
       </div>
 
       {/* Content */}
-      <div className="flex-1 p-4 sm:p-6 lg:p-8">{activeTab?.component}</div>
-    </div>
+      {config.items.map((item) => (
+        <TabsContent
+          key={item.id}
+          value={String(item.id)}
+          className="p-4 sm:p-6 lg:p-8"
+        >
+          {item.component}
+        </TabsContent>
+      ))}
+    </Tabs>
   );
 }

@@ -5,6 +5,10 @@ import Link from "next/link";
 import { AppLayout } from "@/components/layout/app-layout";
 import { TabLayout, TabConfig } from "@/components/ui/tab-layout";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import { PageLayout } from "@/components/ui/page-layout";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   listAgents,
   listAgentTraces,
@@ -114,7 +118,7 @@ function TokenUsageCard({
   return (
     <div className="rounded-lg border border-border/60 bg-muted/40 p-3 mt-3">
       <div className="flex items-center gap-2 mb-2">
-        <Coins className="size-4 text-amber-500" />
+        <Coins className="size-4 text-primary" />
         <span className="text-xs font-medium text-muted-foreground">Token usage</span>
       </div>
       <div className="flex flex-wrap gap-x-4 gap-y-1">
@@ -129,7 +133,7 @@ function TokenUsageCard({
         {cost > 0 && (
           <div className="flex items-baseline gap-1.5">
             <span className="text-xs text-muted-foreground">Est. cost:</span>
-            <span className="text-sm font-mono font-medium text-emerald-600">
+            <span className="font-mono text-sm font-medium text-foreground">
               ${cost.toFixed(6)}
             </span>
           </div>
@@ -140,7 +144,7 @@ function TokenUsageCard({
           <summary className="text-xs text-muted-foreground cursor-pointer hover:text-foreground">
             More details
           </summary>
-          <dl className="mt-2 space-y-1.5 text-xs">
+          <dl className="mt-2 flex flex-col gap-1.5 text-xs">
             {rest.map(([k, v]) => (
               <div key={k} className="flex gap-2 flex-wrap">
                 <dt className="text-muted-foreground font-mono shrink-0 min-w-[140px]">
@@ -218,7 +222,7 @@ function TraceStepRow({
     return (
       <div className="flex gap-4 group">
         <div className="flex flex-col items-center shrink-0">
-          <div className="size-9 rounded-full flex items-center justify-center shrink-0 bg-amber-500/15 text-amber-600">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
             <Wrench className="size-4" />
           </div>
           {!isLast && <div className="w-px flex-1 min-h-[12px] bg-border mt-2" />}
@@ -272,7 +276,7 @@ function TraceStepRow({
     return (
       <div className="flex gap-4 group">
         <div className="flex flex-col items-center shrink-0">
-          <div className="size-9 rounded-full flex items-center justify-center shrink-0 bg-emerald-500/15 text-emerald-600">
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
             <ArrowRight className="size-4" />
           </div>
           {!isLast && <div className="w-px flex-1 min-h-[12px] bg-border mt-2" />}
@@ -365,7 +369,7 @@ function TraceDetailContent({
   );
 
   return (
-    <div className="space-y-0">
+    <div className="flex flex-col">
       <div className="mb-6 rounded-xl border bg-card p-4 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="min-w-0">
@@ -376,7 +380,7 @@ function TraceDetailContent({
             </p>
           </div>
           {totalCost > 0 && (
-            <div className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-3 py-1 text-sm font-medium text-emerald-600 dark:text-emerald-500">
+            <div className="flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-sm font-medium text-primary">
               <DollarSign className="size-3.5" />
               ${totalCost.toFixed(4)}
             </div>
@@ -478,10 +482,10 @@ function AgentTracesContent({ agent }: { agent: AgentItem }) {
   const totalPages = Math.max(1, Math.ceil(total / TRACES_PAGE_SIZE));
 
   return (
-    <div className="space-y-4">
+    <div className="flex flex-col gap-4">
       {/* Opik deep tracing hint — hidden when Opik is already enabled */}
       {opikEnabled === false && (
-      <div className="flex items-start gap-3 rounded-xl border border-orange-300/40 bg-gradient-to-r from-orange-50 to-red-50 px-4 py-3 dark:border-orange-500/20 dark:from-orange-950/20 dark:to-red-950/20">
+      <div className="flex items-start gap-3 rounded-xl border bg-muted/40 px-4 py-3">
         <svg width="24" height="24" viewBox="40 40 230 230" fill="none" xmlns="http://www.w3.org/2000/svg" className="mt-0.5 shrink-0">
           <path fillRule="evenodd" clipRule="evenodd" d="M211.526 86.214C163.671 65.177 106.858 87.6512 84.9987 137.376C63.1395 187.101 84.9915 244.157 132.846 265.194C152.148 273.679 172.796 275.093 192.066 270.531C200.361 268.567 208.678 273.7 210.641 281.995C212.605 290.29 207.473 298.607 199.177 300.571C173.657 306.612 146.128 304.754 120.423 293.454C56.3654 265.294 28.2831 189.683 56.7387 124.953C85.1944 60.2225 159.892 29.7942 223.949 57.954C263.032 75.1349 288.768 110.083 296.374 149.317C297.997 157.686 292.528 165.785 284.159 167.408C275.791 169.03 267.691 163.561 266.069 155.192C260.271 125.29 240.78 99.074 211.526 86.214ZM263.453 256.783C266.44 269.313 258.703 281.891 246.173 284.878C233.643 287.864 221.064 280.128 218.078 267.598C215.091 255.068 222.828 242.489 235.358 239.503C247.888 236.516 260.467 244.253 263.453 256.783ZM282.895 238.991C299.635 235.001 309.971 218.196 305.981 201.457C301.991 184.717 285.186 174.381 268.447 178.371C251.707 182.361 241.371 199.165 245.361 215.905C249.351 232.645 266.156 242.981 282.895 238.991Z" fill="url(#opik_gradient)" />
           <defs>
@@ -494,7 +498,7 @@ function AgentTracesContent({ agent }: { agent: AgentItem }) {
         <div className="min-w-0 flex-1">
           <p className="text-sm text-foreground">
             For deep-level traces (sub-agent calls, tool I/O, LLM token usage per step), enable the{" "}
-            <Link href="/config" className="font-medium text-orange-600 underline underline-offset-2 hover:text-orange-700 dark:text-orange-400 dark:hover:text-orange-300">
+            <Link href="/config" className="font-medium text-primary underline underline-offset-2">
               Opik integration
             </Link>{" "}
             in your config.
@@ -505,7 +509,7 @@ function AgentTracesContent({ agent }: { agent: AgentItem }) {
               href="https://www.comet.com/opik"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-orange-600/80 underline hover:text-orange-700 dark:text-orange-400/80 dark:hover:text-orange-300"
+              className="text-primary underline"
             >
               comet.com/opik
             </a>
@@ -526,9 +530,9 @@ function AgentTracesContent({ agent }: { agent: AgentItem }) {
       </div>
 
       {loading ? (
-        <div className="space-y-2">
+        <div className="flex flex-col gap-2">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="h-[68px] animate-pulse rounded-xl border bg-card" />
+            <Skeleton key={i} className="h-[68px] rounded-xl" />
           ))}
         </div>
       ) : traces.length === 0 ? (
@@ -552,7 +556,7 @@ function AgentTracesContent({ agent }: { agent: AgentItem }) {
         </div>
       ) : (
         <>
-          <div className="space-y-2.5">
+          <div className="flex flex-col gap-2.5">
             {traces.map((t, index) => {
               const isActive = detailTrace?.session_id === t.session_id;
               // Backend prices per-event by the model that ran (stable across model changes).
@@ -587,7 +591,7 @@ function AgentTracesContent({ agent }: { agent: AgentItem }) {
                         <Metric icon={Wrench}>{t.tool_call_count} tools</Metric>
                         <Metric icon={Coins}>{(t.input_tokens + t.output_tokens).toLocaleString()} tokens</Metric>
                         {cost > 0 && (
-                          <Metric icon={DollarSign} className="text-emerald-600 dark:text-emerald-500">
+                          <Metric icon={DollarSign} className="text-foreground">
                             ~${cost.toFixed(4)}
                           </Metric>
                         )}
@@ -680,12 +684,15 @@ function AgentTracesContent({ agent }: { agent: AgentItem }) {
 export default function TracesPage() {
   const [agents, setAgents] = React.useState<AgentItem[]>([]);
   const [loading, setLoading] = React.useState(true);
+  const [loadError, setLoadError] = React.useState<string | null>(null);
   const [, setPricingReady] = React.useState(0);
 
   React.useEffect(() => {
     listAgents({ limit: 100, offset: 0 })
       .then((r) => setAgents(r.items))
-      .catch(() => setAgents([]))
+      .catch((reason) => {
+        setLoadError(reason instanceof Error ? reason.message : "Runs and traces could not be loaded.");
+      })
       .finally(() => setLoading(false));
     // Merge the model catalog (built-ins + custom/overridden pricing) into the
     // pricing map so cost reflects actual per-model rates, then re-render.
@@ -712,21 +719,27 @@ export default function TracesPage() {
   if (loading) {
     return (
       <AppLayout>
-        <div className="flex flex-col">
-          <div className="border-b border-border px-6 pb-4 pt-6">
-            <div className="h-7 w-40 animate-pulse rounded-md bg-muted" />
-            <div className="mt-4 flex gap-2">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="h-8 w-28 animate-pulse rounded-lg bg-muted/70" />
-              ))}
-            </div>
-          </div>
-          <div className="space-y-3 p-6">
+        <PageLayout title="Runs & traces" subtitle="Inspect agent execution, model usage, timing, and tool activity.">
+          <div className="flex flex-col gap-3">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-20 animate-pulse rounded-xl border bg-card" />
+              <Skeleton key={i} className="h-20 rounded-xl" />
             ))}
           </div>
-        </div>
+        </PageLayout>
+      </AppLayout>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <AppLayout>
+        <PageLayout title="Runs & traces" subtitle="Inspect agent execution, model usage, timing, and tool activity.">
+          <Alert variant="destructive">
+            <AlertTriangle />
+            <AlertTitle>Runs and traces unavailable</AlertTitle>
+            <AlertDescription>{loadError}</AlertDescription>
+          </Alert>
+        </PageLayout>
       </AppLayout>
     );
   }
@@ -734,18 +747,16 @@ export default function TracesPage() {
   if (agents.length === 0) {
     return (
       <AppLayout>
-        <div className="mx-auto mt-10 max-w-md rounded-2xl border border-dashed bg-card p-12 text-center shadow-sm">
-          <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-            <Activity className="size-7" />
-          </div>
-          <h2 className="mb-1.5 text-lg font-semibold tracking-tight">No agents yet</h2>
-          <p className="mx-auto max-w-sm text-sm text-muted-foreground">
-            Create an agent and chat with it to generate execution traces.
-          </p>
-          <Button className="mt-5" asChild>
-            <Link href="/agents">Create an agent</Link>
-          </Button>
-        </div>
+        <PageLayout title="Runs & traces" subtitle="Inspect agent execution, model usage, timing, and tool activity.">
+          <Empty className="border">
+            <EmptyHeader>
+              <EmptyMedia variant="icon"><Activity /></EmptyMedia>
+              <EmptyTitle>No agents yet</EmptyTitle>
+              <EmptyDescription>Create an agent and test it to generate execution traces.</EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent><Button asChild><Link href="/agents">Create an agent</Link></Button></EmptyContent>
+          </Empty>
+        </PageLayout>
       </AppLayout>
     );
   }

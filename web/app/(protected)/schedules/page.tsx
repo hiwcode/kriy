@@ -18,6 +18,7 @@ import { AppLayout } from "@/components/layout/app-layout";
 import { PageLayout } from "@/components/ui/page-layout";
 import { DataTable, ColumnFilter } from "@/components/ui/data-table";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -324,21 +325,15 @@ export default function SchedulesPage() {
       header: "Status",
       cell: ({ row }) => {
         const s = row.original.status;
-        const color =
+        const variant =
           s === "active"
-            ? "bg-emerald-500/10 text-emerald-600"
+            ? "default"
             : s === "paused"
-              ? "bg-amber-500/10 text-amber-600"
+              ? "secondary"
               : s === "completed"
-                ? "bg-blue-500/10 text-blue-600"
-                : "bg-red-500/10 text-red-600";
-        return (
-          <span
-            className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${color}`}
-          >
-            {s}
-          </span>
-        );
+                ? "outline"
+                : "destructive";
+        return <Badge variant={variant}>{s}</Badge>;
       },
     },
     {
@@ -358,11 +353,7 @@ export default function SchedulesPage() {
         if (!s) return <span className="text-muted-foreground">-</span>;
         return (
           <div>
-            <span
-              className={`text-xs font-medium ${
-                s === "success" ? "text-emerald-600" : "text-red-600"
-              }`}
-            >
+            <span className={s === "success" ? "text-xs font-medium text-primary" : "text-xs font-medium text-destructive"}>
               {s}
             </span>
             {s === "failed" && maxRetries > 0 && (

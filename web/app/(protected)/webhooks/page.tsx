@@ -3,10 +3,11 @@
 import * as React from "react";
 import { toast } from "sonner";
 import {
-  Plus, Pencil, Trash2, X, Send, RefreshCcw, Copy, Check, KeyRound, ListChecks, Loader2,
+  Plus, Pencil, Trash2, X, Send, RefreshCcw, Copy, Check, KeyRound, ListChecks,
 } from "lucide-react";
 
 import { AppLayout } from "@/components/layout/app-layout";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,6 +15,10 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { ResizableDrawer } from "@/components/ui/resizable-drawer";
 import { SheetTitle } from "@/components/ui/sheet";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import { PageLayout } from "@/components/ui/page-layout";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import { EventMultiSelect } from "@/components/event-multiselect";
 import { cn } from "@/lib/utils";
 import {
@@ -135,56 +140,51 @@ export default function WebhooksPage() {
 
   return (
     <AppLayout>
-      <div className="mx-auto flex min-h-full w-full max-w-[1600px] flex-col">
-        <div className="border-b border-border">
-          <div className="flex flex-col items-start justify-between gap-4 px-4 pb-4 pt-6 sm:flex-row sm:px-6 lg:px-8">
-            <div className="min-w-0">
-              <h1 className="text-2xl font-semibold tracking-tight text-foreground">Delivery webhooks</h1>
-              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-                Deliver asynchronous KRIY results to your application with signed requests,
-                automatic retries, and inspectable delivery history.
-              </p>
-            </div>
-            <Button size="sm" onClick={openNew}><Plus className="size-4" /> New webhook</Button>
-          </div>
-        </div>
-
-        <div className="flex-1 p-4 sm:p-6 lg:p-8">
-          <div className="mx-auto max-w-3xl space-y-4">
+      <PageLayout
+        title="Delivery webhooks"
+        subtitle="Deliver asynchronous KRIY results with signed requests, automatic retries, and inspectable history."
+        actions={<Button size="sm" onClick={openNew}><Plus data-icon="inline-start" /> New webhook</Button>}
+      >
+          <div className="mx-auto flex max-w-3xl flex-col gap-4">
             {revealed && (
-              <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-4 dark:border-emerald-900 dark:bg-emerald-950/30">
-                <div className="flex items-center gap-2 text-sm font-medium text-emerald-800 dark:text-emerald-300">
-                  <KeyRound className="size-4" /> Signing secret — copy it now, it won&apos;t be shown again
-                </div>
-                <div className="mt-2 flex items-center gap-2">
+              <Alert>
+                <KeyRound />
+                <AlertTitle>Copy the signing secret now</AlertTitle>
+                <AlertDescription>
+                  <p>This secret will not be shown again.</p>
+                <div className="mt-2 flex w-full items-center gap-2">
                   <code className="flex-1 truncate rounded-md bg-background px-3 py-2 font-mono text-xs">{revealed}</code>
                   <Button size="sm" variant="outline" onClick={() => { navigator.clipboard.writeText(revealed); toast.success("Copied"); }}>
-                    <Copy className="size-3.5" /> Copy
+                    <Copy data-icon="inline-start" /> Copy
                   </Button>
-                  <Button size="icon-sm" variant="ghost" onClick={() => setRevealed(null)} aria-label="Dismiss"><X className="size-4" /></Button>
+                  <Button size="icon-sm" variant="ghost" onClick={() => setRevealed(null)} aria-label="Dismiss"><X /></Button>
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">
                   Verify deliveries with <code className="font-mono">X-KRIY-Signature: t=…,v1=HMAC_SHA256(secret, &quot;t.body&quot;)</code>.
                 </p>
-              </div>
+                </AlertDescription>
+              </Alert>
             )}
 
             {loading ? (
-              <p className="text-sm text-muted-foreground">Loading…</p>
+              <div className="flex flex-col gap-3">
+                <Skeleton className="h-24 rounded-xl" />
+                <Skeleton className="h-24 rounded-xl" />
+              </div>
             ) : hooks.length === 0 ? (
-              <div className="rounded-2xl border border-dashed bg-card p-12 text-center shadow-sm">
-                <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                  <Send className="size-7" />
-                </div>
-                <h2 className="mb-1.5 text-lg font-semibold tracking-tight">No webhooks yet</h2>
-                <p className="mx-auto max-w-sm text-sm text-muted-foreground">
+              <Empty className="border">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon"><Send /></EmptyMedia>
+                  <EmptyTitle>No webhooks yet</EmptyTitle>
+                  <EmptyDescription>
                   Add an endpoint to receive events like <code className="font-mono">run.completed</code> —
                   the way to get an agent&apos;s async result back into your app.
-                </p>
-                <Button size="sm" className="mt-4" onClick={openNew}><Plus className="size-4" /> New webhook</Button>
-              </div>
+                  </EmptyDescription>
+                </EmptyHeader>
+                <EmptyContent><Button size="sm" onClick={openNew}><Plus data-icon="inline-start" /> New webhook</Button></EmptyContent>
+              </Empty>
             ) : (
-              <div className="space-y-2.5">
+              <div className="flex flex-col gap-2.5">
                 {hooks.map((w) => (
                   <div key={w.id} className={cn("rounded-xl border bg-card p-4 shadow-sm transition-opacity", !w.enabled && "opacity-60")}>
                     <div className="flex items-start gap-3">
@@ -216,8 +216,7 @@ export default function WebhooksPage() {
               </div>
             )}
           </div>
-        </div>
-      </div>
+      </PageLayout>
 
       {/* Editor */}
       <ResizableDrawer open={open} onOpenChange={setOpen} defaultWidth={560} minWidth={440}>
@@ -267,7 +266,7 @@ export default function WebhooksPage() {
           <div className="flex items-center justify-end gap-2 border-t px-4 py-3">
             <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
             <Button onClick={save} disabled={saving}>
-              {saving ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
+              {saving ? <Spinner data-icon="inline-start" /> : <Check data-icon="inline-start" />}
               {editing ? "Save" : "Create"}
             </Button>
           </div>
@@ -301,7 +300,7 @@ function DeliveriesDrawer({ webhook, onClose }: { webhook: Webhook | null; onClo
   };
 
   const tone = (s: string) =>
-    s === "success" ? "bg-emerald-500/10 text-emerald-600 ring-emerald-500/25"
+    s === "success" ? "bg-primary/10 text-primary ring-primary/25"
       : s === "failed" ? "bg-destructive/10 text-destructive ring-destructive/25"
         : "bg-muted text-muted-foreground ring-border";
 

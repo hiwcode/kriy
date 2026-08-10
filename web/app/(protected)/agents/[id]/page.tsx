@@ -7,6 +7,7 @@ import {
   AppLayout,
 } from "@/components/layout/app-layout";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -53,6 +54,7 @@ import { listModels, type ModelPricing } from "@/lib/api/models";
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
   SelectTrigger,
   SelectValue,
@@ -69,6 +71,9 @@ import { SheetTitle } from "@/components/ui/sheet";
 import { ResizableDrawer } from "@/components/ui/resizable-drawer";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
+import { PageLayout } from "@/components/ui/page-layout";
 import {
   chatSync,
   reloadA2A,
@@ -239,6 +244,7 @@ function ConfigurationContent({
   prompts,
   allAgents,
   allSkills,
+  isDirty,
 }: {
   agentId: string;
   formState: AgentFormState;
@@ -250,6 +256,7 @@ function ConfigurationContent({
   prompts: PromptLibraryItem[];
   allAgents: AgentItem[];
   allSkills: SkillItem[];
+  isDirty: boolean;
   databaseConnections: { id: number; name: string }[];
 }) {
   const [activeSection, setActiveSection] = React.useState<string>("agent");
@@ -509,8 +516,10 @@ function ConfigurationContent({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="local">Local (build with instructions & tools)</SelectItem>
-                    <SelectItem value="a2a">A2A (connect external agent by URL)</SelectItem>
+                    <SelectGroup>
+                      <SelectItem value="local">Local (build with instructions & tools)</SelectItem>
+                      <SelectItem value="a2a">A2A (connect external agent by URL)</SelectItem>
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
@@ -599,9 +608,11 @@ function ConfigurationContent({
                     <SelectValue placeholder="Select a model" />
                   </SelectTrigger>
                   <SelectContent>
-                    {modelOptions.map((m) => (
-                      <SelectItem key={m} value={m}>{m}</SelectItem>
-                    ))}
+                    <SelectGroup>
+                      {modelOptions.map((m) => (
+                        <SelectItem key={m} value={m}>{m}</SelectItem>
+                      ))}
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-muted-foreground">
@@ -638,14 +649,16 @@ function ConfigurationContent({
                     <SelectValue placeholder="Select system prompt" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Custom system prompt below</SelectItem>
-                    {prompts
-                      .filter((p) => (p.prompt_type ?? "instructions") === "system")
-                      .map((p) => (
-                        <SelectItem key={p.id} value={String(p.id)}>
-                          {p.title}
-                        </SelectItem>
-                      ))}
+                    <SelectGroup>
+                      <SelectItem value="none">Custom system prompt below</SelectItem>
+                      {prompts
+                        .filter((p) => (p.prompt_type ?? "instructions") === "system")
+                        .map((p) => (
+                          <SelectItem key={p.id} value={String(p.id)}>
+                            {p.title}
+                          </SelectItem>
+                        ))}
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
                 {formState.system_prompt_id ? (
@@ -688,14 +701,16 @@ function ConfigurationContent({
                     <SelectValue placeholder="Select instructions" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Custom instructions below</SelectItem>
-                    {prompts
-                      .filter((p) => (p.prompt_type ?? "instructions") === "instructions")
-                      .map((p) => (
-                        <SelectItem key={p.id} value={String(p.id)}>
-                          {p.title}
-                        </SelectItem>
-                      ))}
+                    <SelectGroup>
+                      <SelectItem value="none">Custom instructions below</SelectItem>
+                      {prompts
+                        .filter((p) => (p.prompt_type ?? "instructions") === "instructions")
+                        .map((p) => (
+                          <SelectItem key={p.id} value={String(p.id)}>
+                            {p.title}
+                          </SelectItem>
+                        ))}
+                    </SelectGroup>
                   </SelectContent>
                 </Select>
                 {formState.instruction_prompt_id ? (
@@ -1106,12 +1121,14 @@ function ConfigurationContent({
         </div>
         <div className="sticky bottom-0 mt-4 flex items-center justify-between gap-3 border-t bg-background/85 px-4 py-3 backdrop-blur-md">
         <p className="hidden text-xs text-muted-foreground sm:block">
-          {agentId === "new"
-            ? "Create the agent to enable chat and integrations."
-            : "Changes apply to new conversations."}
+          {isDirty
+            ? agentId === "new"
+              ? "Save this agent to enable testing and integrations."
+              : "You have unsaved changes. They apply to new conversations."
+            : "All changes are saved."}
         </p>
-        <Button onClick={onSubmit} disabled={saving} size="lg">
-          {saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
+        <Button onClick={onSubmit} disabled={saving || !isDirty} size="lg">
+          {saving ? <Spinner data-icon="inline-start" /> : <Save data-icon="inline-start" />}
           {saving ? "Saving…" : agentId === "new" ? "Create agent" : "Save changes"}
         </Button>
         </div>
@@ -1837,7 +1854,7 @@ function IntegrationCopyButton({ text }: { text: string }) {
       }}
     >
       {copied ? (
-        <Check className="h-3 w-3 text-green-500" />
+        <Check className="size-3 text-primary" />
       ) : (
         <Copy className="h-3 w-3" />
       )}
@@ -1858,11 +1875,11 @@ function IntegrationEndpointRow({
 }) {
   const methodColor =
     method === "GET"
-      ? "bg-blue-500/10 text-blue-600 dark:text-blue-400"
+      ? "bg-muted text-muted-foreground"
       : method === "POST"
-        ? "bg-green-500/10 text-green-600 dark:text-green-400"
+        ? "bg-primary/10 text-primary"
         : method === "DELETE"
-          ? "bg-red-500/10 text-red-600 dark:text-red-400"
+          ? "bg-destructive/10 text-destructive"
           : "bg-muted text-muted-foreground";
 
   // The row shows — and its copy button copies — a ready-to-run curl, not the bare URL.
@@ -1913,7 +1930,7 @@ function CodeBlock({ code }: { code: string }) {
           setTimeout(() => setCopied(false), 1500);
         }}
       >
-        {copied ? <Check className="h-3.5 w-3.5 text-green-400" /> : <Copy className="h-3.5 w-3.5" />}
+        {copied ? <Check className="size-3.5 text-primary" /> : <Copy className="size-3.5" />}
       </Button>
     </div>
   );
@@ -1933,9 +1950,7 @@ function IntegrateContent({
   const [chatResponse, setChatResponse] = React.useState("");
   const [chatLoading, setChatLoading] = React.useState(false);
 
-  const baseUrl = typeof window !== "undefined"
-    ? (process.env.NEXT_PUBLIC_API_BASE_URL ?? window.location.origin.replace(":3000", ":8000"))
-    : process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
+  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8000";
   const base = baseUrl.replace(/\/$/, "");
   const runUrl = `${base}/api/v1/agents/${agentId}/run`;
 
@@ -2239,6 +2254,7 @@ export default function AgentDetailPage() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [formState, setFormState] = React.useState<AgentFormState>(emptyForm);
+  const [savedSnapshot, setSavedSnapshot] = React.useState(() => JSON.stringify(emptyForm));
   const [saving, setSaving] = React.useState(false);
   const [builtinTools, setBuiltinTools] = React.useState<string[]>([]);
   const [mcpConnections, setMcpConnections] = React.useState<
@@ -2253,6 +2269,20 @@ export default function AgentDetailPage() {
   const [activeTabId, setActiveTabId] = React.useState<string | number>("configuration");
   const [sessionToLoad, setSessionToLoad] = React.useState<string | null>(null);
   const [chatOpen, setChatOpen] = React.useState(false);
+  const isDirty = React.useMemo(
+    () => JSON.stringify(formState) !== savedSnapshot,
+    [formState, savedSnapshot]
+  );
+
+  React.useEffect(() => {
+    const preventAccidentalExit = (event: BeforeUnloadEvent) => {
+      if (!isDirty || saving) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", preventAccidentalExit);
+    return () => window.removeEventListener("beforeunload", preventAccidentalExit);
+  }, [isDirty, saving]);
 
   const handleSessionLoaded = React.useCallback(() => {
     setSessionToLoad(null);
@@ -2332,7 +2362,7 @@ export default function AgentDetailPage() {
               : a2aMetadataVal != null
                 ? JSON.stringify(a2aMetadataVal, null, 2)
                 : "";
-          setFormState({
+          const nextForm: AgentFormState = {
             agent_type: agentType,
             name: a.name,
             label: a.label,
@@ -2350,7 +2380,9 @@ export default function AgentDetailPage() {
             a2a_url: String(extra.a2a_url ?? ""),
             a2a_headers: a2a_headers_str,
             a2a_metadata: a2a_metadata_str,
-          });
+          };
+          setFormState(nextForm);
+          setSavedSnapshot(JSON.stringify(nextForm));
         })
         .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"))
         .finally(() => setLoading(false));
@@ -2401,6 +2433,38 @@ export default function AgentDetailPage() {
     setSaving(true);
     setError(null);
     try {
+      if (!formState.name.trim()) throw new Error("Agent identifier is required.");
+      if (!formState.label.trim()) throw new Error("Display name is required.");
+      if (formState.agent_type === "local" && !formState.model.trim()) {
+        throw new Error("Select a model before saving.");
+      }
+      if (formState.agent_type === "a2a") {
+        if (!formState.a2a_url.trim()) throw new Error("A2A base URL is required.");
+        try {
+          const url = new URL(formState.a2a_url.trim());
+          if (url.protocol !== "http:" && url.protocol !== "https:") throw new Error();
+        } catch {
+          throw new Error("Enter a valid HTTP or HTTPS A2A base URL.");
+        }
+      }
+
+      const parseJsonObject = (
+        value: string,
+        label: string
+      ): Record<string, unknown> => {
+        if (!value.trim()) return {};
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(value);
+        } catch {
+          throw new Error(`${label} must contain valid JSON.`);
+        }
+        if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+          throw new Error(`${label} must be a JSON object.`);
+        }
+        return parsed as Record<string, unknown>;
+      };
+
       const baseExtra = ensureExtraFields(agent?.extra_fields);
       const extraFields: Record<string, unknown> = {
         ...baseExtra,
@@ -2416,30 +2480,8 @@ export default function AgentDetailPage() {
       if (formState.agent_type === "a2a") {
         extraFields.type = "a2a";
         extraFields.a2a_url = formState.a2a_url.trim() || null;
-        let headersObj: Record<string, string> = {};
-        if (formState.a2a_headers.trim()) {
-          try {
-            const parsed = JSON.parse(formState.a2a_headers);
-            if (parsed && typeof parsed === "object") {
-              headersObj = { ...headersObj, ...parsed };
-            }
-          } catch {
-            // ignore invalid JSON
-          }
-        }
-        extraFields.a2a_headers = headersObj;
-        let metadataObj: Record<string, unknown> = {};
-        if (formState.a2a_metadata.trim()) {
-          try {
-            const parsed = JSON.parse(formState.a2a_metadata);
-            if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-              metadataObj = parsed as Record<string, unknown>;
-            }
-          } catch {
-            // ignore invalid JSON
-          }
-        }
-        extraFields.a2a_metadata = metadataObj;
+        extraFields.a2a_headers = parseJsonObject(formState.a2a_headers, "Headers");
+        extraFields.a2a_metadata = parseJsonObject(formState.a2a_metadata, "Metadata");
       } else {
         delete extraFields.type;
         delete extraFields.a2a_url;
@@ -2463,14 +2505,19 @@ export default function AgentDetailPage() {
       };
       if (agentId === "new") {
         const created = await createAgent(payload);
+        toast.success("Agent created");
         router.push(`/agents/${created.id}`);
       } else {
         await updateAgent(parseInt(agentId, 10), payload);
         const updated = await getAgent(parseInt(agentId, 10));
         setAgent(updated);
+        setSavedSnapshot(JSON.stringify(formState));
+        toast.success("Agent saved");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save");
+      const message = err instanceof Error ? err.message : "Failed to save";
+      setError(message);
+      toast.error(message);
     } finally {
       setSaving(false);
     }
@@ -2481,6 +2528,8 @@ export default function AgentDetailPage() {
   const config: TabConfig = {
     id: agentId,
     tabName: agentName,
+    backHref: "/agents",
+    backLabel: "Agents",
     description:
       agentId === "new"
         ? "Configure your new agent, then save to enable chat and integrations."
@@ -2505,6 +2554,7 @@ export default function AgentDetailPage() {
             prompts={prompts}
             allAgents={allAgents}
             allSkills={allSkills}
+            isDirty={isDirty}
           />
         ),
       },
@@ -2522,10 +2572,17 @@ export default function AgentDetailPage() {
         : []),
     ],
     headerActions: (
-      <Button onClick={() => setChatOpen(true)} className="gap-2">
-        <MessageSquare className="size-4" />
-        Chat
-      </Button>
+      <>
+        {isDirty && <Badge variant="secondary">Unsaved changes</Badge>}
+        <Button
+          onClick={() => setChatOpen(true)}
+          disabled={agentId === "new"}
+          title={agentId === "new" ? "Save the agent before testing it" : "Test this agent"}
+        >
+          <MessageSquare data-icon="inline-start" />
+          Test agent
+        </Button>
+      </>
     ),
   };
 
@@ -2534,19 +2591,40 @@ export default function AgentDetailPage() {
       <AppLayout>
         <div className="flex flex-col">
           <div className="border-b border-border px-6 pb-4 pt-6">
-            <div className="h-7 w-48 animate-pulse rounded-md bg-muted" />
-            <div className="mt-2 h-4 w-64 animate-pulse rounded-md bg-muted/70" />
+            <Skeleton className="h-7 w-48" />
+            <Skeleton className="mt-2 h-4 w-64" />
             <div className="mt-4 flex gap-2">
               {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="h-8 w-28 animate-pulse rounded-lg bg-muted/70" />
+                <Skeleton key={i} className="h-8 w-28 rounded-lg" />
               ))}
             </div>
           </div>
           <div className="grid gap-6 p-6 lg:grid-cols-3">
-            <div className="h-96 animate-pulse rounded-xl border bg-card lg:col-span-2" />
-            <div className="h-96 animate-pulse rounded-xl border bg-card" />
+            <Skeleton className="h-96 rounded-xl lg:col-span-2" />
+            <Skeleton className="h-96 rounded-xl" />
           </div>
         </div>
+      </AppLayout>
+    );
+  }
+
+  if (agentId !== "new" && !agent) {
+    return (
+      <AppLayout>
+        <PageLayout title="Agent unavailable" subtitle="This agent could not be loaded.">
+          <div className="flex max-w-2xl flex-col gap-4">
+            <Alert variant="destructive">
+              <AlertTriangle />
+              <AlertTitle>Unable to open agent</AlertTitle>
+              <AlertDescription>{error ?? "The agent may have been removed or you may not have access."}</AlertDescription>
+            </Alert>
+            <div>
+              <Button variant="outline" asChild>
+                <Link href="/agents">Back to agents</Link>
+              </Button>
+            </div>
+          </div>
+        </PageLayout>
       </AppLayout>
     );
   }
@@ -2554,9 +2632,12 @@ export default function AgentDetailPage() {
   return (
     <AppLayout>
       {error && (
-        <div className="mx-6 mt-4 flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          <AlertTriangle className="size-4 shrink-0" />
-          {error}
+        <div className="mx-4 mt-4 sm:mx-6 lg:mx-8">
+          <Alert variant="destructive">
+            <AlertTriangle />
+            <AlertTitle>Changes not saved</AlertTitle>
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
         </div>
       )}
       <TabLayout

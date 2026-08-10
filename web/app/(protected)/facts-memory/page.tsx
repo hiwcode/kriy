@@ -5,6 +5,9 @@ import Link from "next/link";
 import { AppLayout } from "@/components/layout/app-layout";
 import { TabLayout, TabConfig } from "@/components/ui/tab-layout";
 import { Button } from "@/components/ui/button";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import { PageLayout } from "@/components/ui/page-layout";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
@@ -56,7 +59,7 @@ const MEMORY_TYPE_STYLES: Record<string, string> = {
   fact: "bg-info/10 text-info",
   preference: "bg-primary/10 text-primary",
   goal: "bg-success/10 text-success",
-  decision: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+  decision: "bg-primary/10 text-primary",
 };
 
 const MEMORY_TYPES = ["fact", "preference", "goal", "decision"] as const;
@@ -161,7 +164,7 @@ function AgentFactsContent({ agent }: { agent: AgentItem }) {
       {loading ? (
         <div className="grid gap-3 sm:grid-cols-2">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-28 animate-pulse rounded-xl border bg-card" />
+            <Skeleton key={i} className="h-28 rounded-xl" />
           ))}
         </div>
       ) : memories.length === 0 ? (
@@ -332,21 +335,13 @@ export default function FactsMemoryPage() {
   if (loading) {
     return (
       <AppLayout>
-        <div className="flex flex-col">
-          <div className="border-b border-border px-6 pb-4 pt-6">
-            <div className="h-7 w-48 animate-pulse rounded-md bg-muted" />
-            <div className="mt-4 flex gap-2">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="h-8 w-28 animate-pulse rounded-lg bg-muted/70" />
-              ))}
-            </div>
-          </div>
-          <div className="grid gap-3 p-6 sm:grid-cols-2">
+        <PageLayout title="Memory" subtitle="Manage durable facts that agents can recall across conversations.">
+          <div className="grid gap-3 sm:grid-cols-2">
             {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-28 animate-pulse rounded-xl border bg-card" />
+              <Skeleton key={i} className="h-28 rounded-xl" />
             ))}
           </div>
-        </div>
+        </PageLayout>
       </AppLayout>
     );
   }
@@ -354,18 +349,16 @@ export default function FactsMemoryPage() {
   if (agents.length === 0) {
     return (
       <AppLayout>
-        <div className="mx-auto mt-10 max-w-md rounded-2xl border border-dashed bg-card p-12 text-center shadow-sm">
-          <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-            <MemoryStick className="size-7" />
-          </div>
-          <h2 className="mb-1.5 text-lg font-semibold tracking-tight">No agents yet</h2>
-          <p className="mx-auto max-w-sm text-sm text-muted-foreground">
-            Create an agent and chat with it to extract facts.
-          </p>
-          <Button className="mt-5" asChild>
-            <Link href="/agents">Create an agent</Link>
-          </Button>
-        </div>
+        <PageLayout title="Memory" subtitle="Manage durable facts that agents can recall across conversations.">
+          <Empty className="border">
+            <EmptyHeader>
+              <EmptyMedia variant="icon"><MemoryStick /></EmptyMedia>
+              <EmptyTitle>No agents yet</EmptyTitle>
+              <EmptyDescription>Create and test an agent before managing its durable memory.</EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent><Button asChild><Link href="/agents">Create an agent</Link></Button></EmptyContent>
+          </Empty>
+        </PageLayout>
       </AppLayout>
     );
   }

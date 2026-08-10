@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { AppLayout } from "@/components/layout/app-layout";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -157,7 +158,7 @@ export default function SkillsPage() {
 
   function renderChildren(tree:SkillTreeData,pid:number|null,sid:number,depth:number):React.ReactNode{
     const folders=tree.folders.filter(f=>f.parent_id===pid);const files=tree.files.filter(f=>f.folder_id===pid);
-    return(<>{folders.map(folder=>{const k=`${sid}-${folder.id}`;const open=expFolders.has(k);return(<div key={k}><TreeRow depth={depth} icon={open?<FolderOpen className="size-4 text-[#e8a87c] shrink-0"/>:<Folder className="size-4 text-[#e8a87c] shrink-0"/>} label={folder.name} active={false} chevron={open?"down":"right"} onClick={()=>togFolder(k)} menu={[{label:"New File",icon:FilePlus,action:()=>{setDlgName("");setDlg({type:"createFile",skillId:sid,folderId:folder.id});}},{label:"New Folder",icon:FolderPlus,action:()=>{setDlgName("");setDlg({type:"createFolder",skillId:sid,parentId:folder.id});}},  "sep",{label:"Rename",icon:Pencil,action:()=>{setDlgName(folder.name);setDlg({type:"rename",kind:"folder",id:folder.id,name:folder.name,skillId:sid});}},{label:"Delete",icon:Trash2,action:()=>delFolder(folder.id,sid),destructive:true}]}/>{open&&renderChildren(tree,folder.id,sid,depth+1)}</div>);})}{files.map(file=>(<TreeRow key={`f-${file.id}`} depth={depth} icon={fIcon(file.name,"size-4")} label={file.name} active={at?.type==="file"&&at.id===file.id} onClick={()=>openFileTab(file.id,sid)} menu={[{label:"Rename",icon:Pencil,action:()=>{setDlgName(file.name);setDlg({type:"rename",kind:"file",id:file.id,name:file.name,skillId:sid});}},{label:"Delete",icon:Trash2,action:()=>delFile(file.id,sid),destructive:true}]}/>))}</>);
+    return(<>{folders.map(folder=>{const k=`${sid}-${folder.id}`;const open=expFolders.has(k);return(<div key={k}><TreeRow depth={depth} icon={open?<FolderOpen className="size-4 text-muted-foreground shrink-0"/>:<Folder className="size-4 text-muted-foreground shrink-0"/>} label={folder.name} active={false} chevron={open?"down":"right"} onClick={()=>togFolder(k)} menu={[{label:"New File",icon:FilePlus,action:()=>{setDlgName("");setDlg({type:"createFile",skillId:sid,folderId:folder.id});}},{label:"New Folder",icon:FolderPlus,action:()=>{setDlgName("");setDlg({type:"createFolder",skillId:sid,parentId:folder.id});}},  "sep",{label:"Rename",icon:Pencil,action:()=>{setDlgName(folder.name);setDlg({type:"rename",kind:"folder",id:folder.id,name:folder.name,skillId:sid});}},{label:"Delete",icon:Trash2,action:()=>delFolder(folder.id,sid),destructive:true}]}/>{open&&renderChildren(tree,folder.id,sid,depth+1)}</div>);})}{files.map(file=>(<TreeRow key={`f-${file.id}`} depth={depth} icon={fIcon(file.name,"size-4")} label={file.name} active={at?.type==="file"&&at.id===file.id} onClick={()=>openFileTab(file.id,sid)} menu={[{label:"Rename",icon:Pencil,action:()=>{setDlgName(file.name);setDlg({type:"rename",kind:"file",id:file.id,name:file.name,skillId:sid});}},{label:"Delete",icon:Trash2,action:()=>delFile(file.id,sid),destructive:true}]}/>))}</>);
   }
 
   const lang=selFile?fLang(selFile.name,content):"markdown";
@@ -165,16 +166,27 @@ export default function SkillsPage() {
   return(
     <AppLayout className="!overflow-hidden">
       <div className="flex flex-col h-full">
-        <ResizablePanelGroup orientation="horizontal">
+        <div className="flex h-14 shrink-0 items-center justify-between gap-4 border-b px-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary"><Package className="size-4" /></span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2"><h1 className="font-semibold tracking-tight">Skills workspace</h1><Badge variant="secondary">Beta</Badge></div>
+              <p className="hidden truncate text-xs text-muted-foreground sm:block">Build reusable instructions, scripts, and tool bundles.</p>
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <Button variant="outline" size="sm" onClick={()=>{setDlgUrl("");setDlgName("");setDlgSkill("");setDlgErr(null);setDlg({type:"install"});}}><Download data-icon="inline-start" />Import</Button>
+            <Button size="sm" onClick={()=>{setDlgName("");setDlgDesc("");setDlgErr(null);setDlg({type:"createSkill"});}}><Plus data-icon="inline-start" />New skill</Button>
+          </div>
+        </div>
+        <ResizablePanelGroup orientation="horizontal" className="min-h-0 flex-1">
           <ResizablePanel defaultSize={240} minSize={100} maxSize={300}>
             <div className="flex flex-col h-full" onDragOver={e=>{e.preventDefault();setDragOver(true);}} onDragLeave={()=>setDragOver(false)} onDrop={handleDrop}>
               <div className="flex items-center justify-between px-3 h-9 border-b text-[11px] font-semibold uppercase tracking-wider text-muted-foreground shrink-0">
                 Explorer
                 <div className="flex gap-0.5">
-                  <Button variant="ghost" size="icon" className="size-6" onClick={()=>setSearchVis(v=>!v)} title="Search"><Search className="size-3.5"/></Button>
-                  <Button variant="ghost" size="icon" className="size-6" onClick={()=>fileRef.current?.click()} title="Upload"><Upload className="size-3.5"/></Button>
-                  <Button variant="ghost" size="icon" className="size-6" onClick={()=>{setDlgUrl("");setDlgName("");setDlgSkill("");setDlgErr(null);setDlg({type:"install"});}} title="Import from Git"><Download className="size-3.5"/></Button>
-                  <Button variant="ghost" size="icon" className="size-6" onClick={()=>{setDlgName("");setDlgDesc("");setDlgErr(null);setDlg({type:"createSkill"});}} title="New skill"><Plus className="size-3.5"/></Button>
+                  <Button variant="ghost" size="icon-xs" onClick={()=>setSearchVis(v=>!v)} aria-label="Search skills"><Search /></Button>
+                  <Button variant="ghost" size="icon-xs" onClick={()=>fileRef.current?.click()} aria-label="Upload skill files"><Upload /></Button>
                 </div>
               </div>
               <input ref={fileRef} type="file" className="hidden" accept=".zip,.py,.js,.ts,.sh,.md,.txt,.json,.yaml,.yml,.toml,.xml,.html,.css,.sql,.go,.rs,.rb,.java,.jsx,.tsx,.scss,.svg,.cfg,.conf,.ini,.env" multiple onChange={e=>{if(!e.target.files?.length)return;const t=[...expSkills][0]??skills[0]?.id;if(t)handleUpload(e.target.files,t);e.target.value="";}}/>
@@ -194,7 +206,7 @@ export default function SkillsPage() {
                   </div>
                 ):filtered.map(skill=>{const open=expSkills.has(skill.id);const tree=trees[skill.id];const loading=loadingTree.has(skill.id);const active=at?.type==="skill"&&at.id===skill.id;return(
                   <div key={skill.id}>
-                    <TreeRow depth={0} icon={skill.source==="self-learned"?<GraduationCap className="size-4 text-amber-400 shrink-0"><title>Self-learned</title></GraduationCap>:<Package className="size-4 text-violet-400 shrink-0"/>} label={skill.name} bold active={active} chevron={open?"down":"right"} onChevronClick={()=>togSkill(skill.id)} onClick={()=>{openSkillTab(skill.id);if(!open)togSkill(skill.id);}} menu={[{label:"New File",icon:FilePlus,action:()=>{setDlgName("");setDlg({type:"createFile",skillId:skill.id,folderId:null});}},{label:"New Folder",icon:FolderPlus,action:()=>{setDlgName("");setDlg({type:"createFolder",skillId:skill.id,parentId:null});}},{label:"Upload",icon:Upload,action:()=>{const i=document.createElement("input");i.type="file";i.accept=".zip,.py,.js,.ts,.sh,.md,.txt,.json,.yaml,.yml";i.multiple=true;i.onchange=()=>{if(i.files?.length)handleUpload(i.files,skill.id);};i.click();}},"sep",{label:"Rename",icon:Pencil,action:()=>{setDlgName(skill.name);setDlg({type:"rename",kind:"skill",id:skill.id,name:skill.name});}},{label:"Delete",icon:Trash2,action:()=>delSkill(skill.id),destructive:true}]}/>
+                    <TreeRow depth={0} icon={skill.source==="self-learned"?<GraduationCap className="size-4 text-primary shrink-0"><title>Self-learned</title></GraduationCap>:<Package className="size-4 text-primary shrink-0"/>} label={skill.name} bold active={active} chevron={open?"down":"right"} onChevronClick={()=>togSkill(skill.id)} onClick={()=>{openSkillTab(skill.id);if(!open)togSkill(skill.id);}} menu={[{label:"New File",icon:FilePlus,action:()=>{setDlgName("");setDlg({type:"createFile",skillId:skill.id,folderId:null});}},{label:"New Folder",icon:FolderPlus,action:()=>{setDlgName("");setDlg({type:"createFolder",skillId:skill.id,parentId:null});}},{label:"Upload",icon:Upload,action:()=>{const i=document.createElement("input");i.type="file";i.accept=".zip,.py,.js,.ts,.sh,.md,.txt,.json,.yaml,.yml";i.multiple=true;i.onchange=()=>{if(i.files?.length)handleUpload(i.files,skill.id);};i.click();}},"sep",{label:"Rename",icon:Pencil,action:()=>{setDlgName(skill.name);setDlg({type:"rename",kind:"skill",id:skill.id,name:skill.name});}},{label:"Delete",icon:Trash2,action:()=>delSkill(skill.id),destructive:true}]}/>
                     {open&&(loading?<div className="flex items-center gap-1.5 py-1 pl-8 text-[11px] text-muted-foreground"><Loader2 className="size-3 animate-spin"/>Loading...</div>:tree?renderChildren(tree,null,skill.id,1):null)}
                   </div>
                 );})}
@@ -204,13 +216,13 @@ export default function SkillsPage() {
           <ResizableHandle/>
           <ResizablePanel defaultSize={76} minSize={40}>
             <div className="flex flex-col h-full">
-              {tabs.length>0&&(<div className="flex items-center border-b h-[35px] shrink-0 overflow-x-auto">{tabs.map(t=>{const k=tk(t);const active=k===aTab;return(<div role="tab" key={k} className={`flex items-center gap-1.5 px-3 h-full text-[12px] border-r shrink-0 transition-colors cursor-pointer ${active?"bg-background text-foreground border-b-2 border-b-primary":"text-muted-foreground hover:text-foreground hover:bg-background/50"}`} onClick={()=>{setATab(k);if(t.type==="skill"){openSkillTab(t.id);}else{openFileTab(t.id,t.skillId);}}}>{t.type==="skill"?<Package className="size-3 text-violet-400"/>:fIcon(t.name,"size-3")}<span className="max-w-32 truncate">{t.name}</span>{t.dirty&&<Circle className="size-1.5 fill-current text-orange-400"/>}<Button variant="ghost" size="icon" className="ml-1 size-5 opacity-60 hover:opacity-100" onClick={e=>{e.stopPropagation();closeTab(k);}}><X className="size-3"/></Button></div>);})}</div>)}
+              {tabs.length>0&&(<div className="flex items-center border-b h-[35px] shrink-0 overflow-x-auto">{tabs.map(t=>{const k=tk(t);const active=k===aTab;return(<div role="tab" key={k} className={`flex items-center gap-1.5 px-3 h-full text-[12px] border-r shrink-0 transition-colors cursor-pointer ${active?"bg-background text-foreground border-b-2 border-b-primary":"text-muted-foreground hover:text-foreground hover:bg-background/50"}`} onClick={()=>{setATab(k);if(t.type==="skill"){openSkillTab(t.id);}else{openFileTab(t.id,t.skillId);}}}>{t.type==="skill"?<Package className="size-3 text-primary"/>:fIcon(t.name,"size-3")}<span className="max-w-32 truncate">{t.name}</span>{t.dirty&&<Circle className="size-1.5 fill-current text-primary"/>}<Button variant="ghost" size="icon" className="ml-1 size-5 opacity-60 hover:opacity-100" onClick={e=>{e.stopPropagation();closeTab(k);}}><X className="size-3"/></Button></div>);})}</div>)}
               {!at?(<div className="flex-1 flex items-center justify-center"><div className="text-center max-w-xs"><Package className="size-12 text-muted-foreground/10 mx-auto mb-4"/><p className="text-sm text-muted-foreground mb-1">No file open</p><p className="text-[11px] text-muted-foreground/50 leading-relaxed">Select a skill or file from the explorer. Drag & drop ZIP files, or import from GitHub.</p></div></div>
               ):loadingC?(<div className="flex-1 flex items-center justify-center"><Loader2 className="size-5 animate-spin text-muted-foreground"/></div>
               ):at.type==="skill"&&selSkill?(
                 <div className="flex-1 min-h-0 flex flex-col">
                   <div className="px-5 py-3 border-b shrink-0 flex items-start justify-between gap-4">
-                    <div className="min-w-0"><div className="flex items-center gap-2"><Package className="size-4 text-violet-400 shrink-0"/><h2 className="text-base font-semibold truncate">{selSkill.name}</h2></div>{selSkill.description&&<p className="text-xs text-muted-foreground mt-0.5 ml-6">{selSkill.description}</p>}</div>
+                    <div className="min-w-0"><div className="flex items-center gap-2"><Package className="size-4 text-primary shrink-0"/><h2 className="text-base font-semibold truncate">{selSkill.name}</h2></div>{selSkill.description&&<p className="text-xs text-muted-foreground mt-0.5 ml-6">{selSkill.description}</p>}</div>
                     <div className="flex items-center gap-1.5 shrink-0"><Button variant="ghost" size="sm" className="h-7 text-xs" onClick={()=>setToolsOpen(!toolsOpen)}><Wrench className="size-3 mr-1"/>Tools ({sT.length})</Button><Button size="sm" className="h-7 text-xs" onClick={handleSave} disabled={saving}><Save className="size-3 mr-1"/>{saving?"Saving...":"Save"}</Button></div>
                   </div>
                   <div className="flex-1 min-h-0 flex">

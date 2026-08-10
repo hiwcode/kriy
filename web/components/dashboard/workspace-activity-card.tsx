@@ -5,20 +5,30 @@ import Link from "next/link";
 import { Plus, Pencil, Trash2, ArrowRight, Activity as ActivityIcon, type LucideIcon } from "lucide-react";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { listWorkspaceActivity, type ActivityItem } from "@/lib/api/activity";
 import { useAuth } from "@/components/auth/auth-provider";
 
 const ACTION_STYLE: Record<string, { icon: LucideIcon; className: string; verb: string }> = {
-  create: { icon: Plus, className: "bg-emerald-500/10 text-emerald-500", verb: "created" },
-  update: { icon: Pencil, className: "bg-blue-500/10 text-blue-500", verb: "updated" },
-  delete: { icon: Trash2, className: "bg-red-500/10 text-red-500", verb: "deleted" },
+  create: { icon: Plus, className: "bg-primary/10 text-primary", verb: "created" },
+  update: { icon: Pencil, className: "bg-muted text-muted-foreground", verb: "updated" },
+  delete: { icon: Trash2, className: "bg-destructive/10 text-destructive", verb: "deleted" },
 };
 
 /** Singular, human-readable label for a resource_type (URL segment). */
@@ -69,7 +79,7 @@ export function WorkspaceActivityCard({
   showViewAll = true,
   paginate = false,
   pageSize = 20,
-  devider=false,
+  divider = false,
 }: {
   limit?: number;
   showViewAll?: boolean;
@@ -77,7 +87,7 @@ export function WorkspaceActivityCard({
   paginate?: boolean;
   /** Rows per page when paginating. */
   pageSize?: number;
-  devider?: boolean;
+  divider?: boolean;
 }) {
   const auth = useAuth();
   const perPage = paginate ? pageSize : limit;
@@ -108,43 +118,59 @@ export function WorkspaceActivityCard({
   const hasNext = (page + 1) * perPage < total;
 
   return (
-    <Card>
-      <CardHeader className={showViewAll ? "flex items-center justify-between" : undefined}>
+    <Card className="h-full">
+      <CardHeader>
         <div>
-          <CardTitle>Recent Activity</CardTitle>
+          <CardTitle>Recent activity</CardTitle>
           <CardDescription>Latest changes in your workspace</CardDescription>
         </div>
         {showViewAll && (
-          <Button variant="ghost" size="sm" asChild>
-            <Link href="/activity">
-              View all
-              <ArrowRight className="ml-1 size-4" />
-            </Link>
-          </Button>
+          <CardAction>
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/activity">
+                View all
+                <ArrowRight data-icon="inline-end" />
+              </Link>
+            </Button>
+          </CardAction>
         )}
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
+        <div className="flex flex-col gap-4">
           {items === null ? (
-            <div className="space-y-3">
+            <div className="flex flex-col gap-3">
               {Array.from({ length: 4 }).map((_, i) => (
                 <div key={i} className="flex items-center gap-3">
-                  <div className="size-8 shrink-0 animate-pulse rounded-full bg-muted" />
-                  <div className="h-3 flex-1 animate-pulse rounded bg-muted" />
+                  <Skeleton className="size-8 shrink-0 rounded-full" />
+                  <div className="flex flex-1 flex-col gap-2">
+                    <Skeleton className="h-3 w-full" />
+                    <Skeleton className="h-3 w-20" />
+                  </div>
                 </div>
               ))}
             </div>
           ) : items.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-6 text-center">
-              <ActivityIcon className="size-5 text-muted-foreground/50" />
-              <p className="text-sm text-muted-foreground">No activity yet.</p>
-            </div>
+            <Empty className="min-h-[220px] py-8">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <ActivityIcon />
+                </EmptyMedia>
+                <EmptyTitle>No workspace activity</EmptyTitle>
+                <EmptyDescription>Changes made by you and your team will appear here.</EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           ) : (
             items.map((item, index) => {
               const style = ACTION_STYLE[item.action];
               const Icon = style?.icon ?? ActivityIcon;
               return (
-                <div key={item.id} className={`flex items-start gap-3 ${devider && index!=items.length-1 && "border-b pb-4"}`}>
+                <div
+                  key={item.id}
+                  className={cn(
+                    "flex items-start gap-3",
+                    divider && index !== items.length - 1 && "border-b pb-4"
+                  )}
+                >
                   <div
                     className={cn(
                       "mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full",
@@ -167,8 +193,10 @@ export function WorkspaceActivityCard({
           )}
         </div>
 
-        {paginate && total > 0 && (
-          <div className="mt-4 flex items-center justify-between border-t pt-4">
+      </CardContent>
+
+      {paginate && total > 0 && (
+        <CardFooter className="justify-between border-t">
             <p className="text-xs text-muted-foreground">
               {from}–{to} of {total}
             </p>
@@ -190,9 +218,8 @@ export function WorkspaceActivityCard({
                 Next
               </Button>
             </div>
-          </div>
-        )}
-      </CardContent>
+        </CardFooter>
+      )}
     </Card>
   );
 }

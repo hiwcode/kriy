@@ -1,80 +1,120 @@
 "use client";
 
+import * as React from "react";
+import Link from "next/link";
+import {
+  Activity,
+  ArrowRight,
+  Bot,
+  CircleAlert,
+  DollarSign,
+  Plug,
+  RefreshCcw,
+  Workflow,
+  Zap,
+} from "lucide-react";
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
+
 import { useAuth } from "@/components/auth/auth-provider";
+import { WorkspaceActivityCard } from "@/components/dashboard/workspace-activity-card";
 import { AppLayout } from "@/components/layout/app-layout";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
+  CardAction,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@/components/ui/chart";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { PageLayout } from "@/components/ui/page-layout";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import type { DashboardData } from "@/lib/api/dashboard";
 import { getDashboard } from "@/lib/api/dashboard";
-import { WorkspaceActivityCard } from "@/components/dashboard/workspace-activity-card";
-import {
-  ArrowRight,
-  Activity,
-  Bot,
-  CheckCircle2,
-  ChevronRight,
-  Clock,
-  DollarSign,
-  FileText,
-  Plug,
-  Workflow,
-  Zap,
-} from "lucide-react";
-import Link from "next/link";
-import * as React from "react";
-import {
-  Area,
-  AreaChart,
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 
-function formatRelativeTime(ts: number | null): string {
-  if (!ts) return "Never";
-  const diff = Date.now() / 1000 - ts;
-  if (diff < 60) return "Just now";
-  if (diff < 3600) return `${Math.floor(diff / 60)} min ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
-  if (diff < 604800) return `${Math.floor(diff / 86400)} days ago`;
-  return new Date(ts * 1000).toLocaleDateString();
+function formatTokens(value: number): string {
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}k`;
+  return value.toLocaleString();
 }
 
-function formatTokens(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
-  return String(n);
+function formatCost(value: number): string {
+  if (value === 0) return "$0.00";
+  if (value < 0.0001) return "<$0.0001";
+  if (value < 1) return `$${value.toFixed(4)}`;
+  return `$${value.toFixed(2)}`;
 }
+
+const usageChartConfig = {
+  tokens: {
+    label: "Tokens",
+    color: "var(--chart-1)",
+  },
+} satisfies ChartConfig;
 
 const quickActions = [
-  { title: "Create an agent", description: "Configure instructions, models, and tools", icon: Bot, href: "/agents" },
-  { title: "Build a workflow", description: "Route application events to an agent", icon: Workflow, href: "/workflows" },
-  { title: "Connect tools", description: "Add an MCP server or database", icon: Plug, href: "/mcp-connections" },
-  { title: "Inspect traces", description: "Review execution and model usage", icon: Activity, href: "/traces" },
+  { label: "Create an agent", icon: Bot, href: "/agents" },
+  { label: "Build a workflow", icon: Workflow, href: "/workflows" },
+  { label: "Connect tools", icon: Plug, href: "/mcp-connections" },
+  { label: "Inspect traces", icon: Activity, href: "/traces" },
 ];
 
-const chartAxisTickStyle = { fill: "var(--muted-foreground)" };
-const chartGridStroke = "var(--border)";
-const chartTooltipStyle = {
-  backgroundColor: "var(--popover)",
-  border: "1px solid var(--border)",
-  borderRadius: "10px",
-  color: "var(--popover-foreground)",
-  boxShadow: "var(--shadow-md)",
-  fontSize: "12px",
-} as const;
+function DashboardSkeleton() {
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <Card key={index} className="gap-4 py-5">
+            <CardHeader>
+              <Skeleton className="h-4 w-24" />
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2">
+              <Skeleton className="h-8 w-28" />
+              <Skeleton className="h-3 w-36" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      <Card>
+        <CardHeader className="flex flex-col gap-2">
+          <Skeleton className="h-5 w-32" />
+          <Skeleton className="h-4 w-56" />
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-[280px] w-full" />
+        </CardContent>
+      </Card>
+      <div className="grid gap-6 xl:grid-cols-5">
+        <Skeleton className="h-[360px] xl:col-span-3 border shadow-md" />
+        <Skeleton className="h-[360px] xl:col-span-2 border shadow-md" />
+      </div>
+    </div>
+  );
+}
 
 export default function DashboardPage() {
   const auth = useAuth();
@@ -82,32 +122,45 @@ export default function DashboardPage() {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
 
+  const loadDashboard = React.useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      setData(await getDashboard());
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Dashboard data could not be loaded.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   React.useEffect(() => {
-    if (!auth?.isSignedIn) return;
-    getDashboard()
-      .then(setData)
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"))
-      .finally(() => setLoading(false));
-  }, [auth?.isSignedIn]);
+    if (auth?.isLoading) return;
+    if (!auth?.isSignedIn) {
+      setLoading(false);
+      return;
+    }
+    void loadDashboard();
+  }, [auth?.isLoading, auth?.isSignedIn, loadDashboard]);
+
+  const pageAction = (
+    <Button asChild>
+      <Link href="/agents">
+        <Bot data-icon="inline-start" />
+        Manage agents
+      </Link>
+    </Button>
+  );
 
   if (loading) {
     return (
       <AppLayout>
-        <div className="space-y-6 p-6">
-          <div className="space-y-2">
-            <div className="h-7 w-40 animate-pulse rounded-md bg-muted" />
-            <div className="h-4 w-72 animate-pulse rounded-md bg-muted/70" />
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-[88px] animate-pulse rounded-xl border bg-card" />
-            ))}
-          </div>
-          <div className="grid gap-6 lg:grid-cols-3">
-            <div className="h-[330px] animate-pulse rounded-xl border bg-card lg:col-span-2" />
-            <div className="h-[330px] animate-pulse rounded-xl border bg-card" />
-          </div>
-        </div>
+        <PageLayout
+          title="Overview"
+          subtitle="Monitor agent activity, usage, and workspace operations."
+        >
+          <DashboardSkeleton />
+        </PageLayout>
       </AppLayout>
     );
   }
@@ -115,207 +168,297 @@ export default function DashboardPage() {
   if (error) {
     return (
       <AppLayout>
-        <div className="space-y-6 p-6">
-          <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
-          <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-destructive">
-            {error}
+        <PageLayout
+          title="Overview"
+          subtitle="Monitor agent activity, usage, and workspace operations."
+        >
+          <div className="flex max-w-2xl flex-col gap-4">
+            <Alert variant="destructive">
+              <CircleAlert />
+              <AlertTitle>Dashboard unavailable</AlertTitle>
+              <AlertDescription>
+                {error} Check the API connection, then try again.
+              </AlertDescription>
+            </Alert>
+            <div>
+              <Button variant="outline" onClick={() => void loadDashboard()}>
+                <RefreshCcw data-icon="inline-start" />
+                Try again
+              </Button>
+            </div>
           </div>
-        </div>
+        </PageLayout>
       </AppLayout>
     );
   }
 
   if (!data) return null;
 
-  const stats = [
-    { title: "Active agents", value: String(data.stats.active_agents), icon: Bot },
-    { title: "Prompt templates", value: String(data.stats.total_prompts), icon: FileText },
-    { title: "Tokens processed", value: formatTokens(data.stats.tokens_used), icon: Zap },
-    { title: "Estimated cost", value: `$${(data.stats.estimated_cost ?? 0).toFixed(4)}`, icon: DollarSign },
-  ];
+  const usageData = data.usage_data;
+  const hasUsage = usageData.some((day) => day.tokens > 0 || day.conversations > 0);
+  const sevenDayTokens = usageData.reduce((total, day) => total + day.tokens, 0);
+  const sevenDayConversations = usageData.reduce(
+    (total, day) => total + day.conversations,
+    0
+  );
+  const agentUsage = [...(data.tokens_per_agent ?? [])]
+    .sort((left, right) => right.tokens - left.tokens)
+    .slice(0, 5);
 
-  const usageData = data.usage_data.length > 0 ? data.usage_data : [{ name: "No data", tokens: 0, conversations: 0 }];
-  const agentPerformance = data.agent_performance.length > 0 ? data.agent_performance : data.agents.length > 0 ? data.agents.map((a) => ({ name: a.name, tasks: 0 })) : [{ name: "No agents", tasks: 0 }];
-  const tokensPerAgent = data.tokens_per_agent ?? [];
-  const tokensChartData = tokensPerAgent.length > 0 ? tokensPerAgent.map((a) => ({ name: a.name, tokens: a.tokens })) : data.agents.length > 0 ? data.agents.map((a) => ({ name: a.name, tokens: 0 })) : [{ name: "No data", tokens: 0 }];
-  const costChartData = tokensPerAgent.length > 0 ? tokensPerAgent.map((a) => ({ name: a.name, cost: a.estimated_cost })) : data.agents.length > 0 ? data.agents.map((a) => ({ name: a.name, cost: 0 })) : [{ name: "No data", cost: 0 }];
+  const stats = [
+    {
+      title: "Total agents",
+      value: data.stats.active_agents.toLocaleString(),
+      description: "Configured in this workspace",
+      icon: Bot,
+    },
+    {
+      title: "Conversations",
+      value: data.stats.conversations.toLocaleString(),
+      description: "All recorded sessions",
+      icon: Activity,
+    },
+    {
+      title: "Recorded tokens",
+      value: formatTokens(data.stats.tokens_used),
+      description: "Latest 500 sessions",
+      icon: Zap,
+    },
+    {
+      title: "Estimated cost",
+      value: formatCost(data.stats.estimated_cost ?? 0),
+      description: "Up to 200 sessions per agent",
+      icon: DollarSign,
+    },
+  ];
 
   return (
     <AppLayout>
-      <div className="mx-auto flex w-full max-w-[1600px] animate-fade-in-up flex-col gap-6 p-4 sm:p-6 lg:p-8">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-[-0.025em]">Overview</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Monitor agent activity, usage, and workspace operations.</p>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {stats.map((stat) => (
-            <Card
-              key={stat.title}
-              className="relative overflow-hidden py-4"
-            >
-              <CardContent className="flex items-center gap-4">
-                <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                  <stat.icon className="size-5" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm text-muted-foreground">{stat.title}</p>
-                  <p className="text-2xl font-semibold tracking-tight tabular-nums">{stat.value}</p>
-                </div>
+      <PageLayout
+        title="Overview"
+        subtitle="Monitor agent activity, usage, and workspace operations."
+        actions={pageAction}
+      >
+        <div className="flex animate-fade-in-up flex-col gap-6">
+          {data.stats.active_agents === 0 && (
+            <Card className="border-primary/20 bg-primary/5">
+              <CardContent>
+                <Empty className="py-8">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <Bot />
+                    </EmptyMedia>
+                    <EmptyTitle>Bring your first agent online</EmptyTitle>
+                    <EmptyDescription>
+                      Create an agent, connect its tools, and run a conversation to populate this overview.
+                    </EmptyDescription>
+                  </EmptyHeader>
+                  <EmptyContent>
+                    <Button asChild>
+                      <Link href="/agents">
+                        <Bot data-icon="inline-start" />
+                        Create an agent
+                      </Link>
+                    </Button>
+                  </EmptyContent>
+                </Empty>
               </CardContent>
             </Card>
-          ))}
-        </div>
+          )}
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          <Card className="lg:col-span-2">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            {stats.map((stat) => (
+              <Card key={stat.title} className="gap-4 py-5">
+                <CardHeader>
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    {stat.title}
+                  </CardTitle>
+                  <CardAction className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <stat.icon className="size-4" aria-hidden="true" />
+                  </CardAction>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-1">
+                  <p className="text-2xl font-semibold tracking-tight tabular-nums">
+                    {stat.value}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{stat.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <Card>
             <CardHeader>
-              <CardTitle>Token usage</CardTitle>
-              <CardDescription>Daily token consumption this week</CardDescription>
+              <CardTitle>Workspace usage</CardTitle>
+              <CardDescription>
+                {hasUsage
+                  ? `${formatTokens(sevenDayTokens)} tokens across ${sevenDayConversations.toLocaleString()} conversations.`
+                  : "Token activity from the last seven days will appear here."}
+              </CardDescription>
+              <CardAction>
+                <Badge variant="secondary">Last 7 days</Badge>
+              </CardAction>
             </CardHeader>
             <CardContent>
-              <div className="h-[250px] [&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line]:stroke-border/60">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={usageData}>
+              {hasUsage ? (
+                <ChartContainer config={usageChartConfig} className="h-[280px] w-full">
+                  <AreaChart data={usageData} accessibilityLayer margin={{ left: 0, right: 12 }}>
                     <defs>
-                      <linearGradient id="tokenGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="var(--chart-1)" stopOpacity={0.35} />
-                        <stop offset="95%" stopColor="var(--chart-1)" stopOpacity={0} />
+                      <linearGradient id="dashboard-token-gradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="var(--color-tokens)" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="var(--color-tokens)" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize: 12, ...chartAxisTickStyle }} tickLine={false} axisLine={false} />
-                    <YAxis tick={{ fontSize: 12, ...chartAxisTickStyle }} tickLine={false} axisLine={false} tickFormatter={(v) => `${v / 1000}k`} />
-                    <Tooltip contentStyle={chartTooltipStyle} labelStyle={{ color: "var(--foreground)" }} cursor={{ stroke: "var(--border)" }} />
-                    <Area type="monotone" dataKey="tokens" stroke="var(--chart-1)" strokeWidth={2} fill="url(#tokenGradient)" />
+                    <CartesianGrid vertical={false} />
+                    <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={10} />
+                    <YAxis
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      width={48}
+                      tickFormatter={(value) => formatTokens(Number(value))}
+                    />
+                    <ChartTooltip
+                      cursor={false}
+                      content={<ChartTooltipContent indicator="line" />}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="tokens"
+                      stroke="var(--color-tokens)"
+                      strokeWidth={2}
+                      fill="url(#dashboard-token-gradient)"
+                    />
                   </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Agent activity</CardTitle>
-              <CardDescription>Conversations per agent</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[250px] [&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line]:stroke-border/60">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={agentPerformance} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} horizontal={false} />
-                    <XAxis type="number" tick={{ fontSize: 12, ...chartAxisTickStyle }} tickLine={false} axisLine={false} />
-                    <YAxis type="category" dataKey="name" tick={{ fontSize: 12, ...chartAxisTickStyle }} tickLine={false} axisLine={false} width={80} />
-                    <Tooltip contentStyle={chartTooltipStyle} labelStyle={{ color: "var(--foreground)" }} cursor={{ fill: "var(--muted)", opacity: 0.4 }} />
-                    <Bar dataKey="tasks" fill="var(--chart-3)" radius={[0, 6, 6, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Tokens by agent</CardTitle>
-              <CardDescription>Token usage by agent</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[250px] [&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line]:stroke-border/60">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={tokensChartData} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} horizontal={false} />
-                    <XAxis type="number" tick={{ fontSize: 12, ...chartAxisTickStyle }} tickLine={false} axisLine={false} tickFormatter={(v) => (v >= 1000 ? `${v / 1000}k` : v)} />
-                    <YAxis type="category" dataKey="name" tick={{ fontSize: 12, ...chartAxisTickStyle }} tickLine={false} axisLine={false} width={80} />
-                    <Tooltip contentStyle={chartTooltipStyle} labelStyle={{ color: "var(--foreground)" }} cursor={{ fill: "var(--muted)", opacity: 0.4 }} formatter={(value: number) => [value.toLocaleString(), "Tokens"]} />
-                    <Bar dataKey="tokens" fill="var(--chart-4)" radius={[0, 6, 6, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Estimated cost by agent</CardTitle>
-              <CardDescription>Estimated cost by agent</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[250px] [&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line]:stroke-border/60">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={costChartData} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} horizontal={false} />
-                    <XAxis type="number" tick={{ fontSize: 12, ...chartAxisTickStyle }} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v.toFixed(4)}`} />
-                    <YAxis type="category" dataKey="name" tick={{ fontSize: 12, ...chartAxisTickStyle }} tickLine={false} axisLine={false} width={80} />
-                    <Tooltip contentStyle={chartTooltipStyle} labelStyle={{ color: "var(--foreground)" }} cursor={{ fill: "var(--muted)", opacity: 0.4 }} formatter={(value: number) => [`$${value.toFixed(4)}`, "Est. cost"]} />
-                    <Bar dataKey="cost" fill="var(--chart-2)" radius={[0, 6, 6, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card>
-            <CardHeader className="flex items-center justify-between">
-              <div>
-                <CardTitle>Agents</CardTitle>
-                <CardDescription>Status of your AI agents</CardDescription>
-              </div>
-              <Button variant="ghost" size="sm" asChild>
-                <Link href="/agents">View all<ArrowRight className="ml-1 size-4" /></Link>
-              </Button>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {data.agents.length === 0 ? (
-                <p className="text-sm text-muted-foreground py-4">No agents yet. Create one to get started.</p>
+                </ChartContainer>
               ) : (
-                data.agents.map((agent) => (
-                  <Link key={agent.id} href={agent.url} className="flex items-center gap-4 rounded-lg p-3 transition-colors hover:bg-muted/50">
-                    <Avatar>
-                      <AvatarFallback className="bg-primary/10 text-primary"><Bot className="size-4" /></AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium">{agent.name}</p>
-                        <Badge variant={agent.session_count > 0 ? "default" : "secondary"}>
-                          {agent.session_count > 0 ? <CheckCircle2 className="size-3" /> : <Clock className="size-3" />}
-                          {agent.session_count > 0 ? "active" : "idle"}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">{agent.session_count} conversations • {formatRelativeTime(agent.last_active)}</p>
-                    </div>
-                    <span className="flex size-8 items-center justify-center text-muted-foreground"><ChevronRight className="size-4" /></span>
-                  </Link>
-                ))
+                <Empty className="min-h-[280px]">
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <Activity />
+                    </EmptyMedia>
+                    <EmptyTitle>No usage recorded</EmptyTitle>
+                    <EmptyDescription>
+                      Run an agent conversation to start tracking token usage and cost.
+                    </EmptyDescription>
+                  </EmptyHeader>
+                  <EmptyContent>
+                    <Button variant="outline" asChild>
+                      <Link href="/agents">
+                        Choose an agent
+                        <ArrowRight data-icon="inline-end" />
+                      </Link>
+                    </Button>
+                  </EmptyContent>
+                </Empty>
               )}
             </CardContent>
           </Card>
-          <WorkspaceActivityCard />
-        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick actions</CardTitle>
-            <CardDescription>Start common workspace tasks.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {quickActions.map((action) => (
-                <Link key={action.title} href={action.href} className="group flex items-start gap-3 rounded-lg border border-border p-4 transition-colors hover:border-primary/40 hover:bg-muted/50">
-                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <action.icon className="size-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-medium">{action.title}</p>
-                    <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{action.description}</p>
-                  </div>
-                </Link>
-              ))}
+          <div className="grid gap-6 xl:grid-cols-5">
+            <Card className="xl:col-span-3">
+              <CardHeader>
+                <CardTitle>Agent usage</CardTitle>
+                <CardDescription>Highest recorded usage, based on up to 200 recent sessions per agent.</CardDescription>
+                <CardAction>
+                  <Button variant="ghost" size="sm" asChild>
+                    <Link href="/agents">
+                      View all
+                      <ArrowRight data-icon="inline-end" />
+                    </Link>
+                  </Button>
+                </CardAction>
+              </CardHeader>
+              <CardContent>
+                {agentUsage.length === 0 ? (
+                  <Empty className="min-h-[250px]">
+                    <EmptyHeader>
+                      <EmptyMedia variant="icon">
+                        <Bot />
+                      </EmptyMedia>
+                      <EmptyTitle>No agent usage yet</EmptyTitle>
+                      <EmptyDescription>
+                        Agents appear here after they process their first conversation.
+                      </EmptyDescription>
+                    </EmptyHeader>
+                  </Empty>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Agent</TableHead>
+                        <TableHead className="text-right">Tokens</TableHead>
+                        <TableHead className="hidden text-right sm:table-cell">Input</TableHead>
+                        <TableHead className="hidden text-right md:table-cell">Output</TableHead>
+                        <TableHead className="text-right">Est. cost</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {agentUsage.map((agent) => (
+                        <TableRow key={agent.id}>
+                          <TableCell>
+                            <Link
+                              href={`/agents/${agent.id}`}
+                              className="flex min-w-0 items-center gap-3 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                            >
+                              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                <Bot className="size-4" aria-hidden="true" />
+                              </span>
+                              <span className="min-w-0">
+                                <span className="block max-w-40 truncate font-medium">{agent.name}</span>
+                                {agent.model && (
+                                  <span className="block max-w-40 truncate text-xs text-muted-foreground">
+                                    {agent.model}
+                                  </span>
+                                )}
+                              </span>
+                            </Link>
+                          </TableCell>
+                          <TableCell className="text-right font-medium tabular-nums">
+                            {formatTokens(agent.tokens)}
+                          </TableCell>
+                          <TableCell className="hidden text-right tabular-nums text-muted-foreground sm:table-cell">
+                            {formatTokens(agent.input_tokens)}
+                          </TableCell>
+                          <TableCell className="hidden text-right tabular-nums text-muted-foreground md:table-cell">
+                            {formatTokens(agent.output_tokens)}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {formatCost(agent.estimated_cost)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+
+            <div className="xl:col-span-2">
+              <WorkspaceActivityCard />
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Keep building</CardTitle>
+              <CardDescription>
+                {data.stats.total_prompts.toLocaleString()} prompt {data.stats.total_prompts === 1 ? "template" : "templates"} in this workspace.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-wrap gap-2">
+              {quickActions.map((action) => (
+                <Button key={action.label} variant="outline" asChild>
+                  <Link href={action.href}>
+                    <action.icon data-icon="inline-start" />
+                    {action.label}
+                  </Link>
+                </Button>
+              ))}
+            </CardContent>
+          </Card>
+        </div>
+      </PageLayout>
     </AppLayout>
   );
 }

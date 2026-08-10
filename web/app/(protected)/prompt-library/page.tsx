@@ -27,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
   SelectContent,
@@ -489,7 +490,7 @@ export default function PromptLibraryPage() {
           {loading ? (
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="h-40 animate-pulse rounded-xl border bg-card" />
+                <Skeleton key={i} className="h-40 rounded-xl" />
               ))}
             </div>
           ) : prompts.length === 0 ? (

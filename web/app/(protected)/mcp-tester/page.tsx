@@ -4,6 +4,10 @@ import * as React from "react";
 import { AppLayout } from "@/components/layout/app-layout";
 import { TabLayout, TabConfig } from "@/components/ui/tab-layout";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Empty, EmptyContent, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import { PageLayout } from "@/components/ui/page-layout";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -228,21 +232,13 @@ export default function McpTesterPage() {
   if (loading) {
     return (
       <AppLayout>
-        <div className="flex flex-col">
-          <div className="border-b border-border px-6 pb-4 pt-6">
-            <div className="h-7 w-40 animate-pulse rounded-md bg-muted" />
-            <div className="mt-4 flex gap-2">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="h-8 w-28 animate-pulse rounded-lg bg-muted/70" />
-              ))}
-            </div>
-          </div>
-          <div className="grid gap-3 p-6 sm:grid-cols-2">
+        <PageLayout title="MCP inspector" subtitle="Inspect available tools and call them with controlled arguments.">
+          <div className="grid gap-3 sm:grid-cols-2">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="h-24 animate-pulse rounded-xl border bg-card" />
+              <Skeleton key={i} className="h-24 rounded-xl" />
             ))}
           </div>
-        </div>
+        </PageLayout>
       </AppLayout>
     );
   }
@@ -250,10 +246,9 @@ export default function McpTesterPage() {
   if (error) {
     return (
       <AppLayout>
-        <div className="m-6 flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          <AlertTriangle className="size-4 shrink-0" />
-          {error}
-        </div>
+        <PageLayout title="MCP inspector" subtitle="Inspect available tools and call them with controlled arguments.">
+          <Alert variant="destructive"><AlertTriangle /><AlertTitle>Connections unavailable</AlertTitle><AlertDescription>{error}</AlertDescription></Alert>
+        </PageLayout>
       </AppLayout>
     );
   }
@@ -261,18 +256,12 @@ export default function McpTesterPage() {
   if (connections.length === 0) {
     return (
       <AppLayout>
-        <div className="mx-auto mt-10 max-w-md rounded-2xl border border-dashed bg-card p-12 text-center shadow-sm">
-          <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-            <Puzzle className="size-7" />
-          </div>
-          <h2 className="mb-1.5 text-lg font-semibold tracking-tight">No MCP connections</h2>
-          <p className="mx-auto max-w-sm text-sm text-muted-foreground">
-            Connect an MCP server to test its tools here.
-          </p>
-          <Button className="mt-5" asChild>
-            <Link href="/mcp-connections">Add a connection</Link>
-          </Button>
-        </div>
+        <PageLayout title="MCP inspector" subtitle="Inspect available tools and call them with controlled arguments.">
+          <Empty className="border">
+            <EmptyHeader><EmptyMedia variant="icon"><Puzzle /></EmptyMedia><EmptyTitle>No MCP connections</EmptyTitle><EmptyDescription>Connect an MCP server to inspect and test its tools.</EmptyDescription></EmptyHeader>
+            <EmptyContent><Button asChild><Link href="/mcp-connections">Add a connection</Link></Button></EmptyContent>
+          </Empty>
+        </PageLayout>
       </AppLayout>
     );
   }
@@ -328,7 +317,7 @@ function McpToolsPanel({ connection }: { connection: McpConnectionItem }) {
     return (
       <div className="grid gap-3 sm:grid-cols-2">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-24 animate-pulse rounded-xl border bg-card" />
+          <Skeleton key={i} className="h-24 rounded-xl" />
         ))}
       </div>
     );
@@ -689,7 +678,7 @@ function CopyButton({ text }: { text: string }) {
       className="inline-flex items-center gap-1 rounded-md border bg-muted/40 px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50"
       aria-label="Copy output"
     >
-      {copied ? <Check className="size-3.5 text-emerald-600 dark:text-emerald-400" /> : <Copy className="size-3.5" />}
+      {copied ? <Check className="size-3.5 text-primary" /> : <Copy className="size-3.5" />}
       {copied ? "Copied" : "Copy"}
     </button>
   );
@@ -730,7 +719,7 @@ function ToolResult({
         "rounded-xl border",
         result.isError
           ? "border-destructive/30 bg-destructive/5"
-          : "border-emerald-500/30 bg-emerald-500/5"
+          : "border-primary/30 bg-primary/5"
       )}
     >
       {/* Header */}
@@ -743,8 +732,8 @@ function ToolResult({
             </>
           ) : (
             <>
-              <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400" />
-              <span className="text-emerald-700 dark:text-emerald-400">Result</span>
+              <CheckCircle2 className="size-4 text-primary" />
+              <span className="text-primary">Result</span>
             </>
           )}
         </div>

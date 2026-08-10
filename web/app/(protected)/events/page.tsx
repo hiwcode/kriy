@@ -2,29 +2,25 @@
 
 import * as React from "react";
 import { toast } from "sonner";
-import { Radio, Pencil, Trash2, Plus, Check, Loader2 } from "lucide-react";
+import { Radio, Pencil, Trash2, Plus, Check } from "lucide-react";
 
 import { AppLayout } from "@/components/layout/app-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardAction, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
+import { PageLayout } from "@/components/ui/page-layout";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Spinner } from "@/components/ui/spinner";
 import {
   listEventTypes,
   upsertEventType,
   deleteEventType,
   type EventType,
 } from "@/lib/api/workflows";
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-xs text-muted-foreground">{label}</Label>
-      {children}
-    </div>
-  );
-}
 
 export default function EventsPage() {
   const [eventTypes, setEventTypes] = React.useState<EventType[]>([]);
@@ -101,24 +97,24 @@ export default function EventsPage() {
 
   return (
     <AppLayout>
-      <div className="mx-auto flex min-h-full w-full max-w-[1600px] flex-col">
-        <div className="border-b border-border/70 px-4 pb-4 pt-6 sm:px-6 lg:px-8">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Event catalog</h1>
-          <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            Define the events your applications send, validate their payloads, and reuse them
-            across <span className="font-medium text-foreground">workflows</span> and{" "}
-            <span className="font-medium text-foreground">decision gates</span>.
-          </p>
-        </div>
-
-        <div className="flex-1 p-4 sm:p-6 lg:p-8">
-          <div className="mx-auto max-w-3xl space-y-5">
+      <PageLayout
+        title="Event catalog"
+        subtitle="Define and validate the application events used by workflows and decision gates."
+      >
+          <div className="mx-auto flex max-w-3xl flex-col gap-5">
             {/* Register / edit */}
-            <div className="rounded-xl border bg-card p-4 shadow-sm">
-              <p className="mb-3 text-sm font-medium">{editing ? `Edit “${editing}”` : "Register an event"}</p>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Name">
+            <Card>
+              <CardHeader>
+                <CardTitle>{editing ? `Edit “${editing}”` : "Register an event"}</CardTitle>
+                <CardDescription>Give incoming application events a stable name and optional JSON Schema.</CardDescription>
+              </CardHeader>
+              <CardContent>
+              <FieldGroup className="gap-4">
+                <div className="grid gap-4 sm:grid-cols-2">
+                <Field>
+                  <FieldLabel htmlFor="event-name">Name</FieldLabel>
                   <Input
+                    id="event-name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="order.created"
@@ -127,87 +123,88 @@ export default function EventsPage() {
                     title={editing ? "Name is the key — delete and re-create to rename" : undefined}
                   />
                 </Field>
-                <Field label="Description">
-                  <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="A todo was completed" />
+                <Field>
+                  <FieldLabel htmlFor="event-description">Description</FieldLabel>
+                  <Input id="event-description" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="An order was created" />
                 </Field>
               </div>
-              <div className="mt-3">
-                <Field label="Payload schema (optional JSON Schema)">
+                <Field>
+                  <FieldLabel htmlFor="event-schema">Payload schema</FieldLabel>
                   <Textarea
+                    id="event-schema"
                     value={schema}
                     onChange={(e) => setSchema(e.target.value)}
                     placeholder='{"type":"object","required":["todos"]}'
                     className="min-h-[64px] font-mono text-xs"
                   />
+                  <FieldDescription>Optional JSON Schema used to validate incoming payloads.</FieldDescription>
                 </Field>
-              </div>
-              <div className="mt-3 flex justify-end gap-2">
+              </FieldGroup>
+              <div className="mt-5 flex justify-end gap-2">
                 {editing && (
                   <Button size="sm" variant="outline" onClick={resetForm} disabled={saving}>
                     Cancel
                   </Button>
                 )}
                 <Button size="sm" onClick={save} disabled={saving || !name.trim()}>
-                  {saving ? <Loader2 className="size-4 animate-spin" /> : editing ? <Check className="size-4" /> : <Plus className="size-4" />}
+                  {saving ? <Spinner data-icon="inline-start" /> : editing ? <Check data-icon="inline-start" /> : <Plus data-icon="inline-start" />}
                   {editing ? "Update event" : "Save event"}
                 </Button>
               </div>
-            </div>
+              </CardContent>
+            </Card>
 
             {/* List */}
             {loading ? (
-              <div className="h-20 animate-pulse rounded-xl border bg-card" />
+              <Skeleton className="h-24 rounded-xl" />
             ) : eventTypes.length === 0 ? (
-              <div className="rounded-2xl border border-dashed bg-card p-12 text-center shadow-sm">
-                <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                  <Radio className="size-7" />
-                </div>
-                <h2 className="mb-1.5 text-lg font-semibold tracking-tight">No events registered</h2>
-                <p className="mx-auto max-w-sm text-sm text-muted-foreground">
+              <Empty className="border">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon"><Radio /></EmptyMedia>
+                  <EmptyTitle>No events registered</EmptyTitle>
+                  <EmptyDescription>
                   Register an event such as “order.created” so workflows and decision gates can react to a validated payload.
-                </p>
-              </div>
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
             ) : (
-              <div className="space-y-2">
+              <div className="flex flex-col gap-2">
                 {eventTypes.map((t) => (
-                  <div key={t.id} className="flex items-start gap-3 rounded-xl border bg-card p-3.5 shadow-sm">
-                    <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                      <Radio className="size-[18px]" />
-                    </span>
-                    <div className="min-w-0 flex-1">
+                  <Card key={t.id} className="gap-3 py-4">
+                    <CardHeader>
+                      <div className="flex min-w-0 items-start gap-3">
+                        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                          <Radio className="size-[18px]" />
+                        </span>
+                        <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
-                        <p className="font-mono text-sm font-medium">{t.name}</p>
-                        <Badge variant="secondary" className="border-0 text-[10px]">
+                        <CardTitle className="font-mono text-sm">{t.name}</CardTitle>
+                        <Badge variant="secondary">
                           {t.subscribers} trigger{t.subscribers === 1 ? "" : "s"}
                         </Badge>
-                        <Badge variant="secondary" className="border-0 text-[10px]">
+                        <Badge variant="secondary">
                           {t.gates} gate{t.gates === 1 ? "" : "s"}
                         </Badge>
-                        {t.payload_schema && <Badge variant="secondary" className="border-0 text-[10px]">schema</Badge>}
+                        {t.payload_schema && <Badge variant="outline">Schema</Badge>}
                       </div>
-                      {t.description && <p className="mt-0.5 text-sm text-muted-foreground">{t.description}</p>}
-                    </div>
-                    <div className="flex shrink-0 items-center gap-1">
-                      <Button variant="ghost" size="icon-sm" onClick={() => startEdit(t)} title="Edit">
-                        <Pencil className="size-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => remove(t.name)}
-                        className="text-muted-foreground hover:text-destructive"
-                        title="Delete"
-                      >
-                        <Trash2 className="size-4" />
-                      </Button>
-                    </div>
-                  </div>
+                      {t.description && <CardDescription className="mt-1">{t.description}</CardDescription>}
+                        </div>
+                      </div>
+                      <CardAction className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon-sm" onClick={() => startEdit(t)} aria-label={`Edit ${t.name}`}>
+                          <Pencil />
+                        </Button>
+                        <Button variant="ghost" size="icon-sm" onClick={() => remove(t.name)} aria-label={`Delete ${t.name}`}>
+                          <Trash2 />
+                        </Button>
+                      </CardAction>
+                    </CardHeader>
+                  </Card>
                 ))}
               </div>
             )}
           </div>
-        </div>
-      </div>
+      </PageLayout>
     </AppLayout>
   );
 }

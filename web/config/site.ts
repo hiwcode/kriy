@@ -36,12 +36,6 @@ export interface NavGroup {
   items: NavItem[];
 }
 
-export interface AgentConfig {
-  id: string;
-  name: string;
-  icon: LucideIcon;
-}
-
 // Site configuration
 export const siteConfig = {
   name: "KRIY",
@@ -162,37 +156,4 @@ export function getBreadcrumb(pathname: string): {
       .join(" ") || "Page";
 
   return { title };
-}
-
-// Agent configuration (derived from navigation)
-export const agentConfig: Record<string, AgentConfig> = navigationConfig
-  .find((group) => group.id === "build")
-  ?.items.reduce(
-    (acc, item) => {
-      const slug = item.url.replace("/", "");
-      acc[slug] = {
-        id: String(item.id),
-        name: item.name,
-        icon: item.icon,
-      };
-      return acc;
-    },
-    {} as Record<string, AgentConfig>
-  ) ?? {};
-
-// Check if URL is an agent route
-export function isAgentRoute(pathname: string): boolean {
-  const slug = pathname.replace("/", "");
-  return slug in agentConfig;
-}
-
-// Get agent config by URL
-export function getAgentConfig(pathname: string): AgentConfig | undefined {
-  const slug = pathname.replace("/", "");
-  return agentConfig[slug];
-}
-
-// Get all agents as array
-export function getAllAgents(): NavItem[] {
-  return navigationConfig.find((group) => group.id === "build")?.items ?? [];
 }
