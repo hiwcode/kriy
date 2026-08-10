@@ -42,21 +42,21 @@ import Logo from "@/components/logo";
 const FEATURES = [
   {
     icon: Bot,
-    title: "Agents and tools",
+    title: "Agents with real tools",
     description:
-      "Create model-backed agents, connect MCP servers or databases, and keep credentials scoped to each workspace.",
+      "Build agents on the models you choose and give them controlled access to MCP tools, databases, and reusable skills.",
   },
   {
     icon: Workflow,
-    title: "Event triggers",
+    title: "Event-driven workflows",
     description:
-      "Send an API event and route it to the right agent through a retryable, priority-aware workflow.",
+      "When something happens in your product, route the work to the right agent with priorities, retries, and run history.",
   },
   {
     icon: ShieldCheck,
     title: "Decision gates",
     description:
-      "Submit a proposed action and receive an inline allow or deny verdict before your application proceeds.",
+      "Check a proposed action against workspace rules before your application allows it to continue.",
   },
   {
     icon: BrainCircuit,
@@ -66,13 +66,13 @@ const FEATURES = [
   },
   {
     icon: MemoryStick,
-    title: "Persistent memory",
+    title: "Memory that carries forward",
     description:
       "Preserve session history and extract durable facts so agents can carry context across conversations.",
   },
   {
     icon: Webhook,
-    title: "Signed webhooks",
+    title: "Reliable result delivery",
     description:
       "Receive results through HMAC-signed callbacks with retries, delivery logs, and manual replay.",
   },
@@ -81,21 +81,21 @@ const FEATURES = [
 const STEPS = [
   {
     number: "01",
-    title: "Create an agent",
+    title: "Build the agent",
     description:
       "Choose a model, write its instructions, and connect only the tools it needs.",
   },
   {
     number: "02",
-    title: "Define the workflow",
+    title: "Connect it to real work",
     description:
-      "Route an event to agent work, or add a decision gate before a sensitive action.",
+      "Use product events to start workflows and decision gates to control sensitive actions.",
   },
   {
     number: "03",
-    title: "Call the API",
+    title: "Receive and inspect the result",
     description:
-      "Send requests from your existing application and receive signed results by webhook.",
+      "Return signed results to your product and inspect every run, decision, and delivery.",
   },
 ];
 
@@ -221,7 +221,7 @@ function HeroVisual() {
                   KRIY
                 </span>
                 <span className="truncate text-[9px] font-medium uppercase tracking-[0.18em] text-sidebar-foreground/45">
-                  AI Workspace
+                  Agent Control Plane
                 </span>
               </div>
             </div>
@@ -483,25 +483,24 @@ export default function LandingPage() {
                 <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary/40" />
                 <span className="relative inline-flex size-2 rounded-full bg-primary" />
               </span>
-              API-first · Source-available · Self-hostable
+              Agent control plane · Source-available · Self-hostable
             </div>
 
             {/* Headline */}
             <h1 className="text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl">
-              Turn app events into{" "}
+              Put{" "}
               <span className="relative inline-block">
-                <span className="relative z-10 text-gradient-brand">agent work</span>
+                <span className="relative z-10 text-gradient-brand">AI agents</span>
                 <span className="absolute bottom-1 left-0 right-0 z-0 h-3 rounded-sm bg-gradient-to-r from-primary/20 to-orange-500/15 sm:bottom-1.5 sm:h-4" />
               </span>{" "}
-              with KRIY
               <br className="hidden sm:block" />
-              <span className="text-muted-foreground"> &mdash; without replacing your stack</span>
+              <span className="text-muted-foreground">behind your product</span>
             </h1>
 
             {/* Subtitle */}
             <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-              Send events from your existing application. KRIY routes them to agents,
-              checks policy before sensitive actions, and posts signed results back.
+              KRIY turns application events into governed agent work. Connect models and
+              tools, control sensitive actions, and receive signed results without replacing your stack.
             </p>
 
             {/* CTAs */}
@@ -527,7 +526,7 @@ export default function LandingPage() {
 
             {/* Trust row */}
             <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs font-medium text-muted-foreground">
-              {["HTTP API", "Signed webhooks", "Free to self-host"].map((item) => (
+              {["Event-driven", "Governed actions", "Signed delivery"].map((item) => (
                 <span key={item} className="inline-flex items-center gap-1.5">
                   <span className="size-1.5 rounded-full bg-primary/70" />
                   {item}
@@ -555,10 +554,10 @@ export default function LandingPage() {
               Features
             </p>
             <h2 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
-              The control plane for agent work
+              Build the agents. Govern the work.
             </h2>
             <p className="mt-4 text-muted-foreground">
-              Build the agents in KRIY. Keep your product, business logic, and data flow where they already live.
+              KRIY connects agents to the product you already have, then gives you control over what they can do and visibility into what happened.
             </p>
           </div>
 
@@ -622,7 +621,7 @@ export default function LandingPage() {
               How it works
             </p>
             <h2 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
-              From event to result in three steps
+              From product signal to finished work
             </h2>
           </div>
 
@@ -729,11 +728,11 @@ export default function LandingPage() {
                 <Logo width={54} height={54} />
               </div>
               <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
-                Start building with AI agents today
+                Your product already knows when work needs to happen
               </h2>
               <p className="mx-auto mt-4 max-w-md text-muted-foreground">
-                Source-available and free to self-host. Create your workspace, connect
-                a model, and call KRIY from the stack you already run.
+                Give it agents that can do the work—with tools, memory, controls,
+                and a clear record of every result.
               </p>
               <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
                 {showSignIn && auth?.signInButton}

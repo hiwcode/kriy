@@ -67,7 +67,7 @@ export function LegalShell({
 
       <footer className="border-t border-border">
         <div className="mx-auto max-w-3xl px-6 py-8 text-sm text-muted-foreground">
-          {siteConfig.name} · Source-available AI workspace.
+          {siteConfig.name} · Source-available AI agent control plane.
         </div>
       </footer>
     </div>

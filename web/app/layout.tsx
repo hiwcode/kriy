@@ -11,7 +11,7 @@ import { GoogleAnalytics } from "@next/third-parties/google";
 
 export const metadata: Metadata = {
   title: "KRIY",
-  description: "API-first agent orchestration for the stack you already run.",
+  description: "Put governed AI agents behind the product you already run.",
 };
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_ID;

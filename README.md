@@ -1,9 +1,9 @@
-# KRIY — AI Workspace Platform
+# KRIY — AI Agent Control Plane
 
 [License: FSL-1.1-MIT](LICENSE.md)
 [GitHub stars](https://github.com/hiwcode/kriy/stargazers)
 
-> **KRIY** is a full-stack AI agent orchestration platform for building, configuring, and managing AI agents with streaming chat, tool integrations, persistent memory, and collaborative workspaces.
+> **KRIY** puts governed AI agents behind the product you already run. Build agents, connect real tools, trigger work from application events, control sensitive actions, and return signed results.
 
 **📖 [Read the Docs →](https://ai.gethowitworks.com/docs)** — setup, usage, and everything else lives here.
 
@@ -11,7 +11,7 @@
 
 ## What is KRIY?
 
-An **AI Workspace** for creating and managing AI agents across multiple LLM providers (Google Gemini, OpenAI GPT, Anthropic Claude). Configure agents, connect external tools, schedule automated runs, orchestrate multi-agent workflows, and keep conversation history with semantic memory — all organized into collaborative workspaces for teams and individuals.
+KRIY is an **AI agent control plane** for turning product signals into governed agent work. Create agents across multiple model providers, connect external tools, schedule and orchestrate runs, retain useful memory, enforce decisions with gates, and deliver results back to your application.
 
 **Highlights:** multi-LLM support · team workspaces with RBAC · agent + skill builder · streaming chat · visual multi-agent orchestrator · MCP / database / file / Claude Code tools · cron scheduling · event triggers · decision gates · signed outbound webhooks · session & facts memory · Slack integration · Opik observability.
 

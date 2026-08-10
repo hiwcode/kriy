@@ -413,11 +413,11 @@ const ROWS: Row[] = [
     mock: <ChatCardsMock />,
   },
   {
-    eyebrow: "Triggers",
-    title: "Your app emits an event, the right agent handles it",
+    eyebrow: "Workflows",
+    title: "When something happens, the right agent gets to work",
     description:
       "Fire an event from anywhere in your stack. KRIY routes it to the matching workflow through a priority queue with automatic retries and backoff — no orchestration glue to maintain.",
-    points: ["One-line emit()", "Priority queue + retries", "Per-user routing"],
+    points: ["One event request", "Priority queue + retries", "Per-user routing"],
     mock: <WorkflowMock />,
   },
   {
@@ -455,11 +455,10 @@ export function FeatureShowcase() {
             A closer look
           </p>
           <h2 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
-            See what it actually looks like
+            See the control loop, end to end
           </h2>
           <p className="mt-4 text-muted-foreground">
-            Real screens from the product — agentic chat, event-driven triggers, decision
-            gates, and the webhooks that carry results back.
+            Build the agent, connect the event, control the decision, and return the result.
           </p>
         </div>
 

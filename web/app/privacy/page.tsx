@@ -12,7 +12,7 @@ export default function PrivacyPage() {
   return (
     <LegalShell eyebrow="Legal" title="Privacy Policy" updated="July 3, 2026">
       <p className="text-sm leading-relaxed text-muted-foreground">
-        KRIY is an open-source, source-available AI workspace. This instance is
+        KRIY is a source-available AI agent control plane. This instance is
         operated by <strong>hiwcode</strong> (&quot;we&quot;, &quot;us&quot;) as a
         demo project. This policy explains, in plain language, what data
         we handle and why. Questions:{" "}

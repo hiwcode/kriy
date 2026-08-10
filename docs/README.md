@@ -1,6 +1,6 @@
 # KRIY
 
-A source-available workspace for building, managing, and orchestrating AI agents. KRIY gives teams a unified platform to create agents powered by **Google Gemini**, **OpenAI GPT**, and **Anthropic Claude** — with collaborative workspaces, scheduling, memory, and extensible tooling.
+A source-available control plane for putting governed AI agents behind an existing product. KRIY gives teams one place to build agents, connect tools, coordinate work, retain memory, and control sensitive actions.
 
 Build agents and give them the tools to *do* work — MCP tools, skills, orchestration, and schedules — then let your app's events trigger the right agent automatically, check a decision gate before it acts, and get the result posted back over a signed webhook.
 

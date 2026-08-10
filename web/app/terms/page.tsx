@@ -26,7 +26,7 @@ export default function TermsPage() {
 
       <LegalSection title="What KRIY is">
         <p>
-          KRIY is an open-source, source-available platform for building and running
+          KRIY is a source-available platform for building and running
           AI agents. This instance is provided for demonstration and evaluation.
         </p>
       </LegalSection>
