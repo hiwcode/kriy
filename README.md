@@ -23,6 +23,12 @@
   <a href="LICENSE.md">License</a>
 </p>
 
+<p align="center">
+  <a href="https://ai.gethowitworks.com">
+    <img src="web/public/home.png" alt="KRIY agent control plane workspace overview" width="100%" />
+  </a>
+</p>
+
 ---
 
 ## Why KRIY
