@@ -31,6 +31,7 @@ Build agents and give them the tools to *do* work — MCP tools, skills, orchest
 |-------|-------------|
 | [Setup Guide](getting-started.md) | Prerequisites, installation, environment variables, and first run |
 | [Integrate KRIY in 15 Minutes](integration-quickstart.md) | End-to-end external app integration with events, workflows, gates, results, and webhooks |
+| [AI Integration Skill](ai-integration-skill.md) | Let Codex, Claude Code, Cursor, or another compatible coding agent integrate KRIY into your backend |
 | [Integration API Reference](integration-api-reference.md) | Authentication, workspace scoping, contracts, errors, retries, webhooks, and security |
 
 ### Core Features

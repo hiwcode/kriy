@@ -10,6 +10,9 @@ import { ArrowLeft, ChevronRight } from "lucide-react";
 const DOC_NAMES: Record<string, string> = {
   "": "Overview",
   "getting-started": "Getting Started",
+  "integration-quickstart": "Integration Quickstart",
+  "ai-integration-skill": "AI Integration",
+  "integration-api-reference": "API Reference",
   "using-workspaces": "Workspaces",
   "workspace-transfer": "Workspace Transfer",
   "using-agents": "Agents",

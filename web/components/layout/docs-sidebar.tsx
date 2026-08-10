@@ -34,6 +34,9 @@ import {
   ShieldCheck,
   Webhook,
   Wrench,
+  Rocket,
+  Sparkles,
+  FileCode2,
 } from "lucide-react";
 
 import Logo from "@/components/logo";
@@ -47,6 +50,14 @@ const DOC_SECTIONS: DocSection[] = [
     items: [
       { slug: "", name: "Overview", href: "/docs", icon: BookOpen },
       { slug: "getting-started", name: "Setup Guide", href: "/docs/getting-started", icon: HelpCircle },
+    ],
+  },
+  {
+    label: "Integrate",
+    items: [
+      { slug: "integration-quickstart", name: "Quickstart", href: "/docs/integration-quickstart", icon: Rocket },
+      { slug: "ai-integration-skill", name: "AI Integration", href: "/docs/ai-integration-skill", icon: Sparkles },
+      { slug: "integration-api-reference", name: "API Reference", href: "/docs/integration-api-reference", icon: FileCode2 },
     ],
   },
   {

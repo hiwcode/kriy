@@ -11,6 +11,9 @@ import { cn } from "@/lib/utils";
 const DOC_FILES: Record<string, string> = {
   "": "README",
   "getting-started": "getting-started",
+  "integration-quickstart": "integration-quickstart",
+  "ai-integration-skill": "ai-integration-skill",
+  "integration-api-reference": "integration-api-reference",
   "using-agents": "using-agents",
   "using-skills": "using-skills",
   "using-orchestrator": "using-orchestrator",

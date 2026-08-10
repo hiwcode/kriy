@@ -1,0 +1,4 @@
+interface:
+  display_name: "Integrate KRIY"
+  short_description: "Add a verified KRIY API integration"
+  default_prompt: "Use $integrate-kriy to integrate KRIY into this backend and verify the result."
