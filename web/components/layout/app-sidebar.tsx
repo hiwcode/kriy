@@ -89,9 +89,6 @@ export function AppSidebar() {
                         )}
                       >
                         <Link href={item.url}>
-                          {isActive && (
-                            <span className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-primary" />
-                          )}
                           <Icon aria-hidden />
                           <span className="flex-1 truncate">{item.name}</span>
                           {item.isBeta && (

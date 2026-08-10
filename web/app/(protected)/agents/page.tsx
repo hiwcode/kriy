@@ -227,7 +227,7 @@ export default function AgentsPage() {
         <span
           className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
             row.original.is_orchestrator
-              ? "bg-purple-500/10 text-purple-500"
+              ? "bg-primary/10 text-primary"
               : "bg-muted text-muted-foreground"
           }`}
         >
