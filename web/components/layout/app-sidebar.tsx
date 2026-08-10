@@ -31,7 +31,7 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="border-r border-sidebar-border/60 bg-sidebar">
       {/* Header */}
       <SidebarHeader className="border-b border-sidebar-border/60 p-3">
-        <Link
+        {!isCollapsed && <Link
           href="/dashboard"
           className={cn(
             "flex items-center gap-3 rounded-xl px-1.5 py-1.5 outline-none transition-colors hover:bg-sidebar-accent/60 focus-visible:ring-2 focus-visible:ring-sidebar-ring",
@@ -59,7 +59,7 @@ export function AppSidebar() {
               {siteConfig.description}
             </span>
           </div>
-        </Link>
+        </Link>}
       </SidebarHeader>
 
       <SidebarContent className="px-2.5 py-2">

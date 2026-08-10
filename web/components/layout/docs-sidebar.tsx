@@ -102,7 +102,7 @@ export function DocsSidebar() {
   return (
     <Sidebar collapsible="icon" className="border-r-0">
       <SidebarHeader className="p-4">
-        <Link
+        {!isCollapsed && <Link
           href="/docs"
           className="flex items-center gap-3 transition-opacity hover:opacity-80"
         >
@@ -122,7 +122,7 @@ export function DocsSidebar() {
               Documentation
             </span>
           </div>
-        </Link>
+        </Link>}
       </SidebarHeader>
 
       <SidebarContent className="px-2 py-2">
