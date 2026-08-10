@@ -5,7 +5,6 @@ import Link from "next/link";
 import { Plus, Pencil, Trash2, ArrowRight, Activity as ActivityIcon, type LucideIcon } from "lucide-react";
 import {
   Card,
-  CardAction,
   CardContent,
   CardDescription,
   CardFooter,
@@ -118,25 +117,23 @@ export function WorkspaceActivityCard({
   const hasNext = (page + 1) * perPage < total;
 
   return (
-    <Card className="h-full">
-      <CardHeader>
-        <div>
+    <Card className="h-full min-w-0 gap-4 py-4 sm:gap-6 sm:py-6">
+      <CardHeader className="px-4 sm:px-6">
+        <div className="flex min-w-0 items-center justify-between gap-3">
           <CardTitle>Recent activity</CardTitle>
-          <CardDescription>Latest changes in your workspace</CardDescription>
-        </div>
-        {showViewAll && (
-          <CardAction>
-            <Button variant="ghost" size="sm" asChild>
+          {showViewAll && (
+            <Button variant="ghost" size="sm" className="shrink-0" asChild>
               <Link href="/activity">
                 View all
                 <ArrowRight data-icon="inline-end" />
               </Link>
             </Button>
-          </CardAction>
-        )}
+          )}
+        </div>
+        <CardDescription>Latest changes in your workspace</CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="flex flex-col gap-4">
+      <CardContent className="px-4 sm:px-6">
+        <div className="flex min-w-0 flex-col gap-3 sm:gap-4">
           {items === null ? (
             <div className="flex flex-col gap-3">
               {Array.from({ length: 4 }).map((_, i) => (
@@ -167,7 +164,7 @@ export function WorkspaceActivityCard({
                 <div
                   key={item.id}
                   className={cn(
-                    "flex items-start gap-3",
+                    "flex min-w-0 items-start gap-3",
                     divider && index !== items.length - 1 && "border-b pb-4"
                   )}
                 >
@@ -180,7 +177,7 @@ export function WorkspaceActivityCard({
                     <Icon className="size-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm leading-tight">
+                    <p className="break-words text-sm leading-snug">
                       {describe(item, auth?.user?.email)}
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
@@ -196,7 +193,7 @@ export function WorkspaceActivityCard({
       </CardContent>
 
       {paginate && total > 0 && (
-        <CardFooter className="justify-between border-t">
+        <CardFooter className="flex-col items-stretch gap-3 border-t px-4 pt-4 min-[420px]:flex-row min-[420px]:items-center min-[420px]:justify-between sm:px-6 sm:pt-6">
             <p className="text-xs text-muted-foreground">
               {from}–{to} of {total}
             </p>

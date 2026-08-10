@@ -85,16 +85,16 @@ const quickActions = [
 
 function DashboardSkeleton() {
   return (
-    <div className="flex flex-col gap-6">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="flex flex-col gap-4 sm:gap-6">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
         {Array.from({ length: 4 }).map((_, index) => (
-          <Card key={index} className="gap-4 py-5">
-            <CardHeader>
+          <Card key={index} className="gap-3 py-4 sm:gap-4 sm:py-5">
+            <CardHeader className="px-4 sm:px-6">
               <Skeleton className="h-4 w-24" />
             </CardHeader>
-            <CardContent className="flex flex-col gap-2">
+            <CardContent className="flex flex-col gap-2 px-4 sm:px-6">
               <Skeleton className="h-8 w-28" />
-              <Skeleton className="h-3 w-36" />
+              <Skeleton className="hidden h-3 w-24 sm:block sm:w-36" />
             </CardContent>
           </Card>
         ))}
@@ -239,7 +239,7 @@ export default function DashboardPage() {
         subtitle="Monitor agent activity, usage, and workspace operations."
         actions={pageAction}
       >
-        <div className="flex animate-fade-in-up flex-col gap-6">
+        <div className="flex animate-fade-in-up flex-col gap-4 sm:gap-6">
           {data.stats.active_agents === 0 && (
             <Card className="border-primary/20 bg-primary/5">
               <CardContent>
@@ -266,43 +266,43 @@ export default function DashboardPage() {
             </Card>
           )}
 
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
             {stats.map((stat) => (
-              <Card key={stat.title} className="gap-4 py-5">
-                <CardHeader>
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
+              <Card key={stat.title} className="min-w-0 gap-3 py-4 sm:gap-4 sm:py-5">
+                <CardHeader className="px-4 sm:px-6">
+                  <CardTitle className="truncate text-xs font-medium text-muted-foreground sm:text-sm">
                     {stat.title}
                   </CardTitle>
-                  <CardAction className="flex size-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <CardAction className="hidden size-9 items-center justify-center rounded-lg bg-primary/10 text-primary sm:flex">
                     <stat.icon className="size-4" aria-hidden="true" />
                   </CardAction>
                 </CardHeader>
-                <CardContent className="flex flex-col gap-1">
-                  <p className="text-2xl font-semibold tracking-tight tabular-nums">
+                <CardContent className="flex min-w-0 flex-col gap-1 px-4 sm:px-6">
+                  <p className="truncate text-xl font-semibold tracking-tight tabular-nums sm:text-2xl">
                     {stat.value}
                   </p>
-                  <p className="text-xs text-muted-foreground">{stat.description}</p>
+                  <p className="hidden text-xs text-muted-foreground sm:block">{stat.description}</p>
                 </CardContent>
               </Card>
             ))}
           </div>
 
-          <Card>
-            <CardHeader>
+          <Card className="gap-4 py-4 sm:gap-6 sm:py-6">
+            <CardHeader className="px-4 sm:px-6">
               <CardTitle>Workspace usage</CardTitle>
               <CardDescription>
                 {hasUsage
                   ? `${formatTokens(sevenDayTokens)} tokens across ${sevenDayConversations.toLocaleString()} conversations.`
                   : "Token activity from the last seven days will appear here."}
               </CardDescription>
-              <CardAction>
+              <CardAction className="hidden sm:block">
                 <Badge variant="secondary">Last 7 days</Badge>
               </CardAction>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-2 sm:px-6">
               {hasUsage ? (
-                <ChartContainer config={usageChartConfig} className="h-[280px] w-full">
-                  <AreaChart data={usageData} accessibilityLayer margin={{ left: 0, right: 12 }}>
+                <ChartContainer config={usageChartConfig} className="h-[220px] w-full sm:h-[280px]">
+                  <AreaChart data={usageData} accessibilityLayer margin={{ left: -6, right: 8 }}>
                     <defs>
                       <linearGradient id="dashboard-token-gradient" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="var(--color-tokens)" stopOpacity={0.3} />
@@ -310,12 +310,20 @@ export default function DashboardPage() {
                       </linearGradient>
                     </defs>
                     <CartesianGrid vertical={false} />
-                    <XAxis dataKey="name" tickLine={false} axisLine={false} tickMargin={10} />
+                    <XAxis
+                      dataKey="name"
+                      tickLine={false}
+                      axisLine={false}
+                      tickMargin={8}
+                      interval="preserveStartEnd"
+                      fontSize={10}
+                    />
                     <YAxis
                       tickLine={false}
                       axisLine={false}
                       tickMargin={8}
-                      width={48}
+                      width={38}
+                      fontSize={10}
                       tickFormatter={(value) => formatTokens(Number(value))}
                     />
                     <ChartTooltip
@@ -355,21 +363,18 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <div className="grid gap-6 xl:grid-cols-5">
-            <Card className="xl:col-span-3">
-              <CardHeader>
-                <CardTitle>Agent usage</CardTitle>
-                <CardDescription>Highest recorded usage, based on up to 200 recent sessions per agent.</CardDescription>
-                <CardAction>
-                  <Button variant="ghost" size="sm" asChild>
-                    <Link href="/agents">
-                      View all
-                      <ArrowRight data-icon="inline-end" />
-                    </Link>
+          <div className="grid min-w-0 gap-4 sm:gap-6 xl:grid-cols-5">
+            <Card className="min-w-0 gap-4 py-4 sm:gap-6 sm:py-6 xl:col-span-3">
+              <CardHeader className="px-4 sm:px-6">
+                <div className="flex min-w-0 items-center justify-between gap-3">
+                  <CardTitle>Agent usage</CardTitle>
+                  <Button variant="ghost" size="sm" className="shrink-0" asChild>
+                    <Link href="/agents">View all<ArrowRight data-icon="inline-end" /></Link>
                   </Button>
-                </CardAction>
+                </div>
+                <CardDescription>Highest recorded usage, based on up to 200 recent sessions per agent.</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="min-w-0 overflow-hidden px-4 sm:px-6">
                 {agentUsage.length === 0 ? (
                   <Empty className="min-h-[250px]">
                     <EmptyHeader>
@@ -383,70 +388,62 @@ export default function DashboardPage() {
                     </EmptyHeader>
                   </Empty>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Agent</TableHead>
-                        <TableHead className="text-right">Tokens</TableHead>
-                        <TableHead className="hidden text-right sm:table-cell">Input</TableHead>
-                        <TableHead className="hidden text-right md:table-cell">Output</TableHead>
-                        <TableHead className="text-right">Est. cost</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {agentUsage.map((agent) => (
-                        <TableRow key={agent.id}>
-                          <TableCell>
-                            <Link
-                              href={`/agents/${agent.id}`}
-                              className="flex min-w-0 items-center gap-3 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                            >
-                              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                                <Bot className="size-4" aria-hidden="true" />
-                              </span>
-                              <span className="min-w-0">
-                                <span className="block max-w-40 truncate font-medium">{agent.name}</span>
-                                {agent.model && (
-                                  <span className="block max-w-40 truncate text-xs text-muted-foreground">
-                                    {agent.model}
-                                  </span>
-                                )}
-                              </span>
-                            </Link>
-                          </TableCell>
-                          <TableCell className="text-right font-medium tabular-nums">
-                            {formatTokens(agent.tokens)}
-                          </TableCell>
-                          <TableCell className="hidden text-right tabular-nums text-muted-foreground sm:table-cell">
-                            {formatTokens(agent.input_tokens)}
-                          </TableCell>
-                          <TableCell className="hidden text-right tabular-nums text-muted-foreground md:table-cell">
-                            {formatTokens(agent.output_tokens)}
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {formatCost(agent.estimated_cost)}
-                          </TableCell>
+                  <div className="min-w-0">
+                    <Table className="min-w-[560px]">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Agent</TableHead>
+                          <TableHead className="text-right">Tokens</TableHead>
+                          <TableHead className="text-right">Input</TableHead>
+                          <TableHead className="text-right">Output</TableHead>
+                          <TableHead className="text-right">Est. cost</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {agentUsage.map((agent) => (
+                          <TableRow key={agent.id}>
+                            <TableCell>
+                              <Link
+                                href={`/agents/${agent.id}`}
+                                className="flex min-w-0 items-center gap-3 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                              >
+                                <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                                  <Bot className="size-4" aria-hidden="true" />
+                                </span>
+                                <span className="min-w-0">
+                                  <span className="block max-w-40 truncate font-medium">{agent.name}</span>
+                                  {agent.model && (
+                                    <span className="block max-w-40 truncate text-xs text-muted-foreground">{agent.model}</span>
+                                  )}
+                                </span>
+                              </Link>
+                            </TableCell>
+                            <TableCell className="text-right font-medium tabular-nums">{formatTokens(agent.tokens)}</TableCell>
+                            <TableCell className="text-right tabular-nums text-muted-foreground">{formatTokens(agent.input_tokens)}</TableCell>
+                            <TableCell className="text-right tabular-nums text-muted-foreground">{formatTokens(agent.output_tokens)}</TableCell>
+                            <TableCell className="text-right tabular-nums">{formatCost(agent.estimated_cost)}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>
 
             <div className="xl:col-span-2">
-              <WorkspaceActivityCard />
+              <WorkspaceActivityCard divider />
             </div>
           </div>
 
-          <Card>
-            <CardHeader>
+          <Card className="gap-4 py-4 sm:gap-6 sm:py-6">
+            <CardHeader className="px-4 sm:px-6">
               <CardTitle>Keep building</CardTitle>
               <CardDescription>
                 {data.stats.total_prompts.toLocaleString()} prompt {data.stats.total_prompts === 1 ? "template" : "templates"} in this workspace.
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex flex-wrap gap-2">
+            <CardContent className="grid grid-cols-1 gap-2 px-4 min-[420px]:grid-cols-2 sm:flex sm:flex-wrap sm:px-6">
               {quickActions.map((action) => (
                 <Button key={action.label} variant="outline" asChild>
                   <Link href={action.href}>
