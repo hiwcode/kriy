@@ -16,7 +16,7 @@ export function EventMultiSelect({
     return (
       <p className="rounded-lg border border-dashed px-3 py-3 text-xs text-muted-foreground">
         No events registered yet — add some on the{" "}
-        <Link href="/events" className="text-primary underline underline-offset-2">Events</Link> page.
+        <Link href="/events" className="text-primary underline underline-offset-2">Event catalog</Link>.
       </p>
     );
   }

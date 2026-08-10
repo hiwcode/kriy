@@ -449,7 +449,7 @@ export default function SchedulesPage() {
     <AppLayout>
       <PageLayout
         title="Schedules"
-        subtitle="Schedule agents to run automatically — one-time or recurring with cron expressions"
+        subtitle="Run agents once or on a recurring schedule."
         actions={
           <Button onClick={handleOpenCreate}>
             <Plus className="size-4 mr-2" />

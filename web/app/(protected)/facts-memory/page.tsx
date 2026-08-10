@@ -318,9 +318,9 @@ export default function FactsMemoryPage() {
 
   const config: TabConfig = {
     id: "facts-memory",
-    tabName: "Facts Memory",
+    tabName: "Memory",
     description:
-      "Cross-session: the agent can access these facts in any conversation. Add them manually or extract from sessions.",
+      "Manage durable facts that agents can recall across conversations.",
     items: agents.map((agent) => ({
       id: agent.id,
       name: agent.label || agent.name,

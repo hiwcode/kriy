@@ -8,7 +8,7 @@ import { useAccent } from "@/components/accent-provider";
 
 /**
  * A row of accent-color swatches. Selecting one re-themes the whole app live and
- * remembers the choice (localStorage). Used on the Config page and in the theme
+ * remembers the choice (localStorage). Used on the Settings page and in the theme
  * menu.
  */
 export function AccentPicker({ className }: { className?: string }) {

@@ -472,8 +472,8 @@ function ConfigurationContent({
     { id: "agent", title: "Agent Configuration", icon: Cpu, visible: true },
     { id: "skills", title: "Skills", icon: Sparkles, visible: isLocal && allSkills.length > 0 },
     { id: "tools", title: "Builtin Tools", icon: Wrench, visible: isLocal },
-    { id: "database", title: "Database Connections", icon: Database, visible: isLocal },
-    { id: "mcp", title: "MCP Connections", icon: Puzzle, visible: isLocal },
+    { id: "database", title: "Databases", icon: Database, visible: isLocal },
+    { id: "mcp", title: "MCP servers", icon: Puzzle, visible: isLocal },
   ].filter((s) => s.visible);
   const currentSection = navSections.some((s) => s.id === activeSection) ? activeSection : "agent";
 
@@ -625,7 +625,7 @@ function ConfigurationContent({
                 </Select>
                 <p className="text-xs text-muted-foreground">
                   Manage models &amp; pricing in{" "}
-                  <Link href="/config" className="text-primary underline underline-offset-2">Config</Link>.
+                  <Link href="/config" className="text-primary underline underline-offset-2">Settings</Link>.
                 </p>
               </div>
               <div className="space-y-2">
@@ -952,7 +952,7 @@ function ConfigurationContent({
           </div>
 
           <div className={cn(currentSection !== "database" && "hidden")}>
-            <PanelSection flat icon={Database} title="Database Connections" description="Let the agent query PostgreSQL databases via SQL">
+            <PanelSection flat icon={Database} title="Databases" description="Let the agent query connected PostgreSQL databases">
               {databaseConnections.length === 0 ? (
                 <div className="rounded-lg border border-dashed p-4 text-center text-sm text-muted-foreground">
                   No database connections yet.{" "}
@@ -977,7 +977,7 @@ function ConfigurationContent({
           </div>
 
           <div className={cn(currentSection !== "mcp" && "hidden")}>
-            <PanelSection flat icon={Puzzle} title="MCP Connections" description="Connect MCP servers and select which tools to give this agent">
+            <PanelSection flat icon={Puzzle} title="MCP servers" description="Select which connected MCP tools this agent can use">
               <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
                 {mcpConnections.map((conn) => {
                   const entry = getMcpToolEntry(conn.id);
@@ -2110,7 +2110,7 @@ for line in response.iter_lines():
               flat
               icon={Link2}
               title="API Endpoint"
-              description="Use your API key from Config to call this agent externally."
+              description="Use an API key from Settings to call this agent externally."
               bodyClassName="flex flex-col gap-4"
             >
           <div className="flex items-center gap-2 rounded-lg border bg-muted/40 px-3 py-2">

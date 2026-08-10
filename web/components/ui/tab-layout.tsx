@@ -48,17 +48,17 @@ export function TabLayout({ config, defaultTab, className, activeTabId: controll
   const activeTab = config.items.find((item) => item.id === activeTabId);
 
   return (
-    <div className={cn("flex flex-col", className)}>
+    <div className={cn("mx-auto flex min-h-full w-full max-w-[1600px] flex-col", className)}>
       {/* Header with title and tabs */}
       <div className="border-b border-border">
         {/* Title */}
-        <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-4">
+        <div className="flex flex-col items-start justify-between gap-4 px-4 pb-4 pt-6 sm:flex-row sm:px-6 lg:px-8">
           <div className="min-w-0">
-            <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            <h1 className="text-2xl font-semibold tracking-[-0.025em] text-foreground">
               {config.tabName}
             </h1>
             {config.description && (
-              <p className="mt-1 text-sm text-muted-foreground max-w-2xl">
+              <p className="mt-1 max-w-3xl text-sm leading-relaxed text-muted-foreground">
                 {config.description}
               </p>
             )}
@@ -69,7 +69,7 @@ export function TabLayout({ config, defaultTab, className, activeTabId: controll
         </div>
 
         {/* Tab Navigation */}
-        <nav className="-mb-px flex gap-1 overflow-x-auto overflow-y-hidden px-4" role="tablist">
+        <nav className="-mb-px flex gap-1 overflow-x-auto overflow-y-hidden px-3 sm:px-5 lg:px-7" role="tablist">
           {config.items.map((item) => {
             const isActive = item.id === activeTabId;
 
@@ -104,7 +104,7 @@ export function TabLayout({ config, defaultTab, className, activeTabId: controll
       </div>
 
       {/* Content */}
-      <div className="flex-1 p-6">{activeTab?.component}</div>
+      <div className="flex-1 p-4 sm:p-6 lg:p-8">{activeTab?.component}</div>
     </div>
   );
 }

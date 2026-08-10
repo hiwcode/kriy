@@ -279,8 +279,8 @@ export default function McpTesterPage() {
 
   const config: TabConfig = {
     id: "mcp-tester",
-    tabName: "MCP Tester",
-    description: "Test MCP tools by calling them with custom arguments",
+    tabName: "MCP inspector",
+    description: "Inspect available tools and call them with controlled arguments.",
     items: connections.map((conn) => ({
       id: conn.id,
       name: conn.name,

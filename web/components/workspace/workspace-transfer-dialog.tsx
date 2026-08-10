@@ -39,13 +39,13 @@ const RESOURCE_TYPES = [
   { value: "agents", label: "Agents Only" },
   { value: "prompts", label: "Prompts Only" },
   { value: "skills", label: "Skills Only" },
-  { value: "mcp_connections", label: "MCP Connections Only" },
-  { value: "database_connections", label: "Database Connections Only" },
+  { value: "mcp_connections", label: "MCP servers only" },
+  { value: "database_connections", label: "Databases only" },
   { value: "schedules", label: "Schedules Only" },
   { value: "workflows", label: "Workflows Only" },
   { value: "events", label: "Event Types Only" },
   { value: "webhooks", label: "Webhooks Only" },
-  { value: "gates", label: "Decision Gates Only" },
+  { value: "gates", label: "Decision gates only" },
   { value: "documents", label: "Documents Only" },
 ] as const;
 

@@ -4,6 +4,7 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { AppLayout } from "@/components/layout/app-layout";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -14,18 +15,17 @@ import {
 import type { DashboardData } from "@/lib/api/dashboard";
 import { getDashboard } from "@/lib/api/dashboard";
 import { WorkspaceActivityCard } from "@/components/dashboard/workspace-activity-card";
-import { cn } from "@/lib/utils";
 import {
   ArrowRight,
+  Activity,
   Bot,
-  Brain,
   CheckCircle2,
   ChevronRight,
   Clock,
-  Database,
   DollarSign,
   FileText,
-  MessageSquare,
+  Plug,
+  Workflow,
   Zap,
 } from "lucide-react";
 import Link from "next/link";
@@ -59,10 +59,10 @@ function formatTokens(n: number): string {
 }
 
 const quickActions = [
-  { title: "New Conversation", description: "Start chatting with an agent", icon: MessageSquare, href: "/agents", color: "text-blue-500" },
-  { title: "Create Prompt", description: "Add a new prompt template", icon: FileText, href: "/prompt-library", color: "text-purple-500" },
-  { title: "Orchestrator", description: "Design multi-agent flows", icon: Brain, href: "/orchestrator", color: "text-green-500" },
-  { title: "Facts Memory", description: "Manage what agents remember", icon: Database, href: "/facts-memory", color: "text-orange-500" },
+  { title: "Create an agent", description: "Configure instructions, models, and tools", icon: Bot, href: "/agents" },
+  { title: "Build a workflow", description: "Route application events to an agent", icon: Workflow, href: "/workflows" },
+  { title: "Connect tools", description: "Add an MCP server or database", icon: Plug, href: "/mcp-connections" },
+  { title: "Inspect traces", description: "Review execution and model usage", icon: Activity, href: "/traces" },
 ];
 
 const chartAxisTickStyle = { fill: "var(--muted-foreground)" };
@@ -116,7 +116,7 @@ export default function DashboardPage() {
     return (
       <AppLayout>
         <div className="space-y-6 p-6">
-          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+          <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
           <div className="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-destructive">
             {error}
           </div>
@@ -128,10 +128,10 @@ export default function DashboardPage() {
   if (!data) return null;
 
   const stats = [
-    { title: "Active Agents", value: String(data.stats.active_agents), icon: Bot, color: "text-blue-500", bgColor: "bg-blue-500/10" },
-    { title: "Total Prompts", value: String(data.stats.total_prompts), icon: FileText, color: "text-purple-500", bgColor: "bg-purple-500/10" },
-    { title: "Tokens Used", value: formatTokens(data.stats.tokens_used), icon: Zap, color: "text-orange-500", bgColor: "bg-orange-500/10" },
-    { title: "Money Spent", value: `$${(data.stats.estimated_cost ?? 0).toFixed(4)}`, icon: DollarSign, color: "text-emerald-500", bgColor: "bg-emerald-500/10" },
+    { title: "Active agents", value: String(data.stats.active_agents), icon: Bot },
+    { title: "Prompt templates", value: String(data.stats.total_prompts), icon: FileText },
+    { title: "Tokens processed", value: formatTokens(data.stats.tokens_used), icon: Zap },
+    { title: "Estimated cost", value: `$${(data.stats.estimated_cost ?? 0).toFixed(4)}`, icon: DollarSign },
   ];
 
   const usageData = data.usage_data.length > 0 ? data.usage_data : [{ name: "No data", tokens: 0, conversations: 0 }];
@@ -142,22 +142,21 @@ export default function DashboardPage() {
 
   return (
     <AppLayout>
-      <div className="animate-fade-in-up space-y-6 p-6">
+      <div className="mx-auto flex w-full max-w-[1600px] animate-fade-in-up flex-col gap-6 p-4 sm:p-6 lg:p-8">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">Welcome back! Here&apos;s an overview of your AI workspace.</p>
+          <h1 className="text-2xl font-semibold tracking-[-0.025em]">Overview</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Monitor agent activity, usage, and workspace operations.</p>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {stats.map((stat) => (
             <Card
               key={stat.title}
-              className="group relative overflow-hidden py-4 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md"
+              className="relative overflow-hidden py-4"
             >
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
               <CardContent className="flex items-center gap-4">
-                <div className={cn("flex size-12 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-105", stat.bgColor)}>
-                  <stat.icon className={cn("size-6", stat.color)} />
+                <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <stat.icon className="size-5" />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm text-muted-foreground">{stat.title}</p>
@@ -171,7 +170,7 @@ export default function DashboardPage() {
         <div className="grid gap-6 lg:grid-cols-3">
           <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle>Token Usage</CardTitle>
+              <CardTitle>Token usage</CardTitle>
               <CardDescription>Daily token consumption this week</CardDescription>
             </CardHeader>
             <CardContent>
@@ -196,7 +195,7 @@ export default function DashboardPage() {
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle>Agent Performance</CardTitle>
+              <CardTitle>Agent activity</CardTitle>
               <CardDescription>Conversations per agent</CardDescription>
             </CardHeader>
             <CardContent>
@@ -218,7 +217,7 @@ export default function DashboardPage() {
         <div className="grid gap-6 lg:grid-cols-2">
           <Card>
             <CardHeader>
-              <CardTitle>Tokens per Agent</CardTitle>
+              <CardTitle>Tokens by agent</CardTitle>
               <CardDescription>Token usage by agent</CardDescription>
             </CardHeader>
             <CardContent>
@@ -237,7 +236,7 @@ export default function DashboardPage() {
           </Card>
           <Card>
             <CardHeader>
-              <CardTitle>Money Spent per Agent</CardTitle>
+              <CardTitle>Estimated cost by agent</CardTitle>
               <CardDescription>Estimated cost by agent</CardDescription>
             </CardHeader>
             <CardContent>
@@ -279,10 +278,10 @@ export default function DashboardPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <p className="font-medium">{agent.name}</p>
-                        <span className={cn("flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium", agent.session_count > 0 ? "bg-green-500/10 text-green-500" : "bg-yellow-500/10 text-yellow-500")}>
+                        <Badge variant={agent.session_count > 0 ? "default" : "secondary"}>
                           {agent.session_count > 0 ? <CheckCircle2 className="size-3" /> : <Clock className="size-3" />}
                           {agent.session_count > 0 ? "active" : "idle"}
-                        </span>
+                        </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground">{agent.session_count} conversations • {formatRelativeTime(agent.last_active)}</p>
                     </div>
@@ -297,19 +296,19 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-            <CardDescription>Common tasks to get started</CardDescription>
+            <CardTitle>Quick actions</CardTitle>
+            <CardDescription>Start common workspace tasks.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {quickActions.map((action) => (
-                <Link key={action.title} href={action.href} className="group flex flex-col items-center gap-3 rounded-lg border border-border p-4 text-center transition-all hover:border-primary/50 hover:bg-muted/50">
-                  <div className={cn("flex size-12 items-center justify-center rounded-full bg-muted transition-colors group-hover:bg-primary/10", action.color)}>
-                    <action.icon className="size-6" />
+                <Link key={action.title} href={action.href} className="group flex items-start gap-3 rounded-lg border border-border p-4 transition-colors hover:border-primary/40 hover:bg-muted/50">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                    <action.icon className="size-5" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <p className="font-medium">{action.title}</p>
-                    <p className="text-xs text-muted-foreground">{action.description}</p>
+                    <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{action.description}</p>
                   </div>
                 </Link>
               ))}

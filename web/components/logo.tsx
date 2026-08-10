@@ -22,7 +22,7 @@ export default function Logo({
       alt="KRIY"
       width={size ?? width}
       height={size ?? height}
-      className={cn("object-contain", className)}
+      className={cn("object-contain bg-primary", className)}
       priority={priority}
     />
   );

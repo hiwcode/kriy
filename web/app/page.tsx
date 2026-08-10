@@ -213,7 +213,7 @@ function HeroVisual() {
           <aside className="hidden w-52 shrink-0 flex-col border-r border-sidebar-border/60 bg-sidebar p-3 sm:flex">
             {/* Brand */}
             <div className="mb-4 flex items-center gap-3 px-1.5 py-1">
-              <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-zinc-950 ring-1 ring-white/10">
+              <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-primary ring-1 ring-inset ring-primary-foreground/15">
                 <Logo width={32} height={32} />
               </div>
               <div className="flex min-w-0 flex-col">
@@ -399,7 +399,7 @@ export default function LandingPage() {
           {/* Left: logo + links */}
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
-              <div className="flex size-8 items-center justify-center overflow-hidden rounded-lg bg-zinc-950 ring-1 ring-white/10">
+              <div className="flex size-8 items-center justify-center overflow-hidden rounded-lg bg-primary ring-1 ring-inset ring-primary-foreground/15">
                 <Logo width={30} height={30} priority />
               </div>
               <span className="text-lg font-semibold tracking-tight">
@@ -725,7 +725,7 @@ export default function LandingPage() {
             />
 
             <div className="relative">
-              <div className="mx-auto mb-6 flex size-14 items-center justify-center overflow-hidden rounded-2xl bg-zinc-950 shadow-lg shadow-black/20 ring-1 ring-white/10">
+              <div className="mx-auto mb-6 flex size-14 items-center justify-center overflow-hidden rounded-2xl bg-primary shadow-lg shadow-primary/20 ring-1 ring-inset ring-primary-foreground/15">
                 <Logo width={54} height={54} />
               </div>
               <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
@@ -787,7 +787,7 @@ export default function LandingPage() {
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 py-8 sm:flex-row">
           <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
-            <div className="flex size-6 items-center justify-center overflow-hidden rounded-md bg-zinc-950 ring-1 ring-white/10">
+            <div className="flex size-6 items-center justify-center overflow-hidden rounded-md bg-primary ring-1 ring-inset ring-primary-foreground/15">
               <Logo width={24} height={24} />
             </div>
             <span className="font-medium text-foreground">{siteConfig.name}</span>

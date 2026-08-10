@@ -26,8 +26,8 @@ export interface AccentPreset {
   mono?: boolean;
 }
 
-/** Default accent — the original green. Its hue matches `--brand-hue` in globals.css. */
-export const DEFAULT_ACCENT_ID = "emerald";
+/** Default accent — KRIY orange. Its hue matches `--brand-hue` in globals.css. */
+export const DEFAULT_ACCENT_ID = "orange";
 
 export const ACCENT_PRESETS: AccentPreset[] = [
   { id: "emerald", label: "Emerald", hue: 163 },

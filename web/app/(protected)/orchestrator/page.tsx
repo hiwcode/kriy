@@ -222,7 +222,7 @@ export default function OrchestratorPage() {
   if (loading) {
     return (
       <AppLayout>
-        <PageLayout title="Orchestrator" subtitle="Design agent flows with drag & connect">
+        <PageLayout title="Orchestration" subtitle="Design and inspect multi-agent flows.">
           <div className="flex h-[calc(100vh-14rem)] gap-4">
             <div className="w-72 shrink-0 animate-pulse rounded-xl border bg-card" />
             <div className="flex-1 animate-pulse rounded-xl border bg-card" />
@@ -235,13 +235,13 @@ export default function OrchestratorPage() {
   return (
     <AppLayout>
       <PageLayout
-        title="Orchestrator"
-        subtitle="Design agent flows — click any agent to chat"
+        title="Orchestration"
+        subtitle="Coordinate specialized agents in a visual execution flow."
         actions={
           <Button asChild>
             <Link href="/agents/new">
               <Plus className="size-4 mr-2" />
-              New Orchestrator
+              New orchestrator
             </Link>
           </Button>
         }

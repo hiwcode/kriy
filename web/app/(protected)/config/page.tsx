@@ -324,7 +324,7 @@ export default function ConfigPage() {
   if (loading) {
     return (
       <AppLayout>
-        <PageLayout title="Config" subtitle="Manage your account and settings">
+        <PageLayout title="Settings" subtitle="Manage your account and provider configuration.">
           <div className="mx-auto max-w-3xl space-y-4">
             <div className="h-28 animate-pulse rounded-xl border bg-card" />
             {Array.from({ length: 4 }).map((_, i) => (
@@ -338,7 +338,7 @@ export default function ConfigPage() {
 
   return (
     <AppLayout>
-      <PageLayout title="Config" subtitle="Manage your account and integration settings">
+      <PageLayout title="Settings" subtitle="Manage providers, API access, integrations, and appearance.">
         <div className="mx-auto max-w-3xl animate-fade-in-up space-y-8">
           {error && (
             <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">

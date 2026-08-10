@@ -699,7 +699,8 @@ export default function TracesPage() {
 
   const config: TabConfig = {
     id: "traces",
-    tabName: "Traces",
+    tabName: "Runs & traces",
+    description: "Inspect agent execution, model usage, timing, and tool activity.",
     items: agents.map((agent) => ({
       id: agent.id,
       name: agent.label || agent.name,

@@ -12,100 +12,103 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Separator } from "@/components/ui/separator";
 import { getBreadcrumb } from "@/config/site";
 import { cn } from "@/lib/utils";
-import { ChevronRight, BookOpen, Check, Github, LogOut, Search, Settings, Star, User, Users, ChevronDown } from "lucide-react";
+import { Building2, ChevronRight, BookOpen, Check, LogOut, Settings, Users, ChevronDown } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useWorkspace } from "@/components/workspace/workspace-provider";
-import { siteConfig } from "@/config/site";
 
 export function AppNavbar({ className }: { className?: string }) {
   const pathname = usePathname();
   const breadcrumb = getBreadcrumb(pathname);
   const auth = useAuth();
   const workspace = useWorkspace();
+  const BreadcrumbIcon = breadcrumb.icon;
 
   return (
     <header
       className={cn(
-        "sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between border-b border-border/70 bg-sidebar pr-6 backdrop-blur-xl",
-        "transition-all duration-300 ease-out",
+        "sticky top-0 z-40 flex h-14 shrink-0 items-center justify-between border-b border-border/70 bg-background/90 px-2 backdrop-blur-xl sm:px-4",
         className
       )}
     >
       {/* Left Section */}
-      <div className="flex items-center gap-3">
+      <div className="flex min-w-0 items-center gap-2">
         <SidebarTrigger className="size-8 text-muted-foreground hover:text-foreground" />
 
         {/* Workspace Switcher */}
         {workspace && !workspace.isLoading && workspace.workspaces.length > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="group flex items-center gap-2 rounded-lg border border-border/70 bg-card px-2.5 py-1.5 text-sm shadow-xs transition-colors hover:bg-accent/60 hover:text-accent-foreground">
-                <span className="flex size-5 items-center justify-center rounded-md bg-primary/10 text-primary">
-                  <Users className="size-3" />
-                </span>
+              <Button variant="outline" size="sm" className="group hidden max-w-52 sm:flex">
+                <Users aria-hidden />
                 <span className="max-w-[120px] truncate font-medium">
                   {workspace.activeWorkspace?.name ?? "Workspace"}
                 </span>
-                <ChevronDown className="size-3.5 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
-              </button>
+                <ChevronDown aria-hidden className="text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+              </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-60">
               <DropdownMenuLabel className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                 Workspaces
               </DropdownMenuLabel>
-              {workspace.workspaces.map((ws) => {
-                const isActive = workspace.activeWorkspace?.id === ws.id;
-                return (
-                  <DropdownMenuItem
-                    key={ws.id}
-                    onClick={() => workspace.setActiveWorkspace(ws)}
-                    className="gap-2"
-                  >
-                    <span className="flex size-6 items-center justify-center rounded-md bg-muted text-muted-foreground">
-                      <Users className="size-3" />
-                    </span>
-                    <span className={cn("flex-1 truncate", isActive && "font-medium")}>
-                      {ws.name}
-                      {ws.is_personal && (
-                        <span className="text-muted-foreground"> · Personal</span>
-                      )}
-                    </span>
-                    {isActive && <Check className="size-3.5 text-primary" />}
-                  </DropdownMenuItem>
-                );
-              })}
+              <DropdownMenuGroup>
+                {workspace.workspaces.map((ws) => {
+                  const isActive = workspace.activeWorkspace?.id === ws.id;
+                  return (
+                    <DropdownMenuItem
+                      key={ws.id}
+                      onClick={() => workspace.setActiveWorkspace(ws)}
+                      className="gap-2"
+                    >
+                      <span className="flex size-6 items-center justify-center rounded-md bg-muted text-muted-foreground">
+                        <Users aria-hidden />
+                      </span>
+                      <span className={cn("flex-1 truncate", isActive && "font-medium")}>
+                        {ws.name}
+                        {ws.is_personal && (
+                          <span className="text-muted-foreground"> · Personal</span>
+                        )}
+                      </span>
+                      {isActive && <Check aria-hidden className="text-primary" />}
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuGroup>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/workspace/settings">
-                  <Settings className="size-4" />
-                  Workspace settings
-                </Link>
-              </DropdownMenuItem>
+              <DropdownMenuGroup>
+                <DropdownMenuItem asChild>
+                  <Link href="/workspace/settings">
+                    <Settings aria-hidden />
+                    Workspace settings
+                  </Link>
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>
         )}
 
-        {/* Separator */}
-        <div className="hidden h-5 w-px bg-border md:block" />
+        <Separator orientation="vertical" className="mx-1 hidden h-4 md:block" />
 
         {/* Breadcrumb / Page Title */}
-        <nav className="flex items-center gap-1.5">
+        <nav aria-label="Breadcrumb" className="flex min-w-0 items-center gap-1.5">
+          {BreadcrumbIcon && (
+            <BreadcrumbIcon className="hidden size-4 shrink-0 text-muted-foreground md:block" aria-hidden />
+          )}
           {breadcrumb.parent && (
             <>
-              <span className="hidden text-sm text-muted-foreground sm:inline">
+              <span className="hidden text-sm text-muted-foreground lg:inline">
                 {breadcrumb.parent}
               </span>
-              <ChevronRight className="hidden size-3.5 text-muted-foreground/60 sm:inline" />
+              <ChevronRight className="hidden size-3.5 text-muted-foreground/60 lg:inline" aria-hidden />
             </>
           )}
-          <span className="text-base font-semibold tracking-tight text-foreground">
+          <span className="truncate text-sm font-semibold tracking-tight text-foreground sm:text-base">
             {breadcrumb.title}
           </span>
         </nav>
@@ -113,37 +116,7 @@ export function AppNavbar({ className }: { className?: string }) {
       </div>
 
       {/* Right Section */}
-      <div className="flex items-center gap-3">
-        <Button
-          variant="outline"
-          size="sm"
-          className="hidden gap-2 md:flex"
-          asChild
-        >
-          <a
-            href={siteConfig.github}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Github className="size-4" />
-            <Star className="size-3.5 fill-primary text-primary" />
-            <span className="text-xs">Star</span>
-          </a>
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="md:hidden size-9"
-          asChild
-        >
-          <a
-            href={siteConfig.github}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Github className="size-4" />
-          </a>
-        </Button>
+      <div className="flex shrink-0 items-center gap-1">
         <NotificationBell />
         <ThemeToggle isHeader={true}/>
         {/* Auth: Sign in button or User dropdown */}
@@ -180,7 +153,7 @@ export function AppNavbar({ className }: { className?: string }) {
                         .slice(0, 2)}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="flex flex-col space-y-1">
+                  <div className="flex flex-col gap-1">
                     <p className="text-sm font-medium leading-none">
                       {auth.user.name}
                     </p>
@@ -194,9 +167,14 @@ export function AppNavbar({ className }: { className?: string }) {
               <DropdownMenuGroup>
                 <DropdownMenuItem asChild>
                   <Link href="/config">
-                    <User className="size-4" />
-                    <span>Config</span>
-                    <DropdownMenuShortcut>⇧⌘P</DropdownMenuShortcut>
+                    <Settings aria-hidden />
+                    <span>Settings</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/workspace/settings">
+                    <Building2 aria-hidden />
+                    <span>Workspace settings</span>
                   </Link>
                 </DropdownMenuItem>
               </DropdownMenuGroup>
@@ -204,20 +182,21 @@ export function AppNavbar({ className }: { className?: string }) {
               <DropdownMenuGroup>
                 <DropdownMenuItem asChild>
                   <Link href="/docs">
-                    <BookOpen className="size-4" />
+                    <BookOpen aria-hidden />
                     <span>Documentation</span>
                   </Link>
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                variant="destructive"
-                onClick={() => auth.signOut()}
-              >
-                <LogOut className="size-4" />
-                <span>Log out</span>
-                <DropdownMenuShortcut>⇧⌘Q</DropdownMenuShortcut>
-              </DropdownMenuItem>
+              <DropdownMenuGroup>
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => auth.signOut()}
+                >
+                  <LogOut aria-hidden />
+                  <span>Log out</span>
+                </DropdownMenuItem>
+              </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>
         ) : auth?.signInButton ? (

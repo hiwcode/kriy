@@ -246,7 +246,7 @@ export default function WorkspaceSettingsPage() {
   if (!workspace) {
     return (
       <AppLayout>
-        <PageLayout title="Workspace" subtitle="Manage your workspace, members, and invites">
+        <PageLayout title="Workspace settings" subtitle="Manage workspace access, members, invitations, and resource ownership.">
           <div className="mx-auto max-w-3xl space-y-4">
             <div className="h-28 animate-pulse rounded-2xl border bg-card" />
             <div className="h-20 animate-pulse rounded-xl border bg-card" />
@@ -266,7 +266,7 @@ export default function WorkspaceSettingsPage() {
 
   return (
     <AppLayout>
-      <PageLayout title="Workspace" subtitle="Manage your workspace, members, and invites">
+      <PageLayout title="Workspace settings" subtitle="Manage workspace access, members, invitations, and resource ownership.">
         <div className="mx-auto max-w-3xl animate-fade-in-up space-y-8">
           {error && (
             <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">

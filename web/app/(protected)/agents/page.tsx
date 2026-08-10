@@ -280,7 +280,7 @@ export default function AgentsPage() {
     <AppLayout>
       <PageLayout
         title="Agents"
-        subtitle="Configure and manage your AI agents"
+        subtitle="Create, configure, and operate the agents in this workspace."
         actions={
           <Button onClick={handleOpenCreate}>
             <Plus className="size-4 mr-2" />

@@ -101,17 +101,17 @@ export default function EventsPage() {
 
   return (
     <AppLayout>
-      <div className="flex flex-col">
-        <div className="border-b border-border px-6 pb-4 pt-6">
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Events</h1>
+      <div className="mx-auto flex min-h-full w-full max-w-[1600px] flex-col">
+        <div className="border-b border-border/70 px-4 pb-4 pt-6 sm:px-6 lg:px-8">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Event catalog</h1>
           <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-            The signals your apps send (e.g. “todo.completed”). Registered once and shared
-            across the workspace — both <span className="font-medium text-foreground">Triggers</span> and{" "}
-            <span className="font-medium text-foreground">Gates</span> react to them, and payloads are validated against the schema.
+            Define the events your applications send, validate their payloads, and reuse them
+            across <span className="font-medium text-foreground">workflows</span> and{" "}
+            <span className="font-medium text-foreground">decision gates</span>.
           </p>
         </div>
 
-        <div className="flex-1 p-6">
+        <div className="flex-1 p-4 sm:p-6 lg:p-8">
           <div className="mx-auto max-w-3xl space-y-5">
             {/* Register / edit */}
             <div className="rounded-xl border bg-card p-4 shadow-sm">
@@ -121,7 +121,7 @@ export default function EventsPage() {
                   <Input
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="todo.completed"
+                    placeholder="order.created"
                     className="font-mono"
                     disabled={editing !== null}
                     title={editing ? "Name is the key — delete and re-create to rename" : undefined}
@@ -164,8 +164,7 @@ export default function EventsPage() {
                 </div>
                 <h2 className="mb-1.5 text-lg font-semibold tracking-tight">No events registered</h2>
                 <p className="mx-auto max-w-sm text-sm text-muted-foreground">
-                  Register the events your apps send (e.g. “todo.completed”) so Triggers and Gates can react
-                  to them and payloads are validated.
+                  Register an event such as “order.created” so workflows and decision gates can react to a validated payload.
                 </p>
               </div>
             ) : (

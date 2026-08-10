@@ -321,8 +321,8 @@ export default function DatabaseConnectionsPage() {
   return (
     <AppLayout>
       <PageLayout
-        title="Database Connections"
-        subtitle="Add PostgreSQL connections for agents to query. Agents can execute SELECT queries."
+        title="Databases"
+        subtitle="Connect PostgreSQL data sources that agents can query with read-only SQL."
         actions={
           <Button onClick={handleOpenCreate}>
             <Plus className="size-4 mr-2" />

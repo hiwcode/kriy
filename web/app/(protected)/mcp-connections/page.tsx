@@ -390,8 +390,8 @@ export default function McpConnectionsPage() {
   return (
     <AppLayout>
       <PageLayout
-        title="MCP Connections"
-        subtitle="Connect MCP servers to your agents"
+        title="MCP servers"
+        subtitle="Connect and manage Model Context Protocol servers for your agents."
         actions={
           <Button onClick={handleOpenCreate}>
             <Plus className="size-4 mr-2" />

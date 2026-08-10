@@ -24,13 +24,13 @@ export function AppLayout({ children, className }: AppLayoutProps) {
   return (
     <SidebarProvider defaultOpen={readSidebarOpen()}>
       <AppSidebar />
-      <SidebarInset className="flex max-h-svh flex-col overflow-hidden">
+      <SidebarInset className="flex max-h-svh flex-col overflow-hidden bg-background">
         <AppNavbar />
         {/* Banners live at the top of the content area, flush under the navbar. */}
         <BannerBar />
         <main
           className={cn(
-            "relative flex-1 overflow-y-auto",
+            "relative flex-1 overflow-y-auto bg-muted/20",
             className
           )}
         >

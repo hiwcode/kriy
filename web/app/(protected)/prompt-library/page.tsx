@@ -446,8 +446,8 @@ export default function PromptLibraryPage() {
   return (
     <AppLayout>
       <PageLayout
-        title="Prompt Library"
-        subtitle="Reusable system & instruction prompts for your agents."
+        title="Prompts"
+        subtitle="Manage reusable instructions and system prompts for your agents."
         actions={
           <div className="flex items-center gap-2">
             <Select value={typeFilter} onValueChange={(v) => { setPage(0); setTypeFilter(v as PromptType | "all"); }}>

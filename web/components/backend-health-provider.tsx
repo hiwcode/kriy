@@ -71,7 +71,7 @@ export function BackendGate({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
       <div className="flex max-w-md flex-col items-center gap-6 text-center">
-        <div className="flex size-16 items-center justify-center overflow-hidden rounded-2xl bg-zinc-950 ring-1 ring-white/10">
+        <div className="flex size-16 items-center justify-center overflow-hidden rounded-2xl bg-primary ring-1 ring-inset ring-primary-foreground/15">
           <Logo size={54} />
         </div>
         <div className="space-y-2">

@@ -177,12 +177,12 @@ export default function GatesPage() {
 
   return (
     <AppLayout>
-      <div className="flex flex-col">
+      <div className="mx-auto flex min-h-full w-full max-w-[1600px] flex-col">
         {/* Header (matches Triggers) */}
         <div className="border-b border-border">
-          <div className="flex items-start justify-between gap-4 px-6 pb-4 pt-6">
+          <div className="flex flex-col items-start justify-between gap-4 px-4 pb-4 pt-6 sm:flex-row sm:px-6 lg:px-8">
             <div className="min-w-0">
-              <h1 className="text-2xl font-semibold tracking-tight text-foreground">Gates</h1>
+              <h1 className="text-2xl font-semibold tracking-tight text-foreground">Decision gates</h1>
               <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{DESCRIPTION}</p>
             </div>
             <div className="flex shrink-0 items-center gap-2">{headerButtons}</div>
@@ -190,7 +190,7 @@ export default function GatesPage() {
         </div>
 
         {/* Content */}
-        <div className="flex-1 p-6">
+        <div className="flex-1 p-4 sm:p-6 lg:p-8">
           <div className="mx-auto max-w-4xl space-y-4">
             <div className="flex items-center justify-between gap-3">
               <p className="text-sm text-muted-foreground">
@@ -494,7 +494,7 @@ function GateEditor({
 
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Events">
+            <Field label="Event types">
               <EventMultiSelect
                 options={eventTypes.map((t) => t.name)}
                 selected={new Set(draft.event_types)}
@@ -771,7 +771,7 @@ function CodeDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o: b
   ).replace(/\/$/, "");
 
   const envExample = `KRIY_URL=${base}
-KRIY_API_KEY=kriy-...          # Config → API key (per-user key)
+KRIY_API_KEY=kriy-...          # Settings → API access
 KRIY_WORKSPACE_ID=1           # optional — omit for your personal workspace`;
 
   const integrationPy = `import httpx

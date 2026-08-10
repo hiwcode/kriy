@@ -135,22 +135,21 @@ export default function WebhooksPage() {
 
   return (
     <AppLayout>
-      <div className="flex flex-col">
+      <div className="mx-auto flex min-h-full w-full max-w-[1600px] flex-col">
         <div className="border-b border-border">
-          <div className="flex items-start justify-between gap-4 px-6 pb-4 pt-6">
+          <div className="flex flex-col items-start justify-between gap-4 px-4 pb-4 pt-6 sm:flex-row sm:px-6 lg:px-8">
             <div className="min-w-0">
-              <h1 className="text-2xl font-semibold tracking-tight text-foreground">Webhooks</h1>
+              <h1 className="text-2xl font-semibold tracking-tight text-foreground">Delivery webhooks</h1>
               <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-                KRIY POSTs platform events (e.g. <code className="font-mono">run.completed</code>) to your
-                endpoints — signed and retried — so external systems get async results back. The outbound
-                counterpart to Events.
+                Deliver asynchronous KRIY results to your application with signed requests,
+                automatic retries, and inspectable delivery history.
               </p>
             </div>
             <Button size="sm" onClick={openNew}><Plus className="size-4" /> New webhook</Button>
           </div>
         </div>
 
-        <div className="flex-1 p-6">
+        <div className="flex-1 p-4 sm:p-6 lg:p-8">
           <div className="mx-auto max-w-3xl space-y-4">
             {revealed && (
               <div className="rounded-xl border border-emerald-300 bg-emerald-50 p-4 dark:border-emerald-900 dark:bg-emerald-950/30">
@@ -239,7 +238,7 @@ export default function WebhooksPage() {
               <p className="text-xs text-muted-foreground">Must be a public https URL in production. KRIY POSTs the signed event here.</p>
             </div>
             <div className="space-y-1.5">
-              <Label>Events</Label>
+              <Label>Event types</Label>
               <EventMultiSelect
                 options={PLATFORM_EVENTS}
                 selected={selEvents}

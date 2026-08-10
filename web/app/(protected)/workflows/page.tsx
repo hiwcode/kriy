@@ -111,7 +111,7 @@ function CodeDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (o: b
   ).replace(/\/$/, "");
 
   const envExample = `KRIY_URL=${base}
-KRIY_API_KEY=kriy-...          # Config → API key (per-user key)
+KRIY_API_KEY=kriy-...          # Settings → API access
 KRIY_WORKSPACE_ID=1           # optional — omit for your personal workspace`;
 
   const integrationPy = `import httpx
@@ -312,7 +312,7 @@ export default function WorkflowsPage() {
       </Button>
       <Button variant="outline" size="sm" onClick={() => setEventsOpen(true)}>
         <Radio className="size-4" />
-        Events{eventTypes.length ? ` (${eventTypes.length})` : ""}
+        Event catalog{eventTypes.length ? ` (${eventTypes.length})` : ""}
       </Button>
       <Button variant="outline" size="sm" onClick={() => setCodeOpen(true)}>
         <Code2 className="size-4" />
@@ -324,9 +324,9 @@ export default function WorkflowsPage() {
   // One tab per agent (like Traces); each shows that agent's workflows.
   const config: TabConfig = {
     id: "workflows",
-    tabName: "Triggers",
+    tabName: "Workflows",
     description:
-      "When your app emits an event (e.g. “todo.completed”), the matching agent runs automatically to handle it. Pick an agent below to see its triggers; manage the events your apps send from the Events button, or grab the emit snippet from Integrate.",
+      "Route application events to agents and inspect each asynchronous run.",
     headerActions: headerButtons,
     items: agents.map((a) => ({
       id: a.id,
@@ -467,7 +467,7 @@ function WorkflowsList({
       <EmptyState
         icon={<WorkflowIcon className="size-7" />}
         title="No workflows yet"
-        body="Add a workflow so this agent reacts to an event your app sends — e.g. on “todo.completed”, run the agent to reset the list. Then emit that event from your app to trigger it."
+        body="Add a workflow so this agent reacts when your application sends a matching event."
         action={
           <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
             <Button size="sm" onClick={onNew}>
@@ -664,7 +664,7 @@ function WorkflowEditor({
           </Field>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Events">
+            <Field label="Event types">
               <EventMultiSelect
                 options={eventTypes.map((t) => t.name)}
                 selected={new Set(draft.event_types)}
@@ -975,7 +975,7 @@ function EventsDrawer({
 }) {
   return (
     <ResizableDrawer open={open} onOpenChange={onOpenChange} defaultWidth={620}>
-      <SheetTitle className="sr-only">Events</SheetTitle>
+      <SheetTitle className="sr-only">Event catalog</SheetTitle>
       <div className="flex h-full flex-col">
         <div className="flex items-center justify-between gap-2 border-b px-4 py-3">
           <div className="flex items-center gap-2.5">
@@ -983,8 +983,8 @@ function EventsDrawer({
               <Radio className="size-[18px]" />
             </span>
             <div>
-              <p className="font-semibold">Events</p>
-              <p className="text-xs text-muted-foreground">The signals your apps send (e.g. “todo.completed”) that workflows react to. Shared across the workspace.</p>
+              <p className="font-semibold">Event catalog</p>
+              <p className="text-xs text-muted-foreground">Shared event definitions that workflows and decision gates can use.</p>
             </div>
           </div>
           <Button variant="ghost" size="icon-sm" onClick={() => onOpenChange(false)} aria-label="Close">
@@ -1075,7 +1075,7 @@ function EventsTab({
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="todo.completed"
+              placeholder="order.created"
               className="font-mono"
               disabled={editing !== null}
               title={editing ? "Name is the key — delete and re-create to rename" : undefined}
@@ -1114,7 +1114,7 @@ function EventsTab({
         <EmptyState
           icon={<Radio className="size-7" />}
           title="No events registered"
-          body="Register the events your external app sends (e.g. “todo.completed”) so workflows can react to them and payloads are validated."
+          body="Register the events your application sends so workflows can react to validated payloads."
         />
       ) : (
         <div className="space-y-2">

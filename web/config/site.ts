@@ -9,7 +9,7 @@ import {
   FlaskConical,
   GraduationCap,
   LayoutDashboard,
-  Bell,
+  Inbox,
   LucideIcon,
   MemoryStick,
   Plug,
@@ -45,7 +45,7 @@ export interface AgentConfig {
 // Site configuration
 export const siteConfig = {
   name: "KRIY",
-  description: "AI Workspace",
+  description: "Agent control plane",
   version: "0.1.0",
   logo: Logo,
   github: "https://github.com/hiwcode/kriy",
@@ -54,63 +54,57 @@ export const siteConfig = {
 // Navigation configuration
 export const navigationConfig: NavGroup[] = [
   {
-    id: "1",
-    name: "main",
+    id: "overview",
+    name: "Workspace",
     items: [
-      { id: 1, name: "Dashboard", url: "/", icon: LayoutDashboard },
-      { id: 2, name: "Alerts", url: "/alerts", icon: Bell },
+      { id: "overview", name: "Overview", url: "/dashboard", icon: LayoutDashboard },
+      { id: "inbox", name: "Inbox", url: "/alerts", icon: Inbox },
     ],
   },
   {
-    id: "2",
-    name: "Agents",
+    id: "build",
+    name: "Build",
     items: [
-      { id: 1, name: "Agents", url: "/agents", icon: Bot },
-      { id: 2, name: "Orchestrator", url: "/orchestrator", icon: BrainCircuit },
+      { id: "agents", name: "Agents", url: "/agents", icon: Bot },
+      { id: "orchestration", name: "Orchestration", url: "/orchestrator", icon: BrainCircuit },
+      { id: "prompts", name: "Prompts", url: "/prompt-library", icon: FileText },
+      { id: "skills", name: "Skills", url: "/skills", icon: GraduationCap, isBeta: true },
+      { id: "memory", name: "Memory", url: "/facts-memory", icon: MemoryStick },
     ],
   },
   {
-    id: "3",
-    name: "Tools & Prompts",
+    id: "connect",
+    name: "Connect",
     items: [
-      { id: 1, name: "Prompt Library", url: "/prompt-library", icon: FileText },
-      { id: 2, name: "Skills", url: "/skills", icon: GraduationCap, isBeta: true },
-      { id: 3, name: "MCP Connections", url: "/mcp-connections", icon: Plug },
-      { id: 4, name: "MCP Tester", url: "/mcp-tester", icon: FlaskConical },
-      { id: 5, name: "Database Connections", url: "/database-connections", icon: Database },
+      { id: "mcp", name: "MCP servers", url: "/mcp-connections", icon: Plug },
+      { id: "databases", name: "Databases", url: "/database-connections", icon: Database },
+      { id: "mcp-inspector", name: "MCP inspector", url: "/mcp-tester", icon: FlaskConical },
     ],
   },
   {
-    id: "4",
-    name: "Memory",
+    id: "automation",
+    name: "Automate",
     items: [
-      { id: 1, name: "Facts Memory", url: "/facts-memory", icon: MemoryStick },
+      { id: "workflows", name: "Workflows", url: "/workflows", icon: Workflow },
+      { id: "events", name: "Event catalog", url: "/events", icon: Radio },
+      { id: "gates", name: "Decision gates", url: "/gates", icon: ShieldCheck },
+      { id: "schedules", name: "Schedules", url: "/schedules", icon: CalendarClock },
+      { id: "webhooks", name: "Delivery webhooks", url: "/webhooks", icon: Webhook },
     ],
   },
   {
-    id: "5",
-    name: "Automation",
+    id: "observe",
+    name: "Observe",
     items: [
-      { id: 1, name: "Schedules", url: "/schedules", icon: CalendarClock },
-      { id: 2, name: "Events", url: "/events", icon: Radio },
-      { id: 3, name: "Triggers", url: "/workflows", icon: Workflow },
-      { id: 4, name: "Gates", url: "/gates", icon: ShieldCheck },
-      { id: 5, name: "Webhooks", url: "/webhooks", icon: Webhook },
+      { id: "traces", name: "Runs & traces", url: "/traces", icon: Activity },
     ],
   },
   {
-    id: "6",
-    name: "Observability",
+    id: "manage",
+    name: "Manage",
     items: [
-      { id: 1, name: "Traces", url: "/traces", icon: Activity },
-    ],
-  },
-  {
-    id: "7",
-    name: "Settings",
-    items: [
-      { id: 1, name: "Config", url: "/config", icon: Settings },
-      { id: 2, name: "Workspace", url: "/workspace/settings", icon: Building2 },
+      { id: "workspace", name: "Workspace settings", url: "/workspace/settings", icon: Building2 },
+      { id: "settings", name: "Settings", url: "/config", icon: Settings },
     ],
   },
 ];
@@ -135,12 +129,25 @@ export function getBreadcrumb(pathname: string): {
   parent?: string;
   icon?: LucideIcon;
 } {
-  const navItem = getNavItem(pathname);
+  const navItem =
+    getNavItem(pathname) ??
+    navItemsFlat
+      .filter((item) => pathname.startsWith(`${item.url}/`))
+      .sort((a, b) => b.url.length - a.url.length)[0];
 
   if (navItem) {
+    const title =
+      pathname === navItem.url
+        ? navItem.name
+        : navItem.url === "/agents"
+          ? "Agent"
+          : navItem.url === "/skills"
+            ? "Skill"
+            : navItem.name;
+
     return {
-      title: navItem.name,
-      parent: navItem.groupName === "main" ? undefined : navItem.groupName,
+      title,
+      parent: navItem.groupName,
       icon: navItem.icon,
     };
   }
@@ -159,7 +166,7 @@ export function getBreadcrumb(pathname: string): {
 
 // Agent configuration (derived from navigation)
 export const agentConfig: Record<string, AgentConfig> = navigationConfig
-  .find((group) => group.name === "Agents")
+  .find((group) => group.id === "build")
   ?.items.reduce(
     (acc, item) => {
       const slug = item.url.replace("/", "");
@@ -187,5 +194,5 @@ export function getAgentConfig(pathname: string): AgentConfig | undefined {
 
 // Get all agents as array
 export function getAllAgents(): NavItem[] {
-  return navigationConfig.find((group) => group.name === "Agents")?.items ?? [];
+  return navigationConfig.find((group) => group.id === "build")?.items ?? [];
 }

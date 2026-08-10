@@ -111,8 +111,8 @@ export default function NotificationsPage() {
   return (
     <AppLayout>
       <PageLayout
-        title="Alerts"
-        subtitle="Everything your agents and workflows have sent you."
+        title="Inbox"
+        subtitle="Review notifications from agents, workflows, and workspace activity."
         actions={
           <Button variant="outline" size="sm" onClick={onReadAll}>
             <CheckCheck className="size-4" /> Mark all read
