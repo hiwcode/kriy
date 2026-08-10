@@ -4,7 +4,68 @@ import * as React from "react";
 import Link from "next/link";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { Check, Copy } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+function CodeBlock({
+  children,
+  isDocs,
+  className,
+  ...props
+}: React.ComponentProps<"pre"> & { isDocs: boolean }) {
+  const [copied, setCopied] = React.useState(false);
+  const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const child = React.Children.toArray(children)[0];
+  const code = React.isValidElement<{ children?: React.ReactNode }>(child)
+    ? String(child.props.children ?? "").replace(/\n$/, "")
+    : "";
+
+  React.useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
+  const copyCode = async () => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopied(true);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  return (
+    <div className={cn("relative", isDocs ? "my-6" : "my-4")}>
+      <pre
+        className={cn(
+          "overflow-x-auto rounded-lg border border-border font-mono text-sm",
+          isDocs ? "bg-muted/50 p-5 pr-24" : "bg-muted p-4 pr-24",
+          className
+        )}
+        {...props}
+      >
+        {children}
+      </pre>
+      {code && (
+        <Button
+          type="button"
+          variant="secondary"
+          size="xs"
+          className="absolute right-2 top-2"
+          aria-label={copied ? "Code copied" : "Copy code"}
+          onClick={copyCode}
+        >
+          {copied ? <Check data-icon="inline-start" /> : <Copy data-icon="inline-start" />}
+          {copied ? "Copied" : "Copy"}
+        </Button>
+      )}
+    </div>
+  );
+}
 
 function MermaidBlock({ code }: { code: string }) {
   const [state, setState] = React.useState<{ svg: string; error?: string }>({ svg: "" });
@@ -200,15 +261,9 @@ export function MdRenderer({ content, className, variant = "default" }: MdRender
             const isMermaid = React.isValidElement(child) && child.type === MermaidBlock;
             if (isMermaid) return <>{children}</>;
             return (
-              <pre
-                className={cn(
-                  "overflow-x-auto rounded-lg border border-border font-mono text-sm",
-                  isDocs ? "my-6 bg-muted/50 p-5" : "bg-muted p-4"
-                )}
-                {...props}
-              >
+              <CodeBlock isDocs={isDocs} {...props}>
                 {children}
-              </pre>
+              </CodeBlock>
             );
           },
           code: ({ className: codeClassName, children, ...props }) => {
