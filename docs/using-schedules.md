@@ -2,19 +2,6 @@
 
 Schedules let you run agents automatically — either at a specific time or on a recurring basis using cron expressions.
 
-```mermaid
-flowchart LR
-    subgraph Schedules["Schedule Types"]
-        OneTime["One-time\n(run at specific datetime)"]
-        Recurring["Recurring\n(cron expression)"]
-    end
-    Schedules --> Runner["Background Scheduler\n(checks every 30s)"]
-    Runner --> Agent["Runs Agent\nwith message"]
-    Agent --> Result["Stores result\n& updates status"]
-```
-
----
-
 ## Create a Schedule
 
 1. Go to **Schedules** in the sidebar (under Automation)

@@ -95,8 +95,8 @@ export function DocsSidebar() {
           href="/docs"
           className="flex items-center gap-3 transition-opacity hover:opacity-80"
         >
-          <div className="flex items-center justify-center">
-            <Logo width={28} height={28} />
+          <div className="flex size-9 items-center justify-center overflow-hidden rounded-xl bg-zinc-950 ring-1 ring-white/10">
+            <Logo width={32} height={32} />
           </div>
           <div
             className={cn(

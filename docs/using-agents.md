@@ -4,36 +4,13 @@
 
 Agents are AI assistants powered by LLMs from multiple providers (Google Gemini, OpenAI GPT, Anthropic Claude). You can create **local agents** (run on this server) or **A2A agents** (external Agent-to-Agent endpoints). All agents belong to a **workspace** — see [Using Workspaces](using-workspaces.md) for details.
 
-```mermaid
-flowchart TB
-    subgraph Workspace["Active Workspace"]
-        subgraph Types["Agent Types"]
-            Local["Local Agent\n(Gemini / GPT / Claude)"]
-            A2A["A2A Agent\n(External endpoint)"]
-        end
-        subgraph Config["Configuration"]
-            Name["Name & Model"]
-            Prompt["System Prompt"]
-            Tools["Tools: Built-in, MCP, DB,\nFile, Claude Code, Schedule"]
-        end
-        Local --> Config
-        A2A --> Config
-        Config --> Chat["Chat & Sessions"]
-    end
-```
-
----
-
 ## Create an Agent
 
 1. Go to **Agents** in the sidebar
 2. Click **New agent**
 3. Fill in:
    - **Name** — Display name
-   - **Model** — Choose from any supported provider:
-     - Google: `gemini-3.1-flash-lite`, `gemini-2.5-pro`, `gemini-2.0-flash`
-     - OpenAI: `gpt-4o`, `gpt-4o-mini`, `o3-mini`
-     - Anthropic: `claude-sonnet-4-20250514`, `claude-haiku-4-20250414`
+   - **Model** — choose a model from a configured provider
    - **System prompt** — Base instructions (or choose from Prompt Library)
    - **Instruction** — Additional instructions
    - **Tools** — Built-in, MCP, database, file tools, Claude Code, schedule
@@ -42,21 +19,6 @@ flowchart TB
 ---
 
 ## Chat with an Agent
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Web
-    participant API
-    participant Agent
-
-    User->>Web: Send message
-    Web->>API: Stream request
-    API->>Agent: Run agent
-    Agent->>API: Stream response
-    API->>Web: SSE events
-    Web->>User: Display text
-```
 
 1. Open an agent (click its row or card)
 2. Go to the **Chat** tab

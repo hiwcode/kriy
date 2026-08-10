@@ -2,27 +2,6 @@
 
 ## Overview
 
-```mermaid
-flowchart TB
-    Config["Config Page"]
-    Config --> LLMKeys["LLM Provider Keys"]
-    Config --> Model["Default Model"]
-    Config --> APIKey["Personal API Key"]
-    Config --> Opik["Opik Observability"]
-    Config --> Slack["Slack Integration"]
-
-    LLMKeys --> Google["Google API Key\n(Gemini models)"]
-    LLMKeys --> OpenAI["OpenAI API Key\n(GPT / o-series)"]
-    LLMKeys --> Anthropic["Anthropic API Key\n(Claude models)"]
-
-    subgraph Fallback["Fallback (per provider)"]
-        Env["API key from .env"]
-    end
-    Google -.->|"If not set"| Env
-    OpenAI -.->|"If not set"| Env
-    Anthropic -.->|"If not set"| Env
-```
-
 The Configuration page is your central place to manage API keys, integrations, and personal settings.
 
 1. Go to **Config** in the sidebar
@@ -36,18 +15,18 @@ KRIY supports multiple LLM providers. Set the API key for each provider you want
 
 ### Google API Key (Gemini)
 
-- For models: `gemini-3.1-flash-lite`, `gemini-2.5-pro`, `gemini-2.0-flash`, `gemini-1.5-pro`, etc.
+- Enables supported Gemini models.
 - Get a key at [Google AI Studio](https://aistudio.google.com/app/apikey)
 
 ### OpenAI API Key (GPT / o-series)
 
-- For models: `gpt-4o`, `gpt-4o-mini`, `gpt-4-turbo`, `o3-mini`, etc.
+- Enables supported GPT and reasoning models.
 - Get a key at [OpenAI Platform](https://platform.openai.com/api-keys)
 - Uses LiteLLM under the hood for API translation
 
 ### Anthropic API Key (Claude)
 
-- For models: `claude-sonnet-4-20250514`, `claude-haiku-4-20250414`, etc.
+- Enables supported Claude models.
 - Get a key at [Anthropic Console](https://console.anthropic.com/settings/keys)
 - Uses LiteLLM under the hood for API translation
 
@@ -68,11 +47,8 @@ Your personal key (Config page) > Server .env key > Error
 
 ## Default Model
 
-Choose which model new agents default to. Available options include models from all supported providers:
-
-- **Google:** gemini-3.1-flash-lite, gemini-2.5-pro, gemini-2.0-flash, gemini-1.5-flash, gemini-1.5-pro
-- **OpenAI:** gpt-4o, gpt-4o-mini, gpt-4-turbo, o3-mini
-- **Anthropic:** claude-sonnet-4-20250514, claude-haiku-4-20250414
+Choose which configured model new agents use by default. The available models come from
+the providers enabled in your deployment.
 
 ---
 

@@ -1,5 +1,29 @@
 import Image from "next/image";
+import { cn } from "@/lib/utils";
 
-export default function Logo({ width=24, height=24 }: { width?: number; height?: number }) {
-  return <Image src="/_logo.png" alt="Logo" width={width} height={height} />;
+type LogoProps = {
+  width?: number;
+  height?: number;
+  size?: number;
+  className?: string;
+  priority?: boolean;
 };
+
+export default function Logo({
+  width = 24,
+  height = 24,
+  size,
+  className,
+  priority = false,
+}: LogoProps) {
+  return (
+    <Image
+      src="/kriy-transparent.png"
+      alt="KRIY"
+      width={size ?? width}
+      height={size ?? height}
+      className={cn("object-contain", className)}
+      priority={priority}
+    />
+  );
+}

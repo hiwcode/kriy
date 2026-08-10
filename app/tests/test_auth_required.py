@@ -29,6 +29,7 @@ PROTECTED = [
     ("GET", "/api/v1/users/1"),
     ("DELETE", "/api/v1/users/1"),
     ("GET", "/api/v1/workflows"),
+    ("GET", "/api/v1/workflows/runs/1"),
     ("GET", "/api/v1/schedules"),
     ("GET", "/api/v1/documents?agent_id=1"),
     ("GET", "/api/v1/documents/1"),

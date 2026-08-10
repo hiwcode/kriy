@@ -3,7 +3,7 @@ import { ArrowLeft, Github } from "lucide-react";
 import { siteConfig } from "@/config/site";
 import { Button } from "@/components/ui/button";
 
-/** Shared shell for static legal pages (Privacy, Terms) — matches the SDK page. */
+/** Shared shell for static legal pages (Privacy and Terms). */
 export function LegalShell({
   eyebrow,
   title,
@@ -21,8 +21,8 @@ export function LegalShell({
       <header className="sticky top-0 z-40 border-b border-border/70 bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-3xl items-center justify-between px-6">
           <Link href="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-primary">
-              <Logo className="size-4 text-primary-foreground" />
+            <div className="flex size-8 items-center justify-center overflow-hidden rounded-lg bg-zinc-950 ring-1 ring-white/10">
+              <Logo size={28} />
             </div>
             <span className="text-lg font-semibold tracking-tight">{siteConfig.name}</span>
           </Link>

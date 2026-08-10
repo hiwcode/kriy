@@ -1,17 +1,15 @@
 """FastAPI todo app — HTML template UI + a small JSON API.
 
 Run:
-    uvicorn app:app --reload --port 8000
+    uvicorn app:app --reload --port 8004
 """
 
 from __future__ import annotations
 
-import os
 from contextlib import asynccontextmanager
 from pathlib import Path
-from urllib.parse import quote
 
-from fastapi import BackgroundTasks, Body, FastAPI, Form, HTTPException, Request
+from fastapi import Body, FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 
@@ -19,85 +17,6 @@ import store
 
 BASE_DIR = Path(__file__).parent
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
-
-
-# ---------------------------------------------------------------------------
-# Event-based KRIY integration (SDK)
-#
-# When a todo is completed we EMIT an event to KRIY — that's all the app does.
-# It doesn't know what (if anything) should happen: each user defines their own
-# "todo.completed" workflow in KRIY (via the UI / chat), and KRIY runs the
-# matching ones in the background. Same event, different behaviour per user.
-#
-# Configure via env (the app runs fine without these — emit just no-ops):
-#   KRIY_API_KEY    a per-user API key (starts with "kriy-") — identifies the user
-#   KRIY_BASE_URL   defaults to http://localhost:8000
-# ---------------------------------------------------------------------------
-
-def _load_dotenv() -> None:
-    """Minimal .env loader (no extra dependency) — only sets keys not already set."""
-    env_path = BASE_DIR / ".env"
-    if not env_path.exists():
-        return
-    for line in env_path.read_text().splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, _, value = line.partition("=")
-        os.environ.setdefault(key.strip(), value.strip())
-
-
-_load_dotenv()
-
-try:
-    from kriy_agentic import KriyClient, KriyDenied
-except ImportError:  # SDK not installed — app still works, events disabled
-    KriyClient = None  # type: ignore[assignment]
-    KriyDenied = Exception  # type: ignore[assignment,misc]
-
-# One client for both patterns:
-#   - emit(...)  → fire-and-forget Triggers (react AFTER)
-#   - guard(...) → synchronous, blocking policy check (decide BEFORE). Needs an
-#     agent id so its deterministic policies (e.g. "deny todo.complete if name
-#     contains 'Standup'") are enforced. Set KRIY_AGENT_ID to enable guards.
-_AGENT_ID = os.getenv("KRIY_AGENT_ID")
-kriy = (
-    KriyClient(agent_id=int(_AGENT_ID) if _AGENT_ID else None, fail_open=True)
-    if KriyClient and os.getenv("KRIY_API_KEY")
-    else None
-)
-
-
-def _guard_complete(name: str) -> str | None:
-    """Deterministic pre-check before completing a todo. Returns a block reason,
-    or None to allow. Fast (no LLM) when the agent's policy is rule-based."""
-    if kriy is None or kriy.agent_id is None:
-        return None
-    try:
-        kriy.guard("todo.complete", {"name": name})
-        return None
-    except KriyDenied as e:  # blocked by a policy
-        return str(e) or "Blocked by policy"
-
-
-def _on_todo_completed() -> None:
-    """Fire-and-forget: tell KRIY a todo was completed; it runs the user's workflows."""
-    if kriy is None:
-        return
-    try:
-        kriy.emit("todo.completed", {"todos": store.list_todos()})
-    except Exception:  # never let an integration hiccup break the app
-        pass
-
-def _on_todo_create(title: str="") -> None:
-    """Fire-and-forget: tell KRIY a todo was added; it runs the user's workflows."""
-    if kriy is None:
-        return
-    try:
-        kriy.emit("todo.create", {"todo": f"New toto added: {title}"})
-    except Exception:  # never let an integration hiccup break the app
-        pass
-
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
@@ -124,33 +43,22 @@ def index(request: Request):
             "todos": todos,
             "remaining": len(active),
             "completed": len(todos) - len(active),
-            "blocked": request.query_params.get("blocked"),
         },
     )
 
 
 @app.post("/add")
-def add(background: BackgroundTasks, title: str = Form(...)):
+def add(title: str = Form(...)):
     try:
         store.add_todo(title)
-        # Schedule the emit (pass the function + arg) — don't call it inline.
-        background.add_task(_on_todo_create, title)
     except ValueError:
         pass
     return RedirectResponse("/", status_code=303)
 
 
 @app.post("/toggle/{todo_id}")
-def toggle(todo_id: int, background: BackgroundTasks):
-    current = store.get_todo(todo_id)
-    # Completing (not un-completing)? Run the deterministic guard first.
-    if current and not current["done"]:
-        blocked = _guard_complete(current["title"])
-        if blocked:
-            return RedirectResponse(f"/?blocked={quote(blocked)}", status_code=303)
-    todo = store.toggle_todo(todo_id)
-    if todo and todo["done"]:
-        background.add_task(_on_todo_completed)
+def toggle(todo_id: int):
+    store.toggle_todo(todo_id)
     return RedirectResponse("/", status_code=303)
 
 
@@ -185,19 +93,10 @@ def api_add(title: str = Body(..., embed=True)):
 
 
 @app.patch("/api/todos/{todo_id}")
-def api_set_done(todo_id: int, background: BackgroundTasks, done: bool = Body(..., embed=True)):
-    if done:
-        current = store.get_todo(todo_id)
-        if current is None:
-            raise HTTPException(status_code=404, detail="todo not found")
-        blocked = _guard_complete(current["title"])
-        if blocked:
-            raise HTTPException(status_code=409, detail=blocked)
+def api_set_done(todo_id: int, done: bool = Body(..., embed=True)):
     todo = store.set_done(todo_id, done)
     if todo is None:
         raise HTTPException(status_code=404, detail="todo not found")
-    if done:
-        background.add_task(_on_todo_completed)
     return todo
 
 

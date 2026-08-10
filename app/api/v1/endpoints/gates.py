@@ -4,8 +4,8 @@ Apps that want a proposed action vetted *before* they commit it call
 ``POST /events/decide`` with ``{type, payload}``. We evaluate the workspace's
 enabled gates (rules) for that event type in priority order; the first rule whose
 conditions match decides the verdict (``allow``/``deny``). If none match, the
-default is ``allow`` (v1). No SDK — any system that can make an HTTP call can use
-it, and the app enforces the verdict.
+default is ``allow`` (v1). Any system that can make an HTTP call can use it, and
+the app enforces the verdict.
 
 ``/gates`` is the builder's CRUD; ``/gates/test`` dry-runs a sample payload and
 returns which rule fired, so a rule set can be verified before it goes live.

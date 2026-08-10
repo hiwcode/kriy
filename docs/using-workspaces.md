@@ -104,7 +104,7 @@ curl -X POST http://localhost:8000/api/v1/agents/ \
   -H "Authorization: Bearer <google_token>" \
   -H "X-Workspace-Id: 42" \
   -H "Content-Type: application/json" \
-  -d '{"name": "my-agent", "label": "My Agent", "model": "gemini-3.1-flash-lite"}'
+  -d '{"name": "my-agent", "label": "My Agent"}'
 ```
 
 The agent's `created_by` is set from your auth token and `workspace_id` is set to `42`.

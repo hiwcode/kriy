@@ -36,8 +36,13 @@ class Settings(BaseSettings):
 
     # Server
     HOST: str = Field(default="0.0.0.0", description="Server host")
-    PORT: int = Field(default=8001, description="Server port")
+    PORT: int = Field(default=8000, description="Server port")
     BACKEND_URL: str = Field(default="http://localhost:8000", description="Backend URL for A2A")
+    ENABLE_API_DOCS: bool = Field(
+        default=True,
+        description="Expose OpenAPI JSON, Swagger UI, and ReDoc. Disable for private deployments if desired.",
+        env="ENABLE_API_DOCS",
+    )
 
     # LLM / Google AI
     GOOGLE_API_KEY: str = Field(

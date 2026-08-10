@@ -3,16 +3,6 @@
 In-app notifications appear live in the **bell** in the top navigation, delivered over a
 WebSocket. They're how agents, workflows, and the platform tell a user something happened.
 
-```mermaid
-flowchart LR
-    Source["Agent / workflow / app"] --> Create["Create notification"]
-    Create --> DB["Persist (history)"]
-    Create --> WS["WebSocket push"]
-    WS --> Bell["🔔 Bell (live)"]
-```
-
----
-
 ## Where they show up
 
 - **Bell** (top nav) — shows the **5 most recent** with an unread badge; updates live.

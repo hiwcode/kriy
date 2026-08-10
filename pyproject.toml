@@ -19,6 +19,7 @@ dependencies = [
     "redis>=7.1.0",
     "boto3>=1.43.45",
     "pdfplumber>=0.11.10",
+    "jsonschema>=4.0",
 ]
 
 # examples/ are standalone uv projects (each has its own pyproject + .venv),

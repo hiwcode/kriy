@@ -28,11 +28,9 @@ function fmt(ts: string | null): string {
   return isNaN(d.getTime()) ? "" : d.toLocaleString();
 }
 
-// Platform lifecycle events KRIY delivers OUTBOUND. App events (application.*,
-// document.*) flow INTO KRIY to fire Triggers/Gates — they are never delivered
-// back out via webhooks, so only these are subscribable. (run.completed fires today;
-// run.failed + gate.decided are wired next.)
-const PLATFORM_EVENTS = ["run.completed", "run.failed", "gate.decided"];
+// Platform lifecycle events KRIY currently delivers OUTBOUND. App events
+// flow INTO KRIY to fire triggers/gates and are not echoed back out.
+const PLATFORM_EVENTS = ["run.completed"];
 
 export default function WebhooksPage() {
   const [hooks, setHooks] = React.useState<Webhook[]>([]);

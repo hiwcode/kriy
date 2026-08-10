@@ -31,6 +31,10 @@ uv sync && uv run uvicorn app.main:app --reload
 cd web && npm install && npm run dev
 ```
 
+Integrating an existing application? Follow **[Integrate KRIY in 15 Minutes](docs/integration-quickstart.md)**,
+then use the **[Integration API Reference](docs/integration-api-reference.md)** for production contracts.
+KRIY integrations use the HTTP API directly; there is no KRIY client SDK to install.
+
 ---
 
 ## ⭐ Support the Project

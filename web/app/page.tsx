@@ -16,10 +16,8 @@ import {
   BookOpen,
   Bot,
   BrainCircuit,
-  FolderKanban,
   Github,
   MemoryStick,
-  MessageSquare,
   Puzzle,
   Star,
   LayoutDashboard,
@@ -29,7 +27,6 @@ import {
   DollarSign,
   Workflow,
   Webhook,
-  Bell,
   Heart,
   ShieldCheck,
   Lock,
@@ -44,85 +41,61 @@ import Logo from "@/components/logo";
 
 const FEATURES = [
   {
-    icon: FolderKanban,
-    title: "Workspaces",
-    description:
-      "Personal and team workspaces with role-based access control, email invites, and atomic resource transfer.",
-  },
-  {
     icon: Bot,
-    title: "Agent Builder",
+    title: "Agents and tools",
     description:
-      "Create local Gemini agents or connect external A2A endpoints. Configure prompts, models, and tools.",
-  },
-  {
-    icon: BrainCircuit,
-    title: "Orchestrator",
-    description:
-      "Visual flow editor for designing multi-agent workflows. Drag, connect, and coordinate sub-agents.",
-  },
-  {
-    icon: Puzzle,
-    title: "Tool Integrations",
-    description:
-      "Connect MCP servers and PostgreSQL databases as agent tools. Test connections before deploying.",
-  },
-  {
-    icon: MemoryStick,
-    title: "Memory System",
-    description:
-      "Persistent session history and automatic facts extraction. Agents remember context across conversations.",
-  },
-  {
-    icon: MessageSquare,
-    title: "Streaming Chat",
-    description:
-      "Real-time SSE streaming with multi-session management. Conversations persist and resume seamlessly.",
+      "Create model-backed agents, connect MCP servers or databases, and keep credentials scoped to each workspace.",
   },
   {
     icon: Workflow,
-    title: "Triggers",
+    title: "Event triggers",
     description:
-      "Connect your app: emit an event and the right agent handles it automatically — a priority queue with retries, no glue code.",
+      "Send an API event and route it to the right agent through a retryable, priority-aware workflow.",
   },
   {
     icon: ShieldCheck,
-    title: "Decision Gates",
+    title: "Decision gates",
     description:
-      "Ask before you act: POST a proposed action and get an allow/deny verdict back inline, from rules you build without shipping code.",
+      "Submit a proposed action and receive an inline allow or deny verdict before your application proceeds.",
+  },
+  {
+    icon: BrainCircuit,
+    title: "Orchestration",
+    description:
+      "Design multi-agent flows visually, coordinate specialized agents, and inspect each execution step.",
+  },
+  {
+    icon: MemoryStick,
+    title: "Persistent memory",
+    description:
+      "Preserve session history and extract durable facts so agents can carry context across conversations.",
   },
   {
     icon: Webhook,
-    title: "Outbound Webhooks",
+    title: "Signed webhooks",
     description:
-      "KRIY posts results back to your app — signed with HMAC, retried, logged, and replayable from the deliveries view.",
-  },
-  {
-    icon: Bell,
-    title: "Notifications",
-    description:
-      "Real-time in-app notifications over WebSocket. Agents and workflows ping you the moment something needs attention.",
+      "Receive results through HMAC-signed callbacks with retries, delivery logs, and manual replay.",
   },
 ];
 
 const STEPS = [
   {
     number: "01",
-    title: "Sign in",
+    title: "Create an agent",
     description:
-      "Authenticate with Google. Your personal workspace is created instantly, complete with a demo agent.",
+      "Choose a model, write its instructions, and connect only the tools it needs.",
   },
   {
     number: "02",
-    title: "Build your agent",
+    title: "Define the workflow",
     description:
-      "Pick a model, write a system prompt, attach MCP or database tools, and save. That's it.",
+      "Route an event to agent work, or add a decision gate before a sensitive action.",
   },
   {
     number: "03",
-    title: "Chat and orchestrate",
+    title: "Call the API",
     description:
-      "Stream conversations in real-time, design multi-agent workflows, and invite your team to collaborate.",
+      "Send requests from your existing application and receive signed results by webhook.",
   },
 ];
 
@@ -196,9 +169,9 @@ const HERO_STATS = [
 ] as const;
 
 const HERO_AGENTS = [
-  { name: "Research Agent", meta: "gemini-3.1-flash-lite", on: true },
-  { name: "Writer Agent", meta: "gemini-2.5-pro", on: true },
-  { name: "Review Agent", meta: "external A2A", on: false },
+  { name: "Research Agent", meta: "Configured model", on: true },
+  { name: "Writer Agent", meta: "Configured model", on: true },
+  { name: "Review Agent", meta: "External A2A", on: false },
 ] as const;
 
 function HeroVisual() {
@@ -240,8 +213,8 @@ function HeroVisual() {
           <aside className="hidden w-52 shrink-0 flex-col border-r border-sidebar-border/60 bg-sidebar p-3 sm:flex">
             {/* Brand */}
             <div className="mb-4 flex items-center gap-3 px-1.5 py-1">
-              <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary shadow-sm shadow-primary/25">
-                <Bot className="size-[18px] text-primary-foreground" />
+              <div className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-zinc-950 ring-1 ring-white/10">
+                <Logo width={32} height={32} />
               </div>
               <div className="flex min-w-0 flex-col">
                 <span className="truncate text-[15px] font-semibold leading-tight tracking-tight text-sidebar-foreground">
@@ -426,8 +399,8 @@ export default function LandingPage() {
           {/* Left: logo + links */}
           <div className="flex items-center gap-8">
             <Link href="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-80">
-              <div className="flex size-8 items-center justify-center rounded-lg bg-primary">
-                <Logo width={24} height={24} />
+              <div className="flex size-8 items-center justify-center overflow-hidden rounded-lg bg-zinc-950 ring-1 ring-white/10">
+                <Logo width={30} height={30} priority />
               </div>
               <span className="text-lg font-semibold tracking-tight">
                 {siteConfig.name}
@@ -486,19 +459,19 @@ export default function LandingPage() {
             backgroundSize: "32px 32px",
           }}
         />
-        {/* Brand glow */}
+        {/* Logo-inspired ambient glow */}
         <div
           className="pointer-events-none absolute left-1/2 top-[-8%] h-[620px] w-[900px] -translate-x-1/2 rounded-full opacity-70 blur-3xl"
           style={{
             background:
-              "radial-gradient(ellipse at center, color-mix(in oklch, var(--primary) 20%, transparent) 0%, transparent 70%)",
+              "radial-gradient(ellipse at center, rgba(255, 132, 25, 0.14) 0%, transparent 70%)",
           }}
         />
         <div
           className="pointer-events-none absolute right-[8%] top-[20%] hidden size-72 rounded-full opacity-50 blur-3xl lg:block"
           style={{
             background:
-              "radial-gradient(circle, color-mix(in oklch, oklch(0.7 0.2 320) 16%, transparent) 0%, transparent 70%)",
+              "radial-gradient(circle, rgba(255, 72, 42, 0.09) 0%, transparent 70%)",
           }}
         />
 
@@ -510,26 +483,25 @@ export default function LandingPage() {
                 <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary/40" />
                 <span className="relative inline-flex size-2 rounded-full bg-primary" />
               </span>
-              Open source · Bring AI agents to your stack
+              API-first · Source-available · Self-hostable
             </div>
 
             {/* Headline */}
             <h1 className="text-4xl font-bold leading-[1.1] tracking-tight sm:text-5xl lg:text-6xl">
-              Add{" "}
+              Turn app events into{" "}
               <span className="relative inline-block">
-                <span className="relative z-10 text-gradient-brand">AI workflows</span>
-                <span className="absolute bottom-1 left-0 right-0 z-0 h-3 rounded-sm bg-gradient-to-r from-primary/20 to-fuchsia-500/20 sm:bottom-1.5 sm:h-4" />
+                <span className="relative z-10 text-gradient-brand">agent work</span>
+                <span className="absolute bottom-1 left-0 right-0 z-0 h-3 rounded-sm bg-gradient-to-r from-primary/20 to-orange-500/15 sm:bottom-1.5 sm:h-4" />
               </span>{" "}
-              to your app
+              with KRIY
               <br className="hidden sm:block" />
-              <span className="text-muted-foreground"> &mdash; without a rewrite</span>
+              <span className="text-muted-foreground"> &mdash; without replacing your stack</span>
             </h1>
 
             {/* Subtitle */}
             <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-muted-foreground sm:text-lg">
-              Build AI agents, give them tools and skills, and let your app&apos;s events
-              trigger the right agent automatically &mdash; so the systems you already run
-              get automated and extended. One open-source platform.
+              Send events from your existing application. KRIY routes them to agents,
+              checks policy before sensitive actions, and posts signed results back.
             </p>
 
             {/* CTAs */}
@@ -548,14 +520,14 @@ export default function LandingPage() {
               <Button variant="outline" size="lg" asChild>
                 <Link href="/docs">
                   <BookOpen className="size-4" />
-                  Documentation
+                  Read the API docs
                 </Link>
               </Button>
             </div>
 
             {/* Trust row */}
             <div className="mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs font-medium text-muted-foreground">
-              {["Source-available · FSL", "Self-hostable", "No credit card"].map((item) => (
+              {["HTTP API", "Signed webhooks", "Free to self-host"].map((item) => (
                 <span key={item} className="inline-flex items-center gap-1.5">
                   <span className="size-1.5 rounded-full bg-primary/70" />
                   {item}
@@ -583,10 +555,10 @@ export default function LandingPage() {
               Features
             </p>
             <h2 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
-              Everything you need to build with AI agents
+              The control plane for agent work
             </h2>
             <p className="mt-4 text-muted-foreground">
-              From agent creation to multi-agent orchestration, KRIY provides the complete toolkit.
+              Build the agents in KRIY. Keep your product, business logic, and data flow where they already live.
             </p>
           </div>
 
@@ -650,7 +622,7 @@ export default function LandingPage() {
               How it works
             </p>
             <h2 className="mt-4 text-3xl font-bold tracking-tight sm:text-4xl">
-              Up and running in minutes
+              From event to result in three steps
             </h2>
           </div>
 
@@ -733,7 +705,7 @@ export default function LandingPage() {
       {/* -- Final CTA ---------------------------------------------- */}
       <section className="py-24 md:py-32">
         <div className="mx-auto max-w-6xl px-6">
-          <div className="relative overflow-hidden rounded-3xl  bg-gradient-to-br from-primary/10 via-card to-fuchsia-500/5 px-8 py-16 text-center md:px-16 md:py-20">
+          <div className="relative overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-primary/10 via-card to-orange-500/5 px-8 py-16 text-center md:px-16 md:py-20">
             {/* Glow */}
             <div
               className="pointer-events-none absolute -top-24 left-1/2 h-72 w-[640px] -translate-x-1/2 rounded-full opacity-70 blur-3xl"
@@ -753,15 +725,15 @@ export default function LandingPage() {
             />
 
             <div className="relative">
-              <div className="mx-auto mb-6 flex size-14 items-center justify-center rounded-2xl bg-primary shadow-lg shadow-primary/30 overflow-clip">
-                <Logo width={48} height={48} />
+              <div className="mx-auto mb-6 flex size-14 items-center justify-center overflow-hidden rounded-2xl bg-zinc-950 shadow-lg shadow-black/20 ring-1 ring-white/10">
+                <Logo width={54} height={54} />
               </div>
               <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
                 Start building with AI agents today
               </h2>
               <p className="mx-auto mt-4 max-w-md text-muted-foreground">
-                Free, open source and self-hostable. Sign in with Google and your
-                workspace is ready in seconds.
+                Source-available and free to self-host. Create your workspace, connect
+                a model, and call KRIY from the stack you already run.
               </p>
               <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
                 {showSignIn && auth?.signInButton}
@@ -815,7 +787,7 @@ export default function LandingPage() {
       <footer className="border-t border-border">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-6 py-8 sm:flex-row">
           <div className="flex items-center gap-2.5 text-sm text-muted-foreground">
-            <div className="flex size-6 items-center justify-center rounded-md bg-primary">
+            <div className="flex size-6 items-center justify-center overflow-hidden rounded-md bg-zinc-950 ring-1 ring-white/10">
               <Logo width={24} height={24} />
             </div>
             <span className="font-medium text-foreground">{siteConfig.name}</span>

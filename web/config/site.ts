@@ -17,9 +17,9 @@ import {
   ShieldCheck,
   Workflow,
   Webhook,
-  Radio,
-  Ghost
+  Radio
 } from "lucide-react";
+import Logo from "@/components/logo";
 
 // Types
 export interface NavItem {
@@ -47,7 +47,7 @@ export const siteConfig = {
   name: "KRIY",
   description: "AI Workspace",
   version: "0.1.0",
-  logo: Ghost,
+  logo: Logo,
   github: "https://github.com/hiwcode/kriy",
 };
 

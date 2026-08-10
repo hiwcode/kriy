@@ -1,7 +1,7 @@
 """Event dispatcher: route an emitted app event to each matching user workflow.
 
 An app emits an event (``todo.completed``) with a payload. For the emitting user we
-find every enabled workflow whose ``event_type`` glob matches, create a ``workflow_run``
+find every enabled workflow whose ``event_types`` patterns match, create a ``workflow_run``
 row for each, and run the workflow's agent in the background with the event context +
 the workflow's instructions. Two users subscribed to the same event run their own
 agents doing their own thing — multi-tenant by construction.

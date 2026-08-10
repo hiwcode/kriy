@@ -1,13 +1,13 @@
 """Outbound webhook delivery — sign, POST, retry (bounded), and log.
 
-Phase 1 delivers `run.completed` from the event worker. Delivery is at-least-once;
+The event worker delivers `run.completed`. Delivery is at-least-once;
 consumers must dedupe on the event ``id``. Signature scheme (Stripe-style):
 
     X-KRIY-Signature: t=<unix>,v1=<hex>
     v1 = HMAC_SHA256(subscription.secret, "<t>.<raw_body>")
 
-Note: MVP does a couple of bounded inline retries. Durable long-backoff redelivery
-is Phase 2 (a delivery queue); failed deliveries can be replayed manually meanwhile.
+Delivery uses bounded immediate retries. Failed deliveries remain available for manual
+replay.
 """
 
 from __future__ import annotations
@@ -31,7 +31,7 @@ from app.repositories import webhook_repo
 logger = logging.getLogger(__name__)
 
 _TIMEOUT = 10.0
-_MAX_ATTEMPTS = 2  # bounded inline retries; Phase 2 adds durable backoff
+_MAX_ATTEMPTS = 2
 
 
 def new_secret() -> str:

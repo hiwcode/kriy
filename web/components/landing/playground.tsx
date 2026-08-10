@@ -55,19 +55,19 @@ const EMIT_SCENARIOS: EmitScenario[] = [
     outcome: "Customer notified · CRM updated",
   },
   {
-    id: "todo",
-    label: "Todos done",
+    id: "invoice",
+    label: "Invoice paid",
     icon: Check,
-    event: "todo.completed",
-    payload: { boardId: 7, remaining: 0 },
-    workflow: "Auto-cleanup",
-    agent: "Cleanup Agent",
+    event: "invoice.paid",
+    payload: { invoiceId: "inv_203", amount: 900, currency: "USD" },
+    workflow: "Revenue operations",
+    agent: "Billing Agent",
     steps: [
-      { icon: Check, label: "Confirm every todo is complete" },
-      { icon: RefreshCw, label: "Archive the finished list" },
-      { icon: Sparkles, label: "Seed tomorrow's list" },
+      { icon: Check, label: "Verify the payment record" },
+      { icon: Database, label: "Mark the invoice as paid" },
+      { icon: Bell, label: "Notify the account team" },
     ],
-    outcome: "Board reset for tomorrow",
+    outcome: "Invoice reconciled · team notified",
   },
   {
     id: "signup",
@@ -136,8 +136,8 @@ export function Playground() {
             See it react — live
           </h2>
           <p className="mt-4 text-muted-foreground">
-            Emit fires an event and the agent reacts after: watch it get queued, routed to a
-            workflow, and handled — no glue code. Runs entirely in your browser — no signup.
+            Submit an event and watch it get queued, routed to a workflow, and handled by an
+            agent. This interactive preview runs entirely in your browser.
           </p>
         </div>
 
@@ -211,8 +211,8 @@ export function Playground() {
                 </Button>
               </div>
 
-              <code className="block truncate rounded-md bg-muted px-2 py-1 font-mono text-[11px] text-muted-foreground">
-                kriy.emit(&quot;{emitScenario.event}&quot;, payload)
+              <code className="block rounded-md bg-muted px-2 py-1.5 font-mono text-[11px] text-muted-foreground">
+                POST /api/v1/events · {`{"type":"${emitScenario.event}","payload":{…}}`}
               </code>
             </div>
 
@@ -226,8 +226,8 @@ export function Playground() {
                     ? <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-500" />
                     : <Zap className="mt-0.5 size-4 shrink-0 text-primary" />}
                   <div>
-                    <p className="text-[11px] font-medium">emit() returned · 202 queued</p>
-                    <p className="text-[9px] text-muted-foreground">your code moves on immediately — fire &amp; forget</p>
+                    <p className="text-[11px] font-medium">POST returned · 202 queued</p>
+                    <p className="text-[9px] text-muted-foreground">the event is accepted; agent work continues asynchronously</p>
                   </div>
                 </div>
 

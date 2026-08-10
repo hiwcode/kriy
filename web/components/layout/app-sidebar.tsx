@@ -38,8 +38,8 @@ export function AppSidebar() {
           )}
         >
           {/* Logo mark */}
-          {!isCollapsed && <div className="relative flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary shadow-sm shadow-primary/25">
-            <Logo width={28} height={28} />
+          {!isCollapsed && <div className="relative flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-zinc-950 shadow-sm shadow-black/20">
+            <Logo width={32} height={32} />
             <span className="absolute -inset-px rounded-xl ring-1 ring-inset ring-white/10" />
           </div>}
 

@@ -1,6 +1,6 @@
 # KRIY
 
-An open-source workspace for building, managing, and orchestrating AI agents. KRIY gives teams a unified platform to create agents powered by **Google Gemini**, **OpenAI GPT**, and **Anthropic Claude** — with collaborative workspaces, scheduling, memory, and extensible tooling.
+A source-available workspace for building, managing, and orchestrating AI agents. KRIY gives teams a unified platform to create agents powered by **Google Gemini**, **OpenAI GPT**, and **Anthropic Claude** — with collaborative workspaces, scheduling, memory, and extensible tooling.
 
 Build agents and give them the tools to *do* work — MCP tools, skills, orchestration, and schedules — then let your app's events trigger the right agent automatically, check a decision gate before it acts, and get the result posted back over a signed webhook.
 
@@ -10,7 +10,7 @@ Build agents and give them the tools to *do* work — MCP tools, skills, orchest
 
 | Capability | What it does |
 |------------|-------------|
-| **Multi-LLM Agents** | Create agents with Gemini, GPT-4o, Claude, and more — switch models per agent |
+| **Multi-LLM Agents** | Create agents with Gemini, GPT, and Claude models; select a model per agent |
 | **Skills** | Bundle reusable instructions and tools into shareable skill packs |
 | **Orchestrator** | Design multi-agent workflows with a visual canvas |
 | **Tools & MCP** | Built-in tools, file system access, Claude Code, shell, MCP servers, databases |
@@ -30,6 +30,8 @@ Build agents and give them the tools to *do* work — MCP tools, skills, orchest
 | Guide | Description |
 |-------|-------------|
 | [Setup Guide](getting-started.md) | Prerequisites, installation, environment variables, and first run |
+| [Integrate KRIY in 15 Minutes](integration-quickstart.md) | End-to-end external app integration with events, workflows, gates, results, and webhooks |
+| [Integration API Reference](integration-api-reference.md) | Authentication, workspace scoping, contracts, errors, retries, webhooks, and security |
 
 ### Core Features
 

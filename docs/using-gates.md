@@ -10,23 +10,6 @@ your codebase.
 > → may I?"). Triggers run agents; gates run rules, and never call a model at decision
 > time.
 
-```mermaid
-flowchart LR
-    App["Your app\n(about to refund $900)"] -- "POST /events/decide" --> Decide["Evaluate gates\nfor this event type"]
-    Decide --> Order["Priority order\nfirst match wins"]
-    Order --> Verdict["allow / deny\n+ reason"]
-    Verdict --> App2["Your app enforces\nthe verdict"]
-    Verdict --> Audit["Decision activity\n(audit log)"]
-```
-
-There are three pieces:
-
-| Piece | What it is |
-| --- | --- |
-| **Gate (rule)** | "When event *X* matches these conditions, `deny` with this reason." |
-| **Decide** | Your app calls `POST /api/v1/events/decide` and honors the answer. |
-| **Decision activity** | Every verdict is recorded, with the rule that fired and the payload. |
-
 Gates are **workspace-scoped**, like triggers and schedules.
 
 ---
@@ -107,33 +90,43 @@ Two dry runs, neither with side effects:
 
 ## 4. Call it from your app
 
-Call `decide` **before** you commit the action, and enforce the answer. There is no SDK —
-any system that can make an HTTP call can use it.
+Call `decide` **before** you commit the action, and enforce the answer. Any system that can
+make an HTTP call can use it; no KRIY-specific library is required.
 
-**Python**
+**Synchronous Python**
+
+Requires `requests` (`pip install requests`).
 
 ```python
 import requests
 
-verdict = requests.post(
+response = requests.post(
     "http://localhost:8000/api/v1/events/decide",
     headers={"X-API-Key": "kriy-..."},
     json={"type": "refund.requested", "payload": {"amount": 900, "user": {"role": "agent"}}},
-).json()
+    timeout=10,
+)
+response.raise_for_status()
+verdict = response.json()
 
 if verdict["decision"] == "deny" and not verdict["overridable"]:
     raise PermissionError(verdict["reason"])
 ```
 
-**Node**
+**Asynchronous TypeScript**
 
 ```ts
 const res = await fetch("http://localhost:8000/api/v1/events/decide", {
   method: "POST",
   headers: { "X-API-Key": "kriy-...", "Content-Type": "application/json" },
   body: JSON.stringify({ type: "refund.requested", payload: { amount: 900 } }),
+  signal: AbortSignal.timeout(10_000),
 });
+if (!res.ok) throw new Error(`KRIY ${res.status}: ${await res.text()}`);
 const verdict = await res.json();
+if (verdict.decision === "deny" && !verdict.overridable) {
+  throw new Error(verdict.reason || "Action denied by KRIY");
+}
 ```
 
 **curl**
@@ -176,14 +169,7 @@ Every `decide` call is written to an audit log — event type, verdict, the rule
 the reason, and the payload. Open **Decision activity** on the Gates page, or
 `GET /api/v1/gates/decisions`.
 
-## Agents can manage gates too
-
-Give an agent the built-in **`gate`** tools (Agent → Tools) and it can create, list,
-update, and delete gates from chat, scoped to its workspace. Assign them deliberately —
-an agent with these tools can also **weaken or delete existing guardrails**.
-
 ## Related
 
 - [Triggers](using-event-workflows.md) — the asynchronous sibling: emit an event, an agent handles it
 - [Webhooks](using-webhooks.md) — how async results get back to your app
-- [Tools & Prompts](using-tools.md) — the built-in `gate` tools

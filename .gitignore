@@ -16,7 +16,6 @@ temp/
 # examples/
 
 .claude
-/sdk/
 /chat/
 .vercel
 

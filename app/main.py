@@ -104,10 +104,9 @@ app = FastAPI(
     title="KRIY API",
     version="0.1.0",
     lifespan=lifespan,
-    docs_url=None,
-    redoc_url=None,
-    # Don't expose the full API schema unauthenticated in production.
-    openapi_url=None if settings.is_production else "/openapi.json",
+    docs_url="/api/docs" if settings.ENABLE_API_DOCS else None,
+    redoc_url="/api/redoc" if settings.ENABLE_API_DOCS else None,
+    openapi_url="/api/openapi.json" if settings.ENABLE_API_DOCS else None,
 )
 # Never combine a wildcard origin with credentials — the browser would let any
 # site send credentialed requests and read the response. If origins are

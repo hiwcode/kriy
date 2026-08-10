@@ -7,16 +7,6 @@ KRIY has two complementary layers of memory:
 
 Both are scoped to the active workspace.
 
-```mermaid
-flowchart LR
-    Chat["Chat with Agent"] --> Session["Session context\n(this conversation)"]
-    Chat --> Extract["Fact Extraction\n(LLM-powered)"]
-    Extract --> Facts["Facts Memory\n(preferences, roles, goals)"]
-    Facts --> Agent["Agent uses facts\nin future conversations"]
-```
-
----
-
 ## Session context
 
 Every chat with an agent creates a **session** that stores the full conversation, and the agent keeps context *within* that session.

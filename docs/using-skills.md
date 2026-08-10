@@ -4,25 +4,6 @@
 
 Skills are reusable capability definitions that can be attached to agents. A skill bundles **instructions** and optional **tool references** into a shareable unit, stored per workspace. When an agent runs with skills attached, the skill instructions and tools are injected into the agent at runtime.
 
-```mermaid
-flowchart LR
-    subgraph Workspace["Active Workspace"]
-        subgraph Skills["Skills"]
-            S1["code_review\n(instructions + tools)"]
-            S2["data_analysis\n(instructions + tools)"]
-        end
-        subgraph Agents["Agents"]
-            A1["Agent A"]
-            A2["Agent B"]
-        end
-        S1 --> A1
-        S1 --> A2
-        S2 --> A2
-    end
-```
-
----
-
 ## What is a Skill?
 
 | Field | Purpose |
@@ -71,24 +52,6 @@ On the skill detail page you can configure:
 4. Click **Save Changes**
 
 When the agent runs, all attached skill instructions are appended to the agent's instruction text under a "Skills" section, and skill tools are merged into the agent's tool list.
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Agent
-    participant Runtime
-
-    User->>Agent: Send message
-    Agent->>Runtime: Build agent
-    Runtime->>Runtime: Load agent config
-    Runtime->>Runtime: Fetch attached skills
-    Runtime->>Runtime: Append skill instructions
-    Runtime->>Runtime: Merge skill tools
-    Runtime->>Agent: Agent ready with skills
-    Agent->>User: Response
-```
-
----
 
 ## Workspace Scoping
 

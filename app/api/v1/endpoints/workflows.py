@@ -5,7 +5,7 @@
 - ``/workflows/{id}/runs`` — execution history
 - ``/events``           — apps emit events here; we route to matching workflows and run them
 
-These share the SDK/API auth (per-user API key or Google sign-in) — both resolve to a
+These share API authentication (per-user API key or Google sign-in) — both resolve to a
 user, which scopes everything below to that tenant.
 """
 
@@ -326,6 +326,25 @@ async def list_queue(
         "success": True,
         "message": "Queue fetched",
         "data": {"runs": runs, "counts": counts},
+        "pagination": None,
+    }
+
+
+@router.get("/runs/{run_id}", response_model=ApiResponse)
+async def get_run(
+    run_id: int,
+    pool: asyncpg.Pool = Depends(get_db),
+    auth: AuthContext = Depends(require_google_auth),
+    workspace: dict | None = Depends(get_current_workspace),
+) -> dict:
+    """Fetch one run by the identifier returned from ``POST /events``."""
+    run = await workflow_repo.get_run(pool, run_id)
+    if not run or run.get("workspace_id") != _ws_id(workspace):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Workflow run not found")
+    return {
+        "success": True,
+        "message": "Workflow run fetched",
+        "data": run,
         "pagination": None,
     }
 

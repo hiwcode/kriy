@@ -162,10 +162,11 @@ function WorkflowMock() {
             Your app
           </p>
           <div className="rounded-lg bg-zinc-950 p-2.5 font-mono text-[10px] leading-relaxed text-zinc-100">
-            <span className="text-zinc-500">{"// on order shipped"}</span>
+            <span className="text-emerald-400">POST</span> /api/v1/events
             <br />
-            kriy.<span className="text-emerald-400">emit</span>(
-            <span className="text-amber-300">&quot;order.shipped&quot;</span>, {"{ id }"})
+            {"{ "}<span className="text-sky-300">&quot;type&quot;</span>: {" "}
+            <span className="text-amber-300">&quot;order.shipped&quot;</span>, {" "}
+            <span className="text-sky-300">&quot;payload&quot;</span>: {"{ order_id } }"}
           </div>
         </div>
 
@@ -209,7 +210,7 @@ function WorkflowMock() {
           </div>
           <div className="min-w-0">
             <p className="text-[11px] font-semibold">Fulfilment Agent</p>
-            <p className="text-[9px] text-muted-foreground">notifies the customer &amp; updates the CRM — no glue code</p>
+            <p className="text-[9px] text-muted-foreground">notifies the customer, updates the CRM, and reports the result</p>
           </div>
           <CheckCircle2 className="ml-auto size-4 shrink-0 text-emerald-500" />
         </div>

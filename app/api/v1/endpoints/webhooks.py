@@ -24,7 +24,7 @@ class WebhookIn(BaseModel):
     url: str = Field(..., min_length=1)
     event_types: list[str] = Field(
         default_factory=lambda: ["run.completed"],
-        description="Event type globs to subscribe to, e.g. ['run.completed', 'gate.*']",
+        description="Platform event globs to subscribe to. Currently emitted: ['run.completed']",
         min_length=1,
     )
 

@@ -15,7 +15,7 @@ export function useBackendReady() {
 
 /**
  * Polls backend health and exposes it via context. It does NOT block rendering —
- * public pages (landing, docs, SDK) must work even when the backend is down.
+ * public pages (landing and docs) must work even when the backend is down.
  * Use {@link BackendGate} to gate the authenticated app.
  */
 export function BackendHealthProvider({
@@ -71,8 +71,8 @@ export function BackendGate({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background px-4">
       <div className="flex max-w-md flex-col items-center gap-6 text-center">
-        <div className="flex size-16 items-center justify-center rounded-2xl bg-primary/10">
-          <Logo className="size-8 text-primary" />
+        <div className="flex size-16 items-center justify-center overflow-hidden rounded-2xl bg-zinc-950 ring-1 ring-white/10">
+          <Logo size={54} />
         </div>
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold tracking-tight">Please wait</h1>

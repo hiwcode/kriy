@@ -17,8 +17,8 @@
   --color-info-foreground: var(--info-foreground);
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: "Avenir Next", Avenir, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   --font-serif: var(--font-serif);
 
   --shadow-2xs: 0 1px 2px 0 oklch(0.2 0.04 277 / 0.04);

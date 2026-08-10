@@ -117,6 +117,33 @@ async def find_matching(
 # --------------------------------------------------------------------------- #
 
 
+async def get_run(pool: asyncpg.Pool, run_id: int) -> dict | None:
+    """Return one run with workflow metadata for workspace-scoped polling."""
+    row = await pool.fetchrow(
+        """
+        SELECT wr.id, wr.workflow_id, wr.agent_id, wr.user_id, wr.event_type,
+               wr.event_payload, wr.status, wr.response, wr.error,
+               wr.attempts, wr.max_attempts, wr.priority,
+               wr.created_at, wr.finished_at,
+               w.name AS workflow_name, w.workspace_id
+          FROM workflow_runs wr
+          JOIN workflows w ON w.id = wr.workflow_id
+         WHERE wr.id = $1;
+        """,
+        run_id,
+    )
+    if row is None:
+        return None
+    result = dict(row)
+    payload = result.get("event_payload")
+    if isinstance(payload, str):
+        try:
+            result["event_payload"] = json.loads(payload)
+        except (ValueError, TypeError):
+            pass
+    return result
+
+
 async def create_run(
     pool: asyncpg.Pool,
     *,

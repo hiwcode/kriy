@@ -5,15 +5,6 @@ Webhooks are the **outbound** half of KRIY's integration surface. Your app emits
 when a triggered agent finishes, its **result reaches your app** instead of sitting in
 KRIY.
 
-```mermaid
-flowchart LR
-    App["Your app"] -- "emit('doc.uploaded')" --> KRIY["KRIY"]
-    KRIY --> Run["Agent run\n(queued, retried)"]
-    Run -- "run.completed" --> Hook["POST your endpoint\nHMAC-signed"]
-    Hook --> App2["Your app\n(dedupe on event id)"]
-    Hook --> Log["Delivery log\n+ manual replay"]
-```
-
 | Direction | Synchronous | Asynchronous |
 | --- | --- | --- |
 | Inbound (your app → KRIY) | [`POST /events/decide`](using-gates.md) — a gate verdict | `POST /events` — an event that triggers agents |
@@ -31,8 +22,8 @@ Open **Webhooks** in the sidebar (under Automation) → **New webhook**:
 - **Endpoint URL** — where KRIY POSTs the signed event. Must be a public `https` URL in
   production; internal and cloud-metadata hosts are blocked (SSRF guard), and `localhost`
   is allowed only in development.
-- **Events** — which event types to receive. Globs work: `run.completed`, `gate.*`,
-  `run.*`. At least one is required.
+- **Events** — which platform event types to receive. `run.completed` is currently emitted.
+  At least one event is required.
 - **Enabled** — toggle delivery on/off without deleting the subscription.
 
 The **signing secret is shown once**, on create and on rotate. Store it immediately —
@@ -43,11 +34,9 @@ Subscriptions are **workspace-scoped**.
 
 ## 2. Event catalog
 
-| Event | Status | Payload `data` |
-| --- | --- | --- |
-| `run.completed` | **Live** | `run_id`, `workflow_id`, `workflow_name`, `event_type`, `status`, `result`, `event_payload` |
-| `run.failed` | Subscribable, not yet emitted | — |
-| `gate.decided` | Subscribable, not yet emitted | — |
+| Event | Payload `data` |
+| --- | --- |
+| `run.completed` | `run_id`, `workflow_id`, `workflow_name`, `event_type`, `status`, `result`, `event_payload` |
 
 `run.completed` fires from the event worker after a triggered workflow run finishes, and
 carries the agent's output as `result`.
@@ -91,26 +80,40 @@ Headers on every POST:
 bytes — not a re-serialized parse — and reject timestamps older than ~5 minutes to block
 replays.
 
+The persistence functions below are application-specific placeholders. Implement them as
+an atomic insert keyed by the envelope `id`; return success for duplicate deliveries.
+
 **Python (FastAPI)**
 
 ```python
-import hashlib, hmac, time
+import hashlib, hmac, json, time
 
-def verify(secret: str, body: str, header: str, tolerance: int = 300) -> bool:
-    parts = dict(p.split("=", 1) for p in header.split(","))
-    ts = int(parts["t"])
+def verify(secret: str, body: bytes, header: str | None, tolerance: int = 300) -> bool:
+    if not header:
+        return False
+    try:
+        parts = dict(p.split("=", 1) for p in header.split(","))
+        ts = int(parts["t"])
+    except (KeyError, ValueError):
+        return False
     if abs(time.time() - ts) > tolerance:
         return False
-    expected = hmac.new(secret.encode(), f"{ts}.{body}".encode(), hashlib.sha256).hexdigest()
+    signed = str(ts).encode() + b"." + body
+    expected = hmac.new(secret.encode(), signed, hashlib.sha256).hexdigest()
     return hmac.compare_digest(expected, parts.get("v1", ""))
 
 
 @app.post("/kriy/webhook")
 async def receive(request: Request):
-    raw = (await request.body()).decode()
-    if not verify(WHSEC, raw, request.headers["X-KRIY-Signature"]):
-        raise HTTPException(401, "bad signature")
-    ...
+    raw = await request.body()
+    if not verify(WHSEC, raw, request.headers.get("X-KRIY-Signature")):
+        raise HTTPException(status_code=401, detail="bad signature")
+    try:
+        event = json.loads(raw)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="invalid JSON")
+    await persist_if_new(event["id"], event)  # dedupe and persist before acknowledging
+    return {"received": True}
 ```
 
 **Node (Express)**
@@ -118,23 +121,41 @@ async def receive(request: Request):
 ```ts
 import crypto from "node:crypto";
 
-// mount with express.raw({ type: "application/json" }) so `req.body` stays a Buffer
-app.post("/kriy/webhook", express.raw({ type: "application/json" }), (req, res) => {
-  const parts = Object.fromEntries(
-    req.header("X-KRIY-Signature")!.split(",").map((p) => p.split("=", 2))
-  );
-  const body = req.body.toString();
-  const expected = crypto
-    .createHmac("sha256", process.env.WHSEC!)
-    .update(`${parts.t}.${body}`)
-    .digest("hex");
+function validSignature(secret: string, body: Buffer, header?: string): boolean {
+  if (!header) return false;
+  try {
+    const parts = Object.fromEntries(
+      header.split(",").map((part) => part.split("=", 2)),
+    );
+    const timestamp = Number(parts.t);
+    if (!Number.isFinite(timestamp) || Math.abs(Date.now() / 1000 - timestamp) > 300) {
+      return false;
+    }
+    const signed = Buffer.concat([Buffer.from(`${parts.t}.`), body]);
+    const wanted = Buffer.from(
+      crypto.createHmac("sha256", secret).update(signed).digest("hex"),
+    );
+    const actual = Buffer.from(parts.v1 ?? "");
+    return actual.length === wanted.length && crypto.timingSafeEqual(wanted, actual);
+  } catch {
+    return false;
+  }
+}
 
-  const ok =
-    Math.abs(Date.now() / 1000 - Number(parts.t)) <= 300 &&
-    crypto.timingSafeEqual(Buffer.from(expected), Buffer.from(parts.v1));
-  if (!ok) return res.sendStatus(401);
+// Keep req.body as a Buffer; signature verification must use the original bytes.
+app.post("/kriy/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+  if (!validSignature(process.env.WHSEC!, req.body, req.header("X-KRIY-Signature"))) {
+    return res.sendStatus(401);
+  }
 
-  res.sendStatus(200); // ack fast, then process
+  let event;
+  try {
+    event = JSON.parse(req.body.toString("utf8"));
+  } catch {
+    return res.status(400).json({ error: "invalid JSON" });
+  }
+  await persistIfNew(event.id, event); // dedupe and persist before acknowledging
+  res.sendStatus(200);                 // process persisted work asynchronously
 });
 ```
 
@@ -143,9 +164,9 @@ app.post("/kriy/webhook", express.raw({ type: "application/json" }), (req, res) 
 - **At-least-once.** Your handler **must dedupe on the envelope `id`** — treat it as an
   idempotency key.
 - Delivery runs **off the request path**, so a slow endpoint never blocks an agent run.
-- A non-2xx response or a network error is retried inline (bounded, short). Durable
-  long-backoff redelivery is planned; until then, failed deliveries are **replayed
-  manually**.
+- A non-2xx response or network error receives bounded immediate retries. Failed
+  deliveries remain in the log and can be replayed manually; delayed automatic
+  redelivery is not available.
 - **Every attempt is logged** — status, HTTP code, attempt count, and the error. Open
   **Deliveries** on a subscription to see them, and **Replay** to re-send one.
 - Return `2xx` as soon as you've persisted the event; do the work afterwards. The delivery
@@ -181,4 +202,3 @@ Polling stays the zero-config fallback — read a run's status and result from
 
 - [Triggers](using-event-workflows.md) — the inbound half: emit an event, an agent handles it
 - [Gates](using-gates.md) — synchronous allow/deny before your app acts
-- [Outbound webhooks — design note](outbound-webhooks-design.md) — the architecture and roadmap
