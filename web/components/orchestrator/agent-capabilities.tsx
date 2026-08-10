@@ -17,6 +17,27 @@ export type AgentCapability = {
   kind: "builtin" | "mcp" | "database" | "skill";
 };
 
+type AgentTool = AgentItem["tools"][number];
+
+function normalizeTools(value: unknown): AgentTool[] {
+  if (Array.isArray(value)) {
+    return value.filter(
+      (tool): tool is AgentTool => tool !== null && typeof tool === "object"
+    );
+  }
+
+  if (typeof value === "string") {
+    try {
+      const parsed: unknown = JSON.parse(value);
+      return normalizeTools(parsed);
+    } catch {
+      return [];
+    }
+  }
+
+  return [];
+}
+
 function humanize(value: string): string {
   return value
     .replace(/[_-]+/g, " ")
@@ -26,7 +47,7 @@ function humanize(value: string): string {
 export function getAgentCapabilities(agent?: AgentItem): AgentCapability[] {
   if (!agent) return [];
 
-  const capabilities = (agent.tools ?? []).flatMap<AgentCapability>((tool, index) => {
+  const capabilities = normalizeTools(agent.tools).flatMap<AgentCapability>((tool, index) => {
     if (tool.type === "builtin" && tool.name) {
       return [
         {
@@ -67,7 +88,7 @@ export function getAgentCapabilities(agent?: AgentItem): AgentCapability[] {
     return [];
   });
 
-  const skillCount = (agent.skill_ids ?? []).length;
+  const skillCount = Array.isArray(agent.skill_ids) ? agent.skill_ids.length : 0;
   if (skillCount > 0) {
     capabilities.push({
       key: "skills",
@@ -104,6 +125,33 @@ export function AgentCapabilityStrip({
 
   const visible = capabilities.slice(0, limit);
   const remaining = capabilities.length - visible.length;
+
+  if (compact) {
+    const primary = capabilities[0];
+    const extra = capabilities.length - 1;
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            className={cn("flex min-w-0", className)}
+            aria-label={`${capabilities.length} configured capabilities`}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <Badge variant="secondary" className="max-w-40">
+              <CapabilityIcon kind={primary.kind} />
+              <span className="truncate">{primary.label}</span>
+              {extra > 0 && <span>+{extra}</span>}
+            </Badge>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-72">
+          <p className="mb-1 font-medium">Agent capabilities</p>
+          <p>{capabilities.map((capability) => capability.label).join(" · ")}</p>
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
 
   return (
     <Tooltip>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AppLayout } from "@/components/layout/app-layout";
 import { PageLayout } from "@/components/ui/page-layout";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { ChatBox, Message, type ChatCard } from "@/components/ui/chat-box";
 import { upsertCards } from "@/components/chat/chat-cards";
 import {
@@ -18,7 +19,7 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet";
 import { ResizableDrawer } from "@/components/ui/resizable-drawer";
-import { Bot, Plus, ArrowRight, Sparkles, X, MousePointerClick } from "lucide-react";
+import { Bot, BrainCircuit, Plus, ArrowRight, Sparkles, X, MessageSquare, Settings2 } from "lucide-react";
 import {
   listAgents,
   getAgent,
@@ -29,7 +30,12 @@ import {
 } from "@/lib/api/agents";
 import { OrchestratorFlow } from "@/components/orchestrator/orchestrator-flow";
 import { OrchestratorSidebar } from "@/components/orchestrator/orchestrator-sidebar";
+import { OrchestratorInspector } from "@/components/orchestrator/orchestrator-inspector";
+import type { OrchestratorSelection } from "@/components/orchestrator/types";
 import { AgentCapabilityStrip } from "@/components/orchestrator/agent-capabilities";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { ensureExtraFields } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -44,6 +50,9 @@ export default function OrchestratorPage() {
   const [sessionId, setSessionId] = React.useState<string | null>(null);
   const [chatAgent, setChatAgent] = React.useState<AgentItem | null>(null);
   const [chatOpen, setChatOpen] = React.useState(false);
+  const [inspected, setInspected] = React.useState<OrchestratorSelection>(null);
+  const [mobilePanel, setMobilePanel] = React.useState("canvas");
+  const isMobile = useIsMobile();
 
   const openChat = React.useCallback((agent: AgentItem) => {
     setChatAgent((prev) => {
@@ -73,12 +82,31 @@ export default function OrchestratorPage() {
   React.useEffect(() => {
     if (selectedId) {
       getAgent(selectedId)
-        .then(setSelected)
-        .catch(() => setSelected(null));
+        .then((agent) => {
+          setSelected(agent);
+          setInspected({ kind: "agent", agent });
+        })
+        .catch(() => {
+          setSelected(null);
+          setInspected(null);
+        });
     } else {
       setSelected(null);
+      setInspected(null);
     }
   }, [selectedId]);
+
+  const applyUpdatedOrchestrator = React.useCallback((updated: AgentItem) => {
+    setSelected(updated);
+    setOrchestrators((prev) =>
+      prev.map((orchestrator) => (orchestrator.id === updated.id ? updated : orchestrator))
+    );
+    setInspected((current) =>
+      current?.kind === "agent" && current.agent.id === updated.id
+        ? { kind: "agent", agent: updated }
+        : current
+    );
+  }, []);
 
   const handleSendMessage = async (content: string) => {
     const userMessage: Message = {
@@ -262,15 +290,12 @@ export default function OrchestratorPage() {
       const next = Array.from(new Set([...(selected.sub_agent_ids ?? []), agentId]));
       updateAgent(selected.id, { sub_agent_ids: next }, { notify: false })
         .then((updated) => {
-          setSelected(updated);
-          setOrchestrators((prev) =>
-            prev.map((o) => (o.id === updated.id ? updated : o))
-          );
+          applyUpdatedOrchestrator(updated);
           toast.success("Agent connected");
         })
         .catch((error) => toast.error(error instanceof Error ? error.message : "Could not connect agent"));
     },
-    [selected]
+    [applyUpdatedOrchestrator, selected]
   );
 
   const handleDisconnect = React.useCallback(
@@ -279,15 +304,13 @@ export default function OrchestratorPage() {
       const next = (selected.sub_agent_ids ?? []).filter((id) => id !== agentId);
       updateAgent(selected.id, { sub_agent_ids: next }, { notify: false })
         .then((updated) => {
-          setSelected(updated);
-          setOrchestrators((prev) =>
-            prev.map((o) => (o.id === updated.id ? updated : o))
-          );
+          applyUpdatedOrchestrator(updated);
+          setInspected({ kind: "agent", agent: updated });
           toast.success("Agent disconnected");
         })
         .catch((error) => toast.error(error instanceof Error ? error.message : "Could not disconnect agent"));
     },
-    [selected]
+    [applyUpdatedOrchestrator, selected]
   );
 
   const handleDisconnectA2a = React.useCallback(
@@ -301,15 +324,13 @@ export default function OrchestratorPage() {
         extra_fields: { ...extra, a2a_connections: list },
       }, { notify: false })
         .then((updated) => {
-          setSelected(updated);
-          setOrchestrators((prev) =>
-            prev.map((o) => (o.id === updated.id ? updated : o))
-          );
+          applyUpdatedOrchestrator(updated);
+          setInspected({ kind: "agent", agent: updated });
           toast.success("External agent disconnected");
         })
         .catch((error) => toast.error(error instanceof Error ? error.message : "Could not disconnect external agent"));
     },
-    [selected]
+    [applyUpdatedOrchestrator, selected]
   );
 
   const handleConnectA2a = React.useCallback(
@@ -323,15 +344,12 @@ export default function OrchestratorPage() {
         extra_fields: { ...extra, a2a_connections: list },
       }, { notify: false })
         .then((updated) => {
-          setSelected(updated);
-          setOrchestrators((prev) =>
-            prev.map((o) => (o.id === updated.id ? updated : o))
-          );
+          applyUpdatedOrchestrator(updated);
           toast.success("External agent connected");
         })
         .catch((error) => toast.error(error instanceof Error ? error.message : "Could not connect external agent"));
     },
-    [selected]
+    [applyUpdatedOrchestrator, selected]
   );
 
   const handleSaveLayout = React.useCallback(
@@ -344,76 +362,144 @@ export default function OrchestratorPage() {
         { notify: false }
       )
         .then((updated) => {
-          setSelected(updated);
-          setOrchestrators((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+          applyUpdatedOrchestrator(updated);
         })
         .catch(() => toast.error("Could not save the canvas layout"));
     },
-    [selected]
+    [applyUpdatedOrchestrator, selected]
   );
 
   if (loading) {
     return (
       <AppLayout>
-        <PageLayout title="Orchestration" subtitle="Design and inspect multi-agent flows.">
-          <div className="flex h-[calc(100vh-14rem)] gap-4">
-            <div className="w-72 shrink-0 animate-pulse rounded-xl border bg-card" />
-            <div className="flex-1 animate-pulse rounded-xl border bg-card" />
+        <PageLayout title="Orchestration studio" subtitle="Design and inspect multi-agent flows.">
+          <div className="flex h-[calc(100dvh-14rem)] min-h-[560px] gap-2">
+            <Skeleton className="w-72 shrink-0 rounded-xl" />
+            <Skeleton className="flex-1 rounded-xl" />
+            <Skeleton className="w-72 shrink-0 rounded-xl" />
           </div>
         </PageLayout>
       </AppLayout>
     );
   }
 
+  const selectedExtra = ensureExtraFields(selected?.extra_fields);
+  const externalCount = Array.isArray(selectedExtra.a2a_connections)
+    ? selectedExtra.a2a_connections.length
+    : 0;
+  const connectedCount = (selected?.sub_agent_ids ?? []).length + externalCount;
+
+  const library = (
+    <OrchestratorSidebar
+      orchestrators={orchestrators}
+      agents={agents}
+      selectedId={selectedId}
+      onSelectOrchestrator={setSelectedId}
+      onConnect={handleConnect}
+      onConnectA2a={handleConnectA2a}
+    />
+  );
+
+  const canvas = (
+    <OrchestratorFlow
+      orchestrator={selected}
+      agents={agents}
+      onConnect={handleConnect}
+      onDisconnect={handleDisconnect}
+      onDisconnectA2a={handleDisconnectA2a}
+      onSelect={(selection) => {
+        setInspected(selection);
+        if (isMobile) setMobilePanel("inspector");
+      }}
+      onSaveLayout={handleSaveLayout}
+    />
+  );
+
+  const inspector = (
+    <OrchestratorInspector
+      selection={inspected}
+      onChat={openChat}
+      onDisconnectAgent={handleDisconnect}
+      onDisconnectExternal={handleDisconnectA2a}
+    />
+  );
+
   return (
     <AppLayout>
       <PageLayout
-        title="Orchestration"
-        subtitle="Coordinate specialized agents in a visual execution flow."
+        title="Orchestration studio"
+        subtitle="Compose a team of specialized agents, inspect their capabilities, and test the flow."
         actions={
           <Button asChild>
             <Link href="/agents/new">
-              <Plus className="size-4 mr-2" />
+              <Plus data-icon="inline-start" />
               New orchestrator
             </Link>
           </Button>
         }
       >
-        <div className="flex h-[calc(100vh-14rem)] overflow-hidden rounded-xl border bg-card shadow-sm">
-          <ResizablePanelGroup orientation="horizontal">
-            <ResizablePanel defaultSize={320} minSize={260} maxSize={420}>
-              <OrchestratorSidebar
-                orchestrators={orchestrators}
-                agents={agents}
-                selectedId={selectedId}
-                onSelectOrchestrator={setSelectedId}
-                onDisconnect={handleDisconnect}
-                onDisconnectA2a={handleDisconnectA2a}
-                onConnectA2a={handleConnectA2a}
-                onChatAgent={openChat}
-              />
-            </ResizablePanel>
-            <ResizableHandle withHandle />
-            <ResizablePanel defaultSize={900} minSize={400}>
-              <div className="relative h-full">
-                <OrchestratorFlow
-                  orchestrator={selected}
-                  agents={agents}
-                  onConnect={handleConnect}
-                  onDisconnect={handleDisconnect}
-                  onDisconnectA2a={handleDisconnectA2a}
-                  onChatAgent={openChat}
-                  onSaveLayout={handleSaveLayout}
-                />
-                {selected && (
-                  <div className="pointer-events-none absolute left-4 top-4 z-10 flex items-center gap-2 rounded-full border bg-background/85 px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm backdrop-blur">
-                    <MousePointerClick className="size-3.5 text-primary" />
-                    Click to chat · hover capabilities for details
-                  </div>
-                )}
+        <div className="flex h-[calc(100dvh-14rem)] min-h-[560px] flex-col overflow-hidden rounded-xl border bg-card shadow-sm">
+          <div className="flex min-h-14 items-center justify-between gap-3 border-b px-4 py-2.5">
+            <div className="flex min-w-0 items-center gap-3">
+              <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <BrainCircuit className="size-4" />
+              </span>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-semibold">
+                  {selected?.label || selected?.name || "Select an orchestrator"}
+                </p>
+                <p className="text-xs text-muted-foreground">Canvas changes save automatically</p>
               </div>
-            </ResizablePanel>
-          </ResizablePanelGroup>
+              {selected && <Badge variant="outline">{connectedCount} connected</Badge>}
+            </div>
+            {selected && (
+              <div className="flex shrink-0 items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={() => openChat(selected)}>
+                  <MessageSquare data-icon="inline-start" />
+                  <span className="hidden sm:inline">Test flow</span>
+                </Button>
+                <Button variant="outline" size="sm" asChild>
+                  <Link href={`/agents/${selected.id}`}>
+                    <Settings2 data-icon="inline-start" />
+                    <span className="hidden sm:inline">Configure</span>
+                  </Link>
+                </Button>
+              </div>
+            )}
+          </div>
+
+          <div className="min-h-0 flex-1">
+            {isMobile ? (
+              <Tabs
+                value={mobilePanel}
+                onValueChange={setMobilePanel}
+                className="flex h-full flex-col gap-0"
+              >
+                <TabsList className="m-2 grid w-auto grid-cols-3">
+                  <TabsTrigger value="library">Agents</TabsTrigger>
+                  <TabsTrigger value="canvas">Canvas</TabsTrigger>
+                  <TabsTrigger value="inspector">Inspector</TabsTrigger>
+                </TabsList>
+                <TabsContent value="library" className="min-h-0 flex-1">{library}</TabsContent>
+                <TabsContent value="canvas" className="min-h-0 flex-1">{canvas}</TabsContent>
+                <TabsContent value="inspector" className="min-h-0 flex-1">{inspector}</TabsContent>
+              </Tabs>
+            ) : (
+              <ResizablePanelGroup orientation="horizontal">
+                <ResizablePanel defaultSize={280} minSize={240} maxSize={340}>
+                  {library}
+                </ResizablePanel>
+                <ResizableHandle />
+                <ResizablePanel defaultSize={760} minSize={420}>
+                  {canvas}
+                </ResizablePanel>
+                <ResizableHandle />
+                <ResizablePanel defaultSize={300} minSize={260} maxSize={380}>
+                  {inspector}
+                </ResizablePanel>
+              </ResizablePanelGroup>
+            )}
+          </div>
         </div>
 
         {/* Chat overlay — lockClose so an in-progress run isn't lost by an accidental dismiss */}
@@ -442,14 +528,14 @@ export default function OrchestratorPage() {
                   {chatAgent && (
                     <Button variant="ghost" size="sm" asChild>
                       <Link href={`/agents/${chatAgent.id}`}>
-                        <ArrowRight className="size-4" />
+                        <ArrowRight data-icon="inline-start" />
                         Edit
                       </Link>
                     </Button>
                   )}
                   <SheetClose asChild>
                     <Button variant="ghost" size="icon-sm" aria-label="Close chat">
-                      <X className="size-4" />
+                      <X />
                     </Button>
                   </SheetClose>
                 </div>

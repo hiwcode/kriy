@@ -111,7 +111,7 @@ export default function NotificationsPage() {
   return (
     <AppLayout>
       <PageLayout
-        title="Inbox"
+        title="Notifications"
         subtitle="Review notifications from agents, workflows, and workspace activity."
         actions={
           <Button variant="outline" size="sm" onClick={onReadAll}>

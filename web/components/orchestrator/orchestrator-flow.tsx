@@ -26,6 +26,7 @@ import { cn, ensureExtraFields } from "@/lib/utils";
 import type { AgentItem } from "@/lib/api/agents";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AgentCapabilityStrip } from "@/components/orchestrator/agent-capabilities";
+import type { OrchestratorSelection } from "@/components/orchestrator/types";
 
 const ORCHESTRATOR_NODE = "orchestrator";
 const SUB_AGENT_NODE = "subAgent";
@@ -39,6 +40,8 @@ type AgentNodeData = {
 type AgentNode = NodeBase<AgentNodeData>;
 
 const HANDLE_CLS = "!size-2.5 !border-2 !border-background !bg-primary";
+const ORCHESTRATOR_HANDLE_CLS =
+  "!size-2.5 !border-2 !border-primary !bg-primary-foreground";
 
 function OrchestratorNode(props: NodeProps<AgentNode>) {
   const { data, selected } = props;
@@ -46,26 +49,26 @@ function OrchestratorNode(props: NodeProps<AgentNode>) {
   return (
     <div
       className={cn(
-        "relative flex min-w-[190px] flex-col gap-2 rounded-2xl border border-white/10 bg-primary px-4 py-3 text-primary-foreground shadow-lg shadow-primary/25 transition-all",
+        "relative flex w-[220px] flex-col gap-2 rounded-2xl border border-primary-foreground/15 bg-primary px-4 py-3 text-primary-foreground shadow-lg shadow-primary/20 transition-all",
         selected
           ? "ring-2 ring-primary/40 ring-offset-2 ring-offset-background"
           : "hover:shadow-xl hover:shadow-primary/30"
       )}
     >
       <div className="flex items-center gap-2.5">
-        <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-white/15 ring-1 ring-inset ring-white/20">
+        <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary-foreground/10 ring-1 ring-inset ring-primary-foreground/20">
           <BrainCircuit className="size-5" />
         </div>
         <div className="min-w-0">
           <p className="truncate text-sm font-semibold leading-tight">{data.label}</p>
-          <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-white/70">Orchestrator</p>
+          <p className="text-[10px] font-medium uppercase tracking-[0.14em] text-primary-foreground/70">Orchestrator</p>
         </div>
       </div>
       {model && (
-        <span className="w-fit rounded-md bg-white/15 px-1.5 py-0.5 font-mono text-[10px] text-white/90">{model}</span>
+        <span className="w-fit rounded-md bg-primary-foreground/10 px-1.5 py-0.5 font-mono text-[10px] text-primary-foreground/90">{model}</span>
       )}
       <AgentCapabilityStrip agent={data.agent} compact limit={2} />
-      <Handle type="source" position={Position.Bottom} className={HANDLE_CLS} />
+      <Handle type="source" position={Position.Right} className={ORCHESTRATOR_HANDLE_CLS} />
     </div>
   );
 }
@@ -77,7 +80,7 @@ function SubAgentNode(props: NodeProps<AgentNode>) {
   return (
     <div
       className={cn(
-        "group relative flex min-w-[180px] items-center gap-2.5 rounded-xl border bg-card px-3 py-2.5 shadow-sm transition-all",
+        "group relative flex w-[220px] items-center gap-2.5 rounded-xl border bg-card px-3 py-2.5 shadow-sm transition-all",
         selected ? "border-primary ring-2 ring-primary/20" : "border-border hover:border-primary/50 hover:shadow-md"
       )}
     >
@@ -103,7 +106,6 @@ function SubAgentNode(props: NodeProps<AgentNode>) {
           <X className="size-3.5" />
         </button>
       )}
-      <Handle type="source" position={Position.Right} className={HANDLE_CLS} />
     </div>
   );
 }
@@ -168,7 +170,7 @@ function flowNodesFromAgents(
     nodes.push({
       id: item.id,
       type: SUB_AGENT_NODE,
-      position: positionFor(item.id, { x: 180 + col * 220, y: row * 126 }),
+      position: positionFor(item.id, { x: 280 + col * 250, y: row * 126 }),
       data: { label: item.label, agent: item.agent, a2aUrl: item.a2aUrl },
       draggable: true,
     });
@@ -190,7 +192,7 @@ interface OrchestratorFlowInnerProps {
   onConnect: (subAgentId: number) => void;
   onDisconnect: (subAgentId: number) => void;
   onDisconnectA2a?: (url: string) => void;
-  onChatAgent?: (agent: AgentItem) => void;
+  onSelect?: (selection: OrchestratorSelection) => void;
   onSaveLayout?: (positions: Record<string, { x: number; y: number }>) => void;
   onNodesChange?: (nodes: Node[]) => void;
 }
@@ -201,7 +203,7 @@ function OrchestratorFlowInner({
   onConnect,
   onDisconnect,
   onDisconnectA2a,
-  onChatAgent,
+  onSelect,
   onSaveLayout,
 }: OrchestratorFlowInnerProps) {
   const subAgents = React.useMemo(
@@ -363,10 +365,14 @@ function OrchestratorFlowInner({
 
   const onNodeClick = React.useCallback(
     (_: React.MouseEvent, node: Node) => {
-      const agent = (node.data as AgentNodeData)?.agent;
-      if (agent) onChatAgent?.(agent);
+      const data = node.data as AgentNodeData;
+      if (data.agent) {
+        onSelect?.({ kind: "agent", agent: data.agent });
+      } else if (data.a2aUrl) {
+        onSelect?.({ kind: "external", label: data.label, url: data.a2aUrl });
+      }
     },
-    [onChatAgent]
+    [onSelect]
   );
 
   if (!orchestrator) {
@@ -414,14 +420,16 @@ function OrchestratorFlowInner({
         showInteractive={false}
         className="!rounded-lg !border !border-border !bg-card !shadow-sm [&_button]:!border-border [&_button]:!bg-card [&_button:hover]:!bg-muted [&_button_svg]:!fill-foreground"
       />
-      <MiniMap
-        pannable
-        zoomable
-        className="!rounded-lg !border !border-border !bg-card/80 !shadow-sm"
-        nodeColor={(n) => (n.type === ORCHESTRATOR_NODE ? "var(--primary)" : "var(--muted-foreground)")}
-        nodeStrokeWidth={2}
-        maskColor="color-mix(in oklch, var(--background) 75%, transparent)"
-      />
+      {nodes.length > 6 && (
+        <MiniMap
+          pannable
+          zoomable
+          className="!rounded-lg !border !border-border !bg-card/80 !shadow-sm"
+          nodeColor={(n) => (n.type === ORCHESTRATOR_NODE ? "var(--primary)" : "var(--muted-foreground)")}
+          nodeStrokeWidth={2}
+          maskColor="color-mix(in oklch, var(--background) 75%, transparent)"
+        />
+      )}
     </ReactFlow>
   );
 }
@@ -432,7 +440,7 @@ export interface OrchestratorFlowProps {
   onConnect: (subAgentId: number) => void;
   onDisconnect: (subAgentId: number) => void;
   onDisconnectA2a?: (url: string) => void;
-  onChatAgent?: (agent: AgentItem) => void;
+  onSelect?: (selection: OrchestratorSelection) => void;
   onSaveLayout?: (positions: Record<string, { x: number; y: number }>) => void;
 }
 
@@ -442,7 +450,7 @@ export function OrchestratorFlow({
   onConnect,
   onDisconnect,
   onDisconnectA2a,
-  onChatAgent,
+  onSelect,
   onSaveLayout,
 }: OrchestratorFlowProps) {
   return (
@@ -455,7 +463,7 @@ export function OrchestratorFlow({
             onConnect={onConnect}
             onDisconnect={onDisconnect}
             onDisconnectA2a={onDisconnectA2a}
-            onChatAgent={onChatAgent}
+            onSelect={onSelect}
             onSaveLayout={onSaveLayout}
           />
         </div>
