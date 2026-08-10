@@ -16,9 +16,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Separator } from "@/components/ui/separator";
-import { getBreadcrumb } from "@/config/site";
+import { getBreadcrumb, siteConfig } from "@/config/site";
 import { cn } from "@/lib/utils";
-import { Building2, ChevronRight, BookOpen, Check, LogOut, Settings, Users, ChevronDown } from "lucide-react";
+import { Building2, ChevronRight, BookOpen, Check, Github, LogOut, Settings, Star, Users, ChevronDown } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/auth/auth-provider";
 import { useWorkspace } from "@/components/workspace/workspace-provider";
@@ -117,6 +117,12 @@ export function AppNavbar({ className }: { className?: string }) {
 
       {/* Right Section */}
       <div className="flex shrink-0 items-center gap-1">
+        <Button variant="outline" size="sm" className="mr-1 hidden lg:inline-flex" asChild>
+          <a href={siteConfig.github} target="_blank" rel="noopener noreferrer">
+            <Star data-icon="inline-start" />
+            Star on GitHub
+          </a>
+        </Button>
         <NotificationBell />
         <ThemeToggle isHeader={true}/>
         {/* Auth: Sign in button or User dropdown */}
@@ -185,6 +191,12 @@ export function AppNavbar({ className }: { className?: string }) {
                     <BookOpen aria-hidden />
                     <span>Documentation</span>
                   </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <a href={siteConfig.github} target="_blank" rel="noopener noreferrer">
+                    <Github aria-hidden />
+                    <span>Star on GitHub</span>
+                  </a>
                 </DropdownMenuItem>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
