@@ -16,6 +16,10 @@
 git clone <repo-url>
 cd kriy
 
+# Create local environment files
+cp .env.example .env
+cp web/.env.example web/.env.local
+
 # Install Python dependencies (backend)
 uv sync
 
@@ -29,40 +33,33 @@ cd web && npm install
 
 ### Backend `.env` (project root)
 
-Create a `.env` file in the project root:
+Copy the maintained template, then replace the required values:
 
-```env
-# Required: PostgreSQL connection
-DATABASE_URL=postgresql://user:password@localhost:5432/kriy
-
-# LLM API keys (set for providers you want to use)
-GOOGLE_API_KEY=your-google-api-key       # Gemini models
-OPENAI_API_KEY=your-openai-api-key       # GPT / o-series models (optional)
-ANTHROPIC_API_KEY=your-anthropic-api-key  # Claude models (optional)
-
-# Optional: Auth
-# For API key auth (scripts, CI)
-API_KEYS=key1,key2
-
-# For Google OAuth (web users)
-GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
-
-# Optional: CORS (default allows all)
-CORS_ORIGINS=http://localhost:3004
+```bash
+cp .env.example .env
 ```
+
+At minimum, configure `DATABASE_URL`, `ENCRYPTION_KEY`, one authentication method
+(`GOOGLE_CLIENT_ID` or `API_KEYS`), and a model provider key. Generate secrets instead
+of using example values:
+
+```bash
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+openssl rand -hex 32
+```
+
+Use the first value for `ENCRYPTION_KEY` and the second for `JWT_SECRET`. In production,
+set `ENVIRONMENT=production`, use a public `BACKEND_URL`, and restrict `CORS_ORIGINS`
+with JSON-array syntax such as `["https://app.example.com"]`.
 
 ### Frontend `web/.env.local`
 
-```env
-# Backend API URL (default: http://localhost:8000)
-NEXT_PUBLIC_API_BASE_URL=http://localhost:8000
-
-# Development only: this value is exposed to the browser; never use a personal key here
-NEXT_PUBLIC_API_KEY=your-api-key
-
-# Optional: Google OAuth
-NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+```bash
+cp web/.env.example web/.env.local
 ```
+
+Set the same variables in Vercel for production. Never put a production secret in
+`NEXT_PUBLIC_API_KEY`; every `NEXT_PUBLIC_*` value is included in browser JavaScript.
 
 ---
 
@@ -70,6 +67,10 @@ NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
 
 Create the database referenced by `DATABASE_URL`. KRIY applies pending SQL migrations
 from `app/db/migrations/` when the backend starts.
+
+For a complete local container stack, run `docker compose up --build`. The included
+Compose file is for development: PostgreSQL is bound to localhost and uses local defaults.
+Production deployments should use managed secrets and a private database endpoint.
 
 ---
 

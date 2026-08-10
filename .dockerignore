@@ -5,6 +5,7 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+app/tests/
 
 # Frontend / SDK (not part of the backend image)
 web/
@@ -15,5 +16,6 @@ docs/
 # Local / VCS
 .git/
 .gitignore
-.env
+.env*
+!.env.example
 *.md

@@ -52,6 +52,7 @@ Requirements: Python 3.10+, Node.js 20.9+, PostgreSQL, and
 git clone https://github.com/hiwcode/kriy.git
 cd kriy
 cp .env.example .env
+cp web/.env.example web/.env.local
 docker compose up -d db
 uv sync
 uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload

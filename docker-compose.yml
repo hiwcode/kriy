@@ -1,12 +1,14 @@
 services:
   db:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       POSTGRES_DB: ${POSTGRES_DB:-ai_workflow_playground}
     ports:
-      - "5432:5432"
+      # Local development only. Do not expose PostgreSQL on a public interface.
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -14,21 +16,26 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 5s
 
   api:
     build: .
+    restart: unless-stopped
     env_file:
       - .env
     environment:
       # Override DATABASE_URL to point at the compose "db" service.
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_DB:-ai_workflow_playground}
+      ENVIRONMENT: ${ENVIRONMENT:-development}
       HOST: 0.0.0.0
       PORT: "8000"
+      BACKEND_URL: ${BACKEND_URL:-http://localhost:8000}
     ports:
       - "${PORT:-8000}:8000"
     depends_on:
       db:
         condition: service_healthy
+    init: true
 
 volumes:
   pgdata:
