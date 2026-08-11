@@ -13,9 +13,11 @@ import { Playground } from "@/components/landing/playground";
 import { FeatureShowcase } from "@/components/landing/feature-showcase";
 import {
   ArrowRight,
+  Bell,
   BookOpen,
   Bot,
   BrainCircuit,
+  Database,
   Github,
   MemoryStick,
   Puzzle,
@@ -140,38 +142,47 @@ function scrollTo(id: string) {
 
 type HeroNavItem = { label: string; icon: React.ComponentType<{ className?: string }>; active?: boolean };
 const HERO_NAV_GROUPS: { name: string; items: HeroNavItem[] }[] = [
-  { name: "main", items: [{ label: "Dashboard", icon: LayoutDashboard, active: true }] },
   {
-    name: "Agents",
+    name: "Workspace",
+    items: [
+      { label: "Overview", icon: LayoutDashboard, active: true },
+      { label: "Notifications", icon: Bell },
+    ],
+  },
+  {
+    name: "Build",
     items: [
       { label: "Agents", icon: Bot },
       { label: "Orchestration", icon: BrainCircuit },
+      { label: "Prompts", icon: FileText },
+      { label: "Memory", icon: MemoryStick },
     ],
   },
   {
-    name: "Tools & Prompts",
+    name: "Connect",
     items: [
-      { label: "Prompt Library", icon: FileText },
-      { label: "MCP Connections", icon: Puzzle },
+      { label: "MCP servers", icon: Puzzle },
+      { label: "Databases", icon: Database },
     ],
   },
   {
-    name: "Observability",
-    items: [{ label: "Traces", icon: Activity }],
+    name: "Automate",
+    items: [
+      { label: "Workflows", icon: Workflow },
+      { label: "Decision gates", icon: ShieldCheck },
+    ],
+  },
+  {
+    name: "Observe",
+    items: [{ label: "Runs & traces", icon: Activity }],
   },
 ];
 
 const HERO_STATS = [
-  { label: "Active agents", value: "12", icon: Bot },
-  { label: "Tokens used", value: "84.2k", icon: Zap },
-  { label: "Prompts", value: "36", icon: FileText },
-  { label: "Spent", value: "$4.21", icon: DollarSign },
-] as const;
-
-const HERO_AGENTS = [
-  { name: "Research Agent", meta: "Configured model", on: true },
-  { name: "Writer Agent", meta: "Configured model", on: true },
-  { name: "Review Agent", meta: "External A2A", on: false },
+  { label: "Total agents", value: "12", icon: Bot },
+  { label: "Conversations", value: "248", icon: Activity },
+  { label: "Recorded tokens", value: "84.2k", icon: Zap },
+  { label: "Estimated cost", value: "$4.21", icon: DollarSign },
 ] as const;
 
 function HeroVisual() {
@@ -202,7 +213,7 @@ function HeroVisual() {
           </div>
           <div className="ml-4 flex-1 rounded-md bg-background/60 px-3 py-1 text-center">
             <span className="text-[10px] font-medium text-muted-foreground/50">
-              kriy.app / dashboard
+              KRIY / overview
             </span>
           </div>
         </div>
@@ -230,11 +241,9 @@ function HeroVisual() {
             <div className="flex flex-1 flex-col gap-2 overflow-hidden">
               {HERO_NAV_GROUPS.map((group) => (
                 <div key={group.name} className="flex flex-col gap-0.5">
-                  {group.name !== "main" && (
-                    <span className="px-2 pb-0.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-sidebar-foreground/40">
-                      {group.name}
-                    </span>
-                  )}
+                  <span className="px-2 pb-0.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-sidebar-foreground/40">
+                    {group.name}
+                  </span>
                   {group.items.map((item) => (
                     <div
                       key={item.label}
@@ -245,12 +254,6 @@ function HeroVisual() {
                           : "text-sidebar-foreground/70"
                       )}
                     >
-                      <span
-                        className={cn(
-                          "absolute left-0 top-1/2 h-4 w-0.5 -translate-y-1/2 rounded-full bg-primary",
-                          item.active ? "opacity-100" : "opacity-0"
-                        )}
-                      />
                       <item.icon
                         className={cn(
                           "size-3.5 shrink-0",
@@ -276,12 +279,13 @@ function HeroVisual() {
             {/* Header */}
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-semibold tracking-tight">Dashboard</p>
-                <p className="text-[10px] text-muted-foreground">Welcome back, Alex</p>
+                <p className="text-sm font-semibold tracking-tight">Overview</p>
+                <p className="text-[10px] text-muted-foreground">Monitor agent activity, usage, and workspace operations.</p>
               </div>
               <div className="flex items-center gap-2">
-                <div className="hidden h-6 w-24 items-center rounded-md border border-border/60 px-2 text-[9px] text-muted-foreground/50 sm:flex">
-                  Search…
+                <div className="hidden h-7 items-center gap-1.5 rounded-md bg-primary px-2.5 text-[9px] font-medium text-primary-foreground sm:flex">
+                  <Bot className="size-3" />
+                  Manage agents
                 </div>
                 <div className="size-7 rounded-full bg-gradient-to-br from-primary to-fuchsia-500" />
               </div>
@@ -291,22 +295,26 @@ function HeroVisual() {
             <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
               {HERO_STATS.map((s) => (
                 <div key={s.label} className="rounded-lg border border-border/60 bg-background/60 p-2.5">
-                  <div className="mb-1.5 flex size-6 items-center justify-center rounded-md bg-primary/10 text-primary">
-                    <s.icon className="size-3.5" />
+                  <div className="mb-2 flex items-start justify-between gap-2">
+                    <p className="truncate text-[9px] text-muted-foreground">{s.label}</p>
+                    <div className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                      <s.icon className="size-3.5" />
+                    </div>
                   </div>
                   <p className="text-sm font-semibold tracking-tight">{s.value}</p>
-                  <p className="truncate text-[9px] text-muted-foreground">{s.label}</p>
                 </div>
               ))}
             </div>
 
-            {/* Chart + agents */}
-            <div className="grid min-h-0 flex-1 grid-cols-1 gap-2.5 lg:grid-cols-3">
-              {/* Chart */}
-              <div className="flex flex-col rounded-lg border border-border/60 bg-background/60 p-3 lg:col-span-2">
-                <div className="mb-1 flex items-center justify-between">
-                  <p className="text-[11px] font-medium">Token usage</p>
-                  <span className="text-[9px] text-muted-foreground">last 7 days</span>
+            {/* Workspace usage */}
+            <div className="min-h-0 flex-1">
+              <div className="flex h-full flex-col rounded-lg border border-border/60 bg-background/60 p-3">
+                <div className="mb-2 flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] font-medium">Workspace usage</p>
+                    <p className="text-[9px] text-muted-foreground">84.2k tokens across 248 conversations.</p>
+                  </div>
+                  <span className="rounded-full bg-muted px-2 py-0.5 text-[9px] text-muted-foreground">Last 7 days</span>
                 </div>
                 <div className="relative min-h-0 flex-1">
                   <svg viewBox="0 0 320 120" preserveAspectRatio="none" className="size-full">
@@ -328,28 +336,6 @@ function HeroVisual() {
                       vectorEffect="non-scaling-stroke"
                     />
                   </svg>
-                </div>
-              </div>
-
-              {/* Agents list */}
-              <div className="hidden flex-col rounded-lg border border-border/60 bg-background/60 p-3 lg:flex">
-                <p className="mb-2 text-[11px] font-medium">Agents</p>
-                <div className="flex flex-col gap-2">
-                  {HERO_AGENTS.map((a) => (
-                    <div key={a.name} className="flex items-center gap-2">
-                      <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-                        <Bot className="size-3" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-[10px] font-medium">{a.name}</p>
-                        <p className="truncate text-[9px] text-muted-foreground">{a.meta}</p>
-                      </div>
-                      <span
-                        className="size-1.5 shrink-0 rounded-full"
-                        style={{ backgroundColor: a.on ? "var(--primary)" : "oklch(0.7 0 0 / 0.3)" }}
-                      />
-                    </div>
-                  ))}
                 </div>
               </div>
             </div>
