@@ -3,6 +3,8 @@
 from app.api.v1.endpoints.gates import DecideIn, DecisionOut
 from app.api.v1.endpoints.webhooks import WebhookIn
 from app.api.v1.endpoints.workflows import EventIn, EventOut, WorkflowIn, _validate_payload
+from fastapi.testclient import TestClient
+
 from app.core.config import settings
 from app.main import app
 
@@ -80,7 +82,9 @@ def test_openapi_contains_the_external_integration_surface():
 
 def test_interactive_api_documentation_is_configurable_and_enabled_by_default():
     if settings.ENABLE_API_DOCS:
-        paths = {route.path for route in app.routes}
-        assert "/api/docs" in paths
-        assert "/api/redoc" in paths
-        assert "/api/openapi.json" in paths
+        # Starlette 1.x wraps included routers, so not every entry in app.routes
+        # exposes .path — hit the endpoints instead of introspecting the table.
+        client = TestClient(app)
+        assert client.get("/api/docs").status_code == 200
+        assert client.get("/api/redoc").status_code == 200
+        assert client.get("/api/openapi.json").status_code == 200
