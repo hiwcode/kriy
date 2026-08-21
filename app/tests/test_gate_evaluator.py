@@ -231,3 +231,120 @@ def test_decide_override_flag_makes_deny_soft():
     assert _decide([allow_ov], payload={"amount": 999}, event_type="x")["overridable"] is False
     # default deny is never overridable.
     assert _decide([hard], payload={"amount": 1}, event_type="x")["overridable"] is False
+
+
+# --------------------------------------------------------------------------- #
+# Field normalization: a bare path is payload-relative
+# --------------------------------------------------------------------------- #
+
+
+def test_bare_field_is_payload_relative():
+    # Regression: rules written (or LLM-compiled) without the `payload.` prefix
+    # used to resolve to nothing and silently never fire.
+    c = {"field": "amount", "op": "gt", "value": 500}
+    assert ev(c, {"amount": 750})
+    assert not ev(c, {"amount": 100})
+
+
+def test_reported_regression_bare_username_email_tree():
+    tree = {
+        "match": "all",
+        "conditions": [
+            {"op": "ne", "field": "username", "value": "ultron"},
+            {"op": "eq", "field": "email", "value": "ultron@example.com"},
+        ],
+    }
+    payload = {"username": "ultron1", "email": "ultron@example.com"}
+    assert ev(tree, payload, event_type="user.updated")
+
+
+def test_normalize_field_leaves_allowed_roots_alone():
+    assert ge.normalize_field("payload.user.role") == "payload.user.role"
+    assert ge.normalize_field("type") == "type"
+    assert ge.normalize_field("user.role") == "payload.user.role"
+    assert ge.normalize_field("  amount ") == "payload.amount"
+    assert ge.normalize_field("") == ""
+
+
+def test_payload_key_named_type_needs_explicit_prefix():
+    # `type` is the event name; a payload key called "type" is `payload.type`.
+    assert ev({"field": "type", "op": "eq", "value": "a.b"}, {"type": "x"}, event_type="a.b")
+    assert ev({"field": "payload.type", "op": "eq", "value": "x"}, {"type": "x"}, event_type="a.b")
+
+
+def test_normalize_fields_rewrites_tree_without_mutating_input():
+    tree = {
+        "match": "all",
+        "conditions": [
+            {"field": "amount", "op": "gt", "value": 5},
+            {"match": "any", "conditions": [{"field": "type", "op": "eq", "value": "x"}]},
+        ],
+    }
+    out = ge.normalize_fields(tree)
+    assert out["conditions"][0]["field"] == "payload.amount"
+    assert out["conditions"][1]["conditions"][0]["field"] == "type"
+    assert tree["conditions"][0]["field"] == "amount"  # input untouched
+
+
+def test_validate_rejects_unresolvable_field_root():
+    with pytest.raises(ValueError, match="must start with 'payload.'"):
+        ge.validate_conditions({"match": "all", "conditions": [{"field": "amount", "op": "eq", "value": 1}]})
+    # normalize first and it passes
+    ge.validate_conditions(
+        ge.normalize_fields({"match": "all", "conditions": [{"field": "amount", "op": "eq", "value": 1}]})
+    )
+
+
+# --------------------------------------------------------------------------- #
+# explain(): per-node trace
+# --------------------------------------------------------------------------- #
+
+
+def test_explain_marks_unresolved_fields():
+    tree = {
+        "match": "all",
+        "conditions": [
+            {"field": "payload.amount", "op": "gt", "value": 500},
+            {"field": "payload.missing.deep", "op": "eq", "value": 1},
+        ],
+    }
+    t = ge.explain(tree, payload={"amount": 750}, event_type="x")
+    assert t["kind"] == "group" and t["result"] is False
+    ok, bad = t["conditions"]
+    assert ok["resolved"] is True and ok["actual"] == 750 and ok["result"] is True
+    assert bad["resolved"] is False and bad["actual"] is None and bad["result"] is False
+
+
+def test_explain_verdict_matches_evaluate():
+    tree = {
+        "match": "any",
+        "conditions": [
+            {"field": "amount", "op": "gt", "value": 500},
+            {"field": "currency", "op": "eq", "value": "USD"},
+        ],
+    }
+    for payload in ({"amount": 750}, {"amount": 1, "currency": "USD"}, {"amount": 1}):
+        assert ge.explain(tree, payload=payload, event_type="x")["result"] == ev(tree, payload)
+
+
+def test_explain_normalizes_field_in_the_trace():
+    t = ge.explain(
+        {"field": "amount", "op": "gt", "value": 5}, payload={"amount": 9}, event_type="x"
+    )
+    assert t["field"] == "payload.amount" and t["result"] is True
+
+
+def test_explain_empty_tree_explains_itself():
+    t = ge.explain({}, payload={}, event_type="x")
+    assert t["result"] is False and "never matches" in t["note"]
+    t2 = ge.explain({"match": "all", "conditions": []}, payload={}, event_type="x")
+    assert t2["result"] is False and "empty group" in t2["note"]
+
+
+def test_explain_truncates_a_huge_string_value():
+    t = ge.explain(
+        {"field": "payload.blob", "op": "eq", "value": "x"},
+        payload={"blob": "y" * 5000},
+        event_type="x",
+    )
+    assert len(t["actual"]) <= 201

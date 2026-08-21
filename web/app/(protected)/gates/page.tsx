@@ -61,10 +61,52 @@ import {
   type GateInput,
   type DraftResult,
   type GateDecision,
+  type TraceNode,
 } from "@/lib/api/gates";
 
 const DESCRIPTION =
   "Rules that allow or deny a proposed action before it runs. An app POSTs the action to /events/decide and honors the verdict. Default is allow — an action is only blocked when a rule explicitly matches and denies it.";
+
+/** The per-node trace of an evaluation: which leaf passed, which failed, and
+ *  whether its field path resolved in the sample payload at all. A rule that
+ *  "does nothing" is nearly always a leaf whose field was not found. */
+function TraceView({ node, depth = 0 }: { node: TraceNode; depth?: number }) {
+  if (node.kind === "group") {
+    return (
+      <div className={cn("space-y-1", depth > 0 && "border-l-2 border-border pl-2")}>
+        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          {node.match} {node.result ? "✓" : "✗"}
+          {node.note ? ` — ${node.note}` : ""}
+        </p>
+        {node.conditions.map((child, i) => (
+          <TraceView key={i} node={child} depth={depth + 1} />
+        ))}
+      </div>
+    );
+  }
+  if (node.kind === "invalid") {
+    return (
+      <p className="text-xs text-destructive">
+        Invalid condition{node.note ? ` — ${node.note}` : ""}
+      </p>
+    );
+  }
+  return (
+    <div className="flex flex-wrap items-baseline gap-1.5 font-mono text-[11px]">
+      <span className={node.result ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}>
+        {node.result ? "PASS" : "FAIL"}
+      </span>
+      <span>{node.field}</span>
+      <span className="text-muted-foreground">{node.op}</span>
+      {node.value !== undefined && <span>{JSON.stringify(node.value)}</span>}
+      <span className="text-muted-foreground">
+        {node.resolved
+          ? `· actual ${JSON.stringify(node.actual)}`
+          : "· field not found in payload"}
+      </span>
+    </div>
+  );
+}
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -589,6 +631,11 @@ function GateEditor({
                     This rule does not fire — the verdict falls to other gates, or the default (allow).
                   </span>
                 )}
+              </div>
+            )}
+            {result?.conditions && (
+              <div className="space-y-1 rounded-lg border border-border bg-background/60 p-2">
+                <TraceView node={result.conditions} />
               </div>
             )}
           </div>
