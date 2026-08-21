@@ -132,10 +132,33 @@ export interface GateDecision {
   created_at: string | null;
 }
 
+/** One node of an evaluation trace — mirrors gate_evaluator.explain(). A leaf's
+ *  `resolved: false` means its field path was not found in the payload, which is
+ *  the usual reason a rule silently never fires. */
+export type TraceNode =
+  | {
+      kind: "group";
+      match: MatchKind;
+      result: boolean;
+      conditions: TraceNode[];
+      note?: string;
+    }
+  | {
+      kind: "leaf";
+      field: string;
+      op: LeafOp;
+      value?: unknown;
+      resolved: boolean;
+      actual?: unknown;
+      result: boolean;
+    }
+  | { kind: "invalid"; result: boolean; note?: string };
+
 export interface DraftResult {
   matched: boolean;
   action: GateAction; // what this rule would decide if it fires
   reason: string;
+  conditions?: TraceNode; // per-node trace of why it matched (or did not)
 }
 
 export interface CompiledGate {
@@ -216,7 +239,13 @@ export function testGates(type: string, payload: unknown): Promise<{
   reason: string;
   matched_gate_id: number | null;
   matched_gate_name: string | null;
-  trace: { gate_id: number; name: string; action: GateAction; matched: boolean }[];
+  trace: {
+    gate_id: number;
+    name: string;
+    action: GateAction;
+    matched: boolean;
+    conditions?: TraceNode;
+  }[];
 }> {
   return unwrap("/api/v1/gates/test", {
     method: "POST",

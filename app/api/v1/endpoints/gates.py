@@ -159,13 +159,20 @@ def _decide(gates: list[dict], *, payload: Any, event_type: str) -> dict:
     }
 
 
-def _validate(conditions: Any) -> None:
+def _prepare(conditions: Any) -> dict:
+    """Canonicalize field paths (bare paths become payload-relative), then validate.
+
+    Returns the tree to store/evaluate — callers must use the return value, not the
+    raw input, so what we save is what we evaluate.
+    """
+    normalized = gate_evaluator.normalize_fields(conditions)
     try:
-        gate_evaluator.validate_conditions(conditions)
+        gate_evaluator.validate_conditions(normalized)
     except ValueError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)
         ) from exc
+    return normalized
 
 
 def _clean_events(event_types: list[str]) -> list[str]:
@@ -195,7 +202,8 @@ _GATE_COMPILE_INSTRUCTIONS = (
     'A LEAF is {"field": <dot-path>, "op": <operator>, "value": <v>}. Fields are dot paths into '
     "the event: 'payload.user.role', 'payload.amount', 'payload.items.0.sku', or 'type' for the "
     "event name. Operators: eq, ne, gt, gte, lt, lte, in, not_in (value is a list), contains, "
-    "not_contains, matches (value is a regex string), exists, not_exists. Groups nest, so "
+    "not_contains, matches (value is a regex string), exists, not_exists. A bare path is "
+    "payload-relative — write 'payload.amount', not 'amount'. Groups nest, so "
     "'role is admin AND (amount > 500 OR currency is USD)' is nested groups.\n\n"
     "Remember the model is default-ALLOW: an action is blocked only when a rule explicitly "
     "matches and denies it. Write 'deny' gates for the specific cases to block; everything else "
@@ -345,14 +353,14 @@ async def create_gate(
     auth: AuthContext = Depends(require_google_auth),
     workspace: dict | None = Depends(get_current_workspace),
 ) -> dict:
-    _validate(data.conditions)
+    conditions = _prepare(data.conditions)
     gate = await gate_repo.create(
         pool,
         user_id=auth.user_id,
         workspace_id=_ws_id(workspace),
         name=data.name,
         event_types=_clean_events(data.event_types),
-        conditions=data.conditions,
+        conditions=conditions,
         action=data.action,
         reason=data.reason,
         enabled=data.enabled,
@@ -380,6 +388,10 @@ async def test_gates(
             "matched": gate_evaluator.evaluate(
                 g.get("conditions"), payload=data.payload, event_type=data.type
             ),
+            # Per-node detail: which leaf failed, and whether its field resolved.
+            "conditions": gate_evaluator.explain(
+                g.get("conditions"), payload=data.payload, event_type=data.type
+            ),
         }
         for g in gates
     ]
@@ -399,10 +411,11 @@ async def evaluate_draft(
 ) -> dict:
     """Evaluate one (possibly unsaved) rule against a sample payload. Powers the
     builder's live preview — no DB, no side effects."""
-    _validate(data.conditions)
-    matched = gate_evaluator.evaluate(
-        data.conditions, payload=data.payload, event_type=data.type
+    conditions = _prepare(data.conditions)
+    trace = gate_evaluator.explain(
+        conditions, payload=data.payload, event_type=data.type
     )
+    matched = bool(trace.get("result"))
     return {
         "success": True,
         "message": "Evaluated",
@@ -410,6 +423,8 @@ async def evaluate_draft(
             "matched": matched,
             "action": data.action,  # what this rule would decide if it fires
             "reason": data.reason if matched else "",
+            # Per-leaf trace so a non-match says WHICH condition failed.
+            "conditions": trace,
         },
         "pagination": None,
     }
@@ -466,7 +481,9 @@ async def gate_chat(
             compiled = CompiledGate(**raw)
             if compiled.action not in ("allow", "deny"):
                 compiled.action = "deny"
-            compiled.conditions = _normalize_conditions(compiled.conditions)
+            compiled.conditions = gate_evaluator.normalize_fields(
+                _normalize_conditions(compiled.conditions)
+            )
             # If the model produced an unusable tree, hand back an empty one to fix.
             try:
                 gate_evaluator.validate_conditions(compiled.conditions)
@@ -519,13 +536,13 @@ async def update_gate(
     workspace: dict | None = Depends(get_current_workspace),
 ) -> dict:
     await _owned_gate(gate_id, pool, workspace)
-    _validate(data.conditions)
+    conditions = _prepare(data.conditions)
     updated = await gate_repo.update(
         pool,
         gate_id,
         name=data.name,
         event_types=_clean_events(data.event_types),
-        conditions=data.conditions,
+        conditions=conditions,
         action=data.action,
         reason=data.reason,
         enabled=data.enabled,

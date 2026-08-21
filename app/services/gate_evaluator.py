@@ -24,7 +24,13 @@ save time so malformed rules are rejected up front instead of silently never
 matching.
 
 Fields are dot paths resolved against ``{"payload": <payload>, "type": <event>}``,
-e.g. ``payload.user.role``, ``payload.items.0.sku``, or ``type``.
+e.g. ``payload.user.role``, ``payload.items.0.sku``, or ``type``. A path whose first
+segment is neither ``payload`` nor ``type`` is treated as payload-relative and gets the
+``payload.`` prefix added (``amount`` -> ``payload.amount``), because a bare path is
+what people and LLMs actually write and it would otherwise resolve to nothing and make
+the rule silently inert. To reach a payload key literally named ``type``, write
+``payload.type``. ``explain`` returns the same verdict with a per-node trace so a
+non-match says WHICH leaf failed and whether its field resolved at all.
 """
 
 from __future__ import annotations
@@ -46,6 +52,39 @@ _MISSING_TRUE_OPS = {"ne", "not_in", "not_contains"}
 
 _MAX_DEPTH = 25
 _MISSING = object()  # sentinel: field path did not resolve
+
+# The only roots a field path can resolve against (see the ctx built in `evaluate`).
+_ALLOWED_ROOTS = ("payload", "type")
+
+
+def normalize_field(field: str) -> str:
+    """Canonicalize one field path: a bare path is payload-relative.
+
+    ``amount`` -> ``payload.amount``; ``payload.amount`` and ``type`` are left alone.
+    """
+    f = (field or "").strip()
+    if not f:
+        return f
+    return f if f.split(".", 1)[0] in _ALLOWED_ROOTS else f"payload.{f}"
+
+
+def normalize_fields(node: Any) -> Any:
+    """Return a copy of a condition tree with every leaf field canonicalized.
+
+    Applied at save time so stored rules show the path they actually evaluate.
+    Evaluation normalizes per-leaf anyway, so gates stored before this existed
+    still work without a migration.
+    """
+    if not isinstance(node, dict):
+        return node
+    if "match" in node:
+        children = node.get("conditions")
+        if not isinstance(children, list):
+            return dict(node)
+        return {**node, "conditions": [normalize_fields(c) for c in children]}
+    if "field" in node:
+        return {**node, "field": normalize_field(node.get("field") or "")}
+    return dict(node)
 
 
 def _resolve(path: str, ctx: dict) -> Any:
@@ -92,7 +131,7 @@ def _cmp(actual: Any, expected: Any, op: str) -> bool:
 
 def _eval_leaf(node: dict, ctx: dict) -> bool:
     op = node.get("op")
-    field = node.get("field") or ""
+    field = normalize_field(node.get("field") or "")
     expected = node.get("value")
     actual = _resolve(field, ctx) if field else _MISSING
 
@@ -184,6 +223,11 @@ def _validate_tree(node: Any, depth: int) -> None:
     field = node.get("field")
     if not isinstance(field, str) or not field:
         raise ValueError("a condition needs a non-empty 'field'")
+    if field.split(".", 1)[0] not in _ALLOWED_ROOTS:
+        raise ValueError(
+            f"field '{field}' must start with 'payload.' or be 'type' "
+            f"(pass it through normalize_fields first)"
+        )
     if op in ("in", "not_in") and not isinstance(node.get("value"), list):
         raise ValueError(f"operator '{op}' needs 'value' to be a list")
     if op == "matches":
@@ -204,3 +248,73 @@ def validate_conditions(root: Any) -> None:
     if "match" in root and not (root.get("conditions") or []):
         raise ValueError("a gate needs at least one condition")
     _validate_tree(root, 0)
+
+
+# --------------------------------------------------------------------------- #
+# Explain (same verdict, plus a per-node trace)
+# --------------------------------------------------------------------------- #
+
+_MAX_STR = 200
+
+
+def _jsonable(v: Any) -> Any:
+    """Shrink a value to something safe to put in an API response."""
+    if v is None or isinstance(v, (bool, int, float)):
+        return v
+    if isinstance(v, str):
+        return v if len(v) <= _MAX_STR else v[:_MAX_STR] + "…"
+    if isinstance(v, (list, tuple)):
+        return [_jsonable(x) for x in v[:20]]
+    if isinstance(v, dict):
+        return {str(k): _jsonable(x) for k, x in list(v.items())[:20]}
+    return _jsonable(str(v))
+
+
+def _explain_leaf(node: dict, ctx: dict) -> dict:
+    field = normalize_field(node.get("field") or "")
+    actual = _resolve(field, ctx) if field else _MISSING
+    resolved = actual is not _MISSING
+    return {
+        "kind": "leaf",
+        "field": field,
+        "op": node.get("op"),
+        "value": _jsonable(node.get("value")),
+        "resolved": resolved,
+        "actual": _jsonable(actual) if resolved else None,
+        "result": _eval_leaf(node, ctx),
+    }
+
+
+def _explain_node(node: Any, ctx: dict, depth: int) -> dict:
+    if depth > _MAX_DEPTH or not isinstance(node, dict):
+        return {"kind": "invalid", "result": False, "note": "not a condition object"}
+    if "match" in node:
+        children = node.get("conditions") or []
+        kids = [_explain_node(c, ctx, depth + 1) for c in children]
+        return {
+            "kind": "group",
+            "match": node.get("match"),
+            "result": _eval_node(node, ctx, depth),
+            "conditions": kids,
+            **({"note": "an empty group never matches"} if not children else {}),
+        }
+    return _explain_leaf(node, ctx)
+
+
+def explain(conditions: Any, *, payload: Any, event_type: str) -> dict:
+    """Same verdict as ``evaluate``, as a tree annotated per node.
+
+    Leaves carry ``resolved`` (did the field path exist in this payload?) and the
+    ``actual`` value found, so a false verdict tells you which leaf failed and why
+    instead of only that it failed.
+    """
+    if not conditions:
+        return {
+            "kind": "group",
+            "match": "all",
+            "result": False,
+            "conditions": [],
+            "note": "no conditions — an unconfigured gate never matches",
+        }
+    ctx = {"payload": payload, "type": event_type}
+    return _explain_node(conditions, ctx, 0)

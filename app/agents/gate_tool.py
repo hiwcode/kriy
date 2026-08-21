@@ -31,6 +31,7 @@ _CONDITIONS_HELP = (
     "into the event: 'payload.user.role', 'payload.amount', 'payload.items.0.sku', or 'type'. "
     "Operators: eq, ne, gt, gte, lt, lte, in, not_in (value is a list), contains, not_contains, "
     "matches (value is a regex), exists, not_exists. Groups nest for AND/OR combinations. "
+    "A bare path is payload-relative — 'amount' is stored as 'payload.amount'. "
     'Example: {"match":"all","conditions":[{"field":"payload.amount","op":"gt","value":500}]}'
 )
 
@@ -55,6 +56,7 @@ def make_gate_tools(
             conditions = json.loads(conditions_json) if isinstance(conditions_json, str) else conditions_json
         except (ValueError, TypeError):
             return None, "conditions_json must be valid JSON"
+        conditions = gate_evaluator.normalize_fields(conditions)
         try:
             gate_evaluator.validate_conditions(conditions)
         except ValueError as e:
