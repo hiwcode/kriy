@@ -760,7 +760,8 @@ function ActivityDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (
                   )}
                 </span>
                 {r.reason && <span>· {r.reason}</span>}
-                {r.payload ? <pre> {JSON.stringify(r.payload)}</pre>:""}
+                {r.payload ? <pre className="overflow-x-auto rounded-lg bg-gray-900 p-4 text-sm text-gray-100"> 
+                  <code>{JSON.stringify(r.payload, null, 2)}</code></pre>:""}
               </div>
             </div>
           ))}
