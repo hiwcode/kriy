@@ -2,7 +2,18 @@
   <img src="web/public/kriy-transparent.png" alt="KRIY" width="96" height="96" />
 </p>
 
-<h1 align="center">KRIY</h1>
+<h1 align="center">
+  <pre>
+ _   ________ _______   __
+| | / /| ___ \_   _\ \ / /
+| |/ / | |_/ / | |  \ V / 
+|    \ |    /  | |   \ /  
+| |\  \| |\ \ _| |_  | |  
+\_| \_/\_| \_|\___/  \_/  
+                          
+                          
+  </pre>
+</h1>
 
 <p align="center">
   <strong>Build and govern AI agents that work inside your product.</strong>
